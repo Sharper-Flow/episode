@@ -17,6 +17,8 @@ use crate::types::{MemoryInput, MemorySource};
 pub struct EpisodeServer {
     store: Store,
     embedder: Arc<dyn Embedder>,
+    // Read by the `#[tool_handler]`-generated dispatch; not seen by dead-code analysis.
+    #[allow(dead_code)]
     tool_router: ToolRouter<EpisodeServer>,
 }
 

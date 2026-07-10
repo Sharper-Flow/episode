@@ -1,4 +1,6 @@
 /target
+/target-verify
+.fastembed_cache
 .env
 .env.local
 *.log

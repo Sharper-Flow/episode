@@ -13,21 +13,13 @@ pub struct Store {
 }
 
 impl Store {
-    /// Connect to Postgres and return a pool handle.
-    ///
-    /// NOTE: does NOT run `sqlx::migrate!("./migrations")` — the `migrate`
-    /// feature is not enabled in `Cargo.toml` (sqlx is built with
-    /// `default-features = false` and a feature list that omits `migrate`),
-    /// and this task is constrained to editing only `src/store.rs`. Migrations
-    /// in `migrations/0001_init.sql` are idempotent (`IF NOT EXISTS`) and are
-    /// expected to be applied out-of-band (the live DB already has them).
-    /// To restore auto-migration, add `migrate` to the sqlx features and
-    /// re-add `sqlx::migrate!("./migrations").run(&pool).await?;` here.
+    /// Connect to Postgres, run migrations, and return a pool handle.
     pub async fn connect(database_url: &str, pool_size: u32) -> Result<Self> {
         let pool = PgPoolOptions::new()
             .max_connections(pool_size)
             .connect(database_url)
             .await?;
+        sqlx::migrate!("./migrations").run(&pool).await?;
         Ok(Self { pool })
     }
 
