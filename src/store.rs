@@ -144,12 +144,22 @@ impl Store {
         Ok(hits)
     }
 
-    /// Delete by id; return rows affected.
-    pub async fn forget(&self, id: &str) -> Result<u64> {
-        let result = sqlx::query("DELETE FROM memories WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+    /// Restricted hard deletion of a manual memory (AC1 / C3 / DONT1).
+    ///
+    /// Removes at most one row whose `id`, `namespace`, and `source = 'manual'`
+    /// all match, and returns rows affected (`0` or `1`). Enforcement is
+    /// structural: the `source = 'manual'` predicate lives in this single SQL
+    /// statement, not in a pre-read or an app-layer authorization check. A wrong
+    /// namespace, an ingested source (`adv_wisdom` / `adv_reflection`), an
+    /// unknown id, or a repeated delete all return `0`.
+    pub async fn forget_manual(&self, id: &str, namespace: &str) -> Result<u64> {
+        let result = sqlx::query(
+            "DELETE FROM memories WHERE id = $1 AND namespace = $2 AND source = 'manual'",
+        )
+        .bind(id)
+        .bind(namespace)
+        .execute(&self.pool)
+        .await?;
         Ok(result.rows_affected())
     }
 

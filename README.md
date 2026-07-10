@@ -23,7 +23,7 @@ Persistent **decision memory** for AI coding agents, served over the [Model Cont
 |---|---|
 | `recall` | Semantic search over memories (namespace-filtered, top-k) |
 | `remember` | Write a memory directly (manual, `global` or a project namespace) |
-| `forget` | Soft-remove a memory by id |
+| `forget` | Restricted hard deletion of a `manual` memory by id + namespace (ingested memories are never affected) |
 | `stats` | Counts by namespace / source |
 
 ## Architecture

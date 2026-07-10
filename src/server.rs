@@ -51,6 +51,10 @@ struct RememberParams {
 struct ForgetParams {
     /// The memory id to remove.
     id: String,
+    /// Namespace that owns the memory. Required: deletion is a restricted hard
+    /// delete that only removes a matching `manual` row in this namespace;
+    /// ingested memories and other namespaces are never affected.
+    namespace: String,
 }
 
 fn internal(e: impl std::fmt::Display) -> ErrorData {
@@ -123,12 +127,18 @@ impl EpisodeServer {
         )?]))
     }
 
-    #[tool(description = "Remove a memory by id.")]
+    #[tool(
+        description = "Restricted hard deletion of a manual memory by id within a namespace. Only the row matching id + namespace with source `manual` is removed; ingested memories and other namespaces are unaffected. Returns the `removed` count (0 or 1)."
+    )]
     async fn forget(
         &self,
         Parameters(p): Parameters<ForgetParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let removed = self.store.forget(&p.id).await.map_err(internal)?;
+        let removed = self
+            .store
+            .forget_manual(&p.id, &p.namespace)
+            .await
+            .map_err(internal)?;
         Ok(CallToolResult::success(vec![ContentBlock::json(
             serde_json::json!({ "removed": removed }),
         )?]))
