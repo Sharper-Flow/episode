@@ -1,0 +1,21 @@
+# cargo-deny policy for episode. Scoped to dependency advisories (RustSec) so
+# CI reports known vulnerabilities without adopting bans/licenses/sources policy
+# this repo has not chosen. Consumed by `.github/workflows/ci.yml` via
+# `cargo deny --locked check advisories`, which resolves the dependency graph
+# from the committed Cargo.lock (the build step runs `--locked` first).
+#
+# cargo-deny reference: https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+
+[advisories]
+# RustSec advisory database location and source (cargo-deny defaults).
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Known security vulnerabilities fail CI.
+vulnerability = "deny"
+# Routine notices warn instead of failing, so a newly-filed
+# unmaintained/unsound/yanked/notice entry does not retroactively break every
+# build. These still surface in the log for triage.
+unmaintained = "warn"
+unsound = "warn"
+yanked = "warn"
+notice = "warn"

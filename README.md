@@ -13,8 +13,8 @@ Persistent **decision memory** for AI coding agents, served over the [Model Cont
 | Language | Rust (fast, one instance serves ~20 concurrent agent sessions) |
 | Protocol | MCP over stdio (`rmcp`), proxied by [Vision](https://github.com/Sharper-Flow/Vision-MCP-Manager) |
 | Store | PostgreSQL + `pgvector` (HNSW, cosine, `vector(1024)`) |
-| Embeddings | Local `fastembed` by default; `voyage-4-lite` optional tier |
-| Ingestion | Reads each project's `.adv/wisdom.jsonl` + `.adv/reflections.jsonl` |
+| Embeddings | Local `fastembed` (BGE-large, 1024d) — the only backend in v0; `EPISODE_EMBED_BACKEND` accepts only `local` |
+| Ingestion | Periodic reconcile of each project's `.adv/wisdom.jsonl` + `.adv/reflections.jsonl`, embedded in bounded batches |
 | Namespacing | Per-project namespace + a shared `global` namespace |
 
 ## Tools (MCP)
@@ -34,7 +34,7 @@ OpenCode agents ──stdio──▶ Vision proxy ──▶ episode (rmcp)
                     ┌─────────────────────────┼───────────────────────┐
                     ▼                          ▼                       ▼
              recall / remember          embedder                 ingestion
-             (MCP tools)          (fastembed | voyage)     (.adv/*.jsonl watcher)
+             (MCP tools)          (local fastembed)     (periodic .adv reconcile)
                     │                          │                       │
                     └──────────────▶ Postgres + pgvector ◀─────────────┘
                                      (HNSW cosine, vector(1024))
@@ -48,9 +48,12 @@ OpenCode agents ──stdio──▶ Vision proxy ──▶ episode (rmcp)
 (HNSW cosine), local fastembed embeddings (BGE-large, 1024d), and ADV
 wisdom/reflection ingestion are implemented and verified end-to-end (real embed →
 store → semantic recall ranks correctly). Runs under Vision as a shared server.
+The embedding backend is local-only in v0: `EPISODE_EMBED_BACKEND` accepts only
+`local` (a `voyage` value is rejected at startup), and ingestion is a periodic
+reconcile loop (see `EPISODE_INGEST_INTERVAL_SECS`), not a file watcher.
 
-Follow-ups: Voyage embedding tier, ingestion via file-watch (currently periodic
-reconcile), automated release.
+Not yet implemented: a Voyage embedding tier, file-watch ingestion, automated
+release.
 
 ## Development
 
