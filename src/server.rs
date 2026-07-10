@@ -1,7 +1,5 @@
 //! rmcp server exposing recall / remember / forget / stats tools.
 
-use std::sync::Arc;
-
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo};
@@ -9,14 +7,14 @@ use rmcp::schemars::{self, JsonSchema};
 use rmcp::{ErrorData, ServerHandler, tool, tool_handler, tool_router};
 use serde::Deserialize;
 
-use crate::embed::Embedder;
+use crate::scheduler::SchedulerHandle;
 use crate::store::Store;
 use crate::types::{MemoryInput, MemorySource};
 
 #[derive(Clone)]
 pub struct EpisodeServer {
     store: Store,
-    embedder: Arc<dyn Embedder>,
+    handle: SchedulerHandle,
     // Read by the `#[tool_handler]`-generated dispatch; not seen by dead-code analysis.
     #[allow(dead_code)]
     tool_router: ToolRouter<EpisodeServer>,
@@ -63,20 +61,16 @@ fn internal(e: impl std::fmt::Display) -> ErrorData {
 
 #[tool_router]
 impl EpisodeServer {
-    pub fn new(store: Store, embedder: Arc<dyn Embedder>) -> Self {
+    pub fn new(store: Store, handle: SchedulerHandle) -> Self {
         Self {
             store,
-            embedder,
+            handle,
             tool_router: Self::tool_router(),
         }
     }
 
     async fn embed_query(&self, text: String) -> Result<Vec<f32>, ErrorData> {
-        let embedder = self.embedder.clone();
-        tokio::task::spawn_blocking(move || embedder.embed_one(&text))
-            .await
-            .map_err(internal)?
-            .map_err(internal)
+        self.handle.embed_one(text).await.map_err(internal)
     }
 
     #[tool(
