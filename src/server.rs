@@ -6,7 +6,7 @@ use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo};
 use rmcp::schemars::{self, JsonSchema};
-use rmcp::{tool, tool_handler, tool_router, ErrorData, ServerHandler};
+use rmcp::{ErrorData, ServerHandler, tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::embed::Embedder;
@@ -114,9 +114,12 @@ impl EpisodeServer {
             content: p.content,
             metadata: serde_json::json!({}),
         };
-        self.store.upsert(&input, &embedding).await.map_err(internal)?;
+        self.store
+            .upsert(&input, &embedding)
+            .await
+            .map_err(internal)?;
         Ok(CallToolResult::success(vec![ContentBlock::json(
-            &serde_json::json!({ "stored": true, "id": id }),
+            serde_json::json!({ "stored": true, "id": id }),
         )?]))
     }
 
@@ -127,7 +130,7 @@ impl EpisodeServer {
     ) -> Result<CallToolResult, ErrorData> {
         let removed = self.store.forget(&p.id).await.map_err(internal)?;
         Ok(CallToolResult::success(vec![ContentBlock::json(
-            &serde_json::json!({ "removed": removed }),
+            serde_json::json!({ "removed": removed }),
         )?]))
     }
 
@@ -141,10 +144,16 @@ impl EpisodeServer {
 #[tool_handler]
 impl ServerHandler for EpisodeServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "episode: persistent decision memory for agents. Use `recall` before starting \
-             work to surface prior gotchas/conventions/decisions; use `remember` to store \
-             durable learnings. Namespaces are per-project plus a shared `global`.",
-        )
+        // `ServerInfo::new` fills server_info via rmcp's `from_build_env`, which
+        // reports "rmcp" — override it with our own identity.
+        let mut info = ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+            .with_instructions(
+                "episode: persistent decision memory for agents. Use `recall` before starting \
+                 work to surface prior gotchas/conventions/decisions; use `remember` to store \
+                 durable learnings. Namespaces are per-project plus a shared `global`.",
+            );
+        info.server_info.name = "episode".to_string();
+        info.server_info.version = env!("CARGO_PKG_VERSION").to_string();
+        info
     }
 }

@@ -40,7 +40,7 @@ fn read_jsonl(path: &Path) -> Result<Vec<Value>> {
     Ok(out)
 }
 
-/// WORKER C — parse `{adv_dir}/wisdom.jsonl`.
+/// Parse `{adv_dir}/wisdom.jsonl` into memory inputs.
 ///
 /// Each line is a JSON object (ADV `ProjectWisdomEntry`):
 ///   `{ id: "pw-..", type, content, source_change?, source_task?, promoted_at, tags?, ... }`
@@ -103,23 +103,21 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>>
     Ok(items)
 }
 
-/// WORKER C — parse `{adv_dir}/reflections.jsonl`.
+/// Parse `{adv_dir}/reflections.jsonl` into memory inputs.
 ///
-/// Each line is an ADV `ReflectionEntry`:
-///   `{ id: "rf-..", change_id, created_at, plane1{..}, plane2{ friction_items[],
-///     highlights[], improvement_suggestions[] } }`.
-/// Explode each reflection into MULTIPLE `MemoryInput`s (the retrievable text
-/// lives in plane2):
-///   - one per `plane2.friction_items[i].description`  -> kind "friction"
-///   - one per `plane2.highlights[i]`                  -> kind "highlight"
-///   - one per `plane2.improvement_suggestions[i]`     -> kind "suggestion"
-/// For each child:
-///   - stable id / source_id: `format!("{}:{}:{}", rf_id, kind, index)`
-///   - source: `MemorySource::AdvReflection`
-///   - content: the text
-///   - metadata: `{ "change_id": .., "reflection_id": rf_id, "created_at": .. }`
-/// Rules: skip malformed lines; skip children with empty/whitespace content;
-/// missing file -> `Ok(vec![])`.
+/// Each line is an ADV `ReflectionEntry`. The retrievable text lives in
+/// `plane2`, so each reflection is exploded into multiple `MemoryInput`s:
+///
+/// - one per `plane2.friction_items[i].description` (kind `friction`)
+/// - one per `plane2.highlights[i]` (kind `highlight`)
+/// - one per `plane2.improvement_suggestions[i]` (kind `suggestion`)
+///
+/// Each child gets a stable id `format!("{rf_id}:{kind}:{index}")`,
+/// `source = MemorySource::AdvReflection`, the text as `content`, and metadata
+/// `{ change_id, reflection_id, created_at }`.
+///
+/// Malformed lines and empty/whitespace children are skipped; a missing file
+/// yields `Ok(vec![])`.
 pub fn parse_reflections(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>> {
     let path = adv_dir.join("reflections.jsonl");
     let mut items = Vec::new();

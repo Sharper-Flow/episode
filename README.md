@@ -44,17 +44,34 @@ OpenCode agents ──stdio──▶ Vision proxy ──▶ episode (rmcp)
 
 ## Status
 
-🚧 Early. Dependency foundation + schema are in place; the MCP server, store, embeddings, and ingestion land phase by phase (see the build plan in project notes).
+**v0 working.** MCP server (`recall`/`remember`/`forget`/`stats`), pgvector store
+(HNSW cosine), local fastembed embeddings (BGE-large, 1024d), and ADV
+wisdom/reflection ingestion are implemented and verified end-to-end (real embed →
+store → semantic recall ranks correctly). Runs under Vision as a shared server.
+
+Follow-ups: Voyage embedding tier, ingestion via file-watch (currently periodic
+reconcile), automated release.
 
 ## Development
 
-Requires Rust, Docker, and a pgvector-capable Postgres.
+Requires Rust, Docker, and the bundled pgvector Postgres.
 
 ```bash
-docker compose up -d          # dev Postgres + pgvector on :5433
+docker compose up -d          # dev Postgres + pgvector on :5434
 cp .env.example .env          # then edit as needed
-cargo run
+cargo run                     # serves MCP over stdio
 ```
+
+Run the end-to-end recall test (needs the dev DB; downloads the model once):
+
+```bash
+cargo test --test recall_it -- --ignored --nocapture
+```
+
+## Deploy
+
+`scripts/deploy.sh` builds a release binary to `~/.local/bin/episode`, which
+Vision spawns and proxies (one instance, many agent sessions).
 
 ## License
 

@@ -49,7 +49,7 @@ impl Embedder for LocalEmbedder {
             .map_err(|_| anyhow::anyhow!("embedder mutex poisoned"))?;
         // fastembed embed(&mut self, texts, batch_size) -> Result<Vec<Vec<f32>>>;
         // None => default batch size.
-        let out = model.embed(texts.to_vec(), None)?;
+        let out = model.embed(texts, None)?;
         if let Some(first) = out.first() {
             anyhow::ensure!(
                 first.len() == EMBEDDING_DIM,

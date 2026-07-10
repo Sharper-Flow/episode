@@ -14,18 +14,26 @@ use episode::types::{MemoryInput, MemorySource};
 #[tokio::test]
 #[ignore = "requires Postgres + downloads the embedding model"]
 async fn embed_store_recall_ranks_semantically() {
-    let db = std::env::var("EPISODE_TEST_DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://episode:episode@localhost:5434/episode".to_string()
-    });
+    let db = std::env::var("EPISODE_TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://episode:episode@localhost:5434/episode".to_string());
 
     let store = Store::connect(&db, 5).await.expect("connect + migrate");
     let embedder = LocalEmbedder::new().expect("init fastembed (downloads model on first run)");
 
     let ns = "it_test";
     let docs = [
-        ("it-1", "Always run database migrations inside connect() on startup."),
-        ("it-2", "The espresso machine needs descaling every two weeks."),
-        ("it-3", "Use an HNSW index with cosine distance for vector similarity search."),
+        (
+            "it-1",
+            "Always run database migrations inside connect() on startup.",
+        ),
+        (
+            "it-2",
+            "The espresso machine needs descaling every two weeks.",
+        ),
+        (
+            "it-3",
+            "Use an HNSW index with cosine distance for vector similarity search.",
+        ),
     ];
 
     // Clean slate for the test namespace.

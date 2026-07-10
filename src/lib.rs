@@ -14,8 +14,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use rmcp::transport::stdio;
 use rmcp::ServiceExt;
+use rmcp::transport::stdio;
 
 use crate::config::{Config, EmbedBackend, ProjectRoot};
 use crate::embed::{Embedder, LocalEmbedder};
@@ -98,18 +98,21 @@ pub async fn run_ingestion_loop(
 
                 let embedder2 = embedder.clone();
                 let content = item.content.clone();
-                let embedding =
-                    match tokio::task::spawn_blocking(move || embedder2.embed_one(&content)).await {
-                        Ok(Ok(v)) => v,
-                        Ok(Err(e)) => {
-                            tracing::warn!(error = %e, "embed failed");
-                            continue;
-                        }
-                        Err(e) => {
-                            tracing::warn!(error = %e, "embed task join failed");
-                            continue;
-                        }
-                    };
+                let embedding = match tokio::task::spawn_blocking(move || {
+                    embedder2.embed_one(&content)
+                })
+                .await
+                {
+                    Ok(Ok(v)) => v,
+                    Ok(Err(e)) => {
+                        tracing::warn!(error = %e, "embed failed");
+                        continue;
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = %e, "embed task join failed");
+                        continue;
+                    }
+                };
 
                 match store.upsert(&item, &embedding).await {
                     Ok(true) => ingested += 1,
