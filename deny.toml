@@ -10,12 +10,9 @@
 # RustSec advisory database location and source (cargo-deny defaults).
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-# Known security vulnerabilities fail CI.
-vulnerability = "deny"
-# Routine notices warn instead of failing, so a newly-filed
-# unmaintained/unsound/yanked/notice entry does not retroactively break every
-# build. These still surface in the log for triage.
-unmaintained = "warn"
-unsound = "warn"
+# Fail for unmaintained or unsound direct dependencies, but do not make every
+# newly-filed transitive notice a release blocker. `workspace` is cargo-deny's
+# supported scope selector for these advisory classes.
+unmaintained = "workspace"
+unsound = "workspace"
 yanked = "warn"
-notice = "warn"
