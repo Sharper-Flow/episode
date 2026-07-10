@@ -1,0 +1,2371 @@
+{
+  "id": "improveEpisodeResilience",
+  "title": "Improve Episode resilience",
+  "status": "archived",
+  "lifecycleState": "open",
+  "created_at": "2026-07-10T15:28:40.058Z",
+  "tasks": [
+    {
+      "id": "tk-5724ed81c6dc",
+      "title": "Validate configuration and bound SQLx pool lifecycle",
+      "type": "code",
+      "section": "Resilience boundaries",
+      "status": "done",
+      "priority": 0,
+      "created_at": "2026-07-10T16:01:32.727Z",
+      "metadata": {
+        "tdd_intent": "inline",
+        "delegation_hint": "delegate_preferred"
+      },
+      "contract_refs": {
+        "implements": [
+          "AC2",
+          "AC3"
+        ],
+        "respects": [
+          "C1",
+          "C2"
+        ]
+      },
+      "evidence_policy": "test",
+      "assignedTo": "agent",
+      "started_at": "2026-07-10T16:10:47.062Z",
+      "subagent_reports": [
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 1,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-5724ed81c6dc",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-5724ed81c6dc"
+          },
+          "agent": "adv-engineer",
+          "status": "complete",
+          "files_touched": [
+            "src/config.rs",
+            "src/store.rs",
+            ".env.example",
+            "tests/pool_bounds.rs"
+          ],
+          "verification": [
+            {
+              "command": "CARGO_BUILD_JOBS=4 cargo test --lib config::tests (RED, before strict validation)",
+              "exit_code": 1,
+              "summary": "RED: 10 strict-validation tests failed under the previous permissive parsing (zero/invalid pool, zero/invalid interval, unknown backend, voyage unsupported, malformed/empty/empty-ns/empty-path roots); 5 passed. Confirms AC2 behavior was missing."
+            },
+            {
+              "command": "CARGO_BUILD_JOBS=4 cargo test --test pool_bounds (RED, before pool bounds)",
+              "exit_code": 1,
+              "summary": "RED: unavailable_db_errors_within_acquire_bound hung the full 20.00s safety timeout (Elapsed) under sqlx's 30s default acquire_timeout — acquire bound not enforced."
+            },
+            {
+              "command": "CARGO_BUILD_JOBS=4 cargo test (GREEN, after implementation)",
+              "exit_code": 0,
+              "summary": "GREEN: 20 lib unit tests passed (15 config incl. all AC2 cases, 2 store pool-options pinning, 3 pre-existing ingest); tests/pool_bounds.rs passed in 5.00s (acquisition error within the 5s bound); recall_it remains ignored (needs DB/model); doctests 0."
+            },
+            {
+              "command": "cargo fmt --check",
+              "exit_code": 0,
+              "summary": "Formatting clean across touched files."
+            },
+            {
+              "command": "CARGO_BUILD_JOBS=4 cargo clippy --tests -j 4 -- -D warnings",
+              "exit_code": 0,
+              "summary": "Clippy clean with -D warnings (removed an unused test helper that tripped dead_code)."
+            }
+          ],
+          "decisions": [
+            {
+              "what": "Factored Config::from_env to delegate to a pure internal from_vars(iter) and unit-tested through it.",
+              "why": "Rust 2024 marks std::env set_var/remove_var unsafe; a pure seam gives deterministic, parallel-safe tests with no env mutation and no unsafe blocks (P33)."
+            },
+            {
+              "what": "Pinned explicit pool constants (5s acquire, 10m idle, 30m max lifetime, test_before_acquire(true)) in a pub(crate) pool_options() builder instead of relying on sqlx defaults.",
+              "why": "AC3 requires finite, explicit bounds; pinning them means a sqlx upgrade cannot silently change pool semantics, and the pure builder is unit-testable without a database."
+            },
+            {
+              "what": "Proved the acquire bound with a never-accepting localhost TcpListener wrapped in a 20s tokio::time::timeout safety net.",
+              "why": "The kernel completes the TCP handshake (backlog) but the PostgreSQL handshake never answers, so the client hangs inside connection establishment — exactly what acquire_timeout bounds — fully deterministic and DB-free. It drove the real eager connect+migrate path and returned an acquisition error in 5.00s."
+            },
+            {
+              "what": "Left the EmbedBackend::Voyage variant and the lib.rs match arm in place; config rejects 'voyage' at validation.",
+              "why": "lib.rs is outside this task's allowed file set (deletion/docs belong to other tasks); rejecting at validation satisfies AC2 without expanding scope. The now-unreachable arm is surfaced as a follow-up."
+            },
+            {
+              "what": "Kept documented defaults for ABSENT optional vars while making PRESENT-but-invalid values error.",
+              "why": "DONT2 forbids silent correction of invalid input, not documented defaults for unset vars; this preserves backward-compatible startup for the common case while eliminating the silent fallback."
+            }
+          ],
+          "blockers": [],
+          "scope_drift": null,
+          "follow_ups": [
+            "lib.rs `EmbedBackend::Voyage => anyhow::bail!(...)` arm is now unreachable via the env path (config rejects 'voyage' at validation); safe to collapse/simplify when lib.rs is in scope — not this task.",
+            "README documentation of the local-only backend and validation behavior is owned by AC8 task tk-2732986d8239 (out of scope here); only .env.example was updated in this task."
+          ],
+          "required_main_agent_actions": [],
+          "related_scan": "Grep'd all call sites of Config::from_env, EmbedBackend, pool_size, ingest_interval_secs, and Store::forget. from_env has a single caller (lib.rs::run) which now correctly fails fast on invalid config. Store::forget (server.rs:131, tests/recall_it.rs) is owned by AC1 task tk-252520f7698a and was left untouched. No same-pattern validation gaps remained in the touched config/pool surfaces after the fix.",
+          "context_update_for_adv": {
+            "what_ads_needs_to_know": "AC2 + AC3 done within scope. Config::from_env now validates strictly via an internal pure from_vars seam: invalid/zero EPISODE_DB_POOL_SIZE and EPISODE_INGEST_INTERVAL_SECS, unknown/unsupported EPISODE_EMBED_BACKEND (only 'local' accepted; 'voyage' rejected as unsupported), and malformed/empty EPISODE_PROJECT_ROOTS entries all fail with the variable name + offending value + expected form; documented defaults still apply for absent vars; local backend retained. Store::connect now builds the pool through pool_options() with pinned constants (acquire 5s, idle 10m, max lifetime 30m, test_before_acquire(true), configured max_connections) and still runs eager sqlx::migrate!. Deterministic unavailable-DB proof: a hung-listener endpoint returns a pool acquisition error in 5.00s (RED was a 20.00s safety-timeout hang under the sqlx 30s default). fmt --check clean; clippy --tests -D warnings clean; cargo test: 20 lib unit tests pass, pool_bounds integration passes, recall_it stays ignored. Note: adv_run_test returned a service error ('Failed to query Workflow'), so RED/GREEN evidence was captured via direct cargo runs and recorded in `verification` rather than through the ADV evidence tool. Only the four allowed surfaces were touched: src/config.rs, src/store.rs, .env.example, tests/pool_bounds.rs.",
+            "suggested_next_action": "Config validation (AC2) and SQLx pool bounds (AC3) are implemented and verified. Unblock and delegate the dependent deletion task tk-252520f7698a (AC1 forget_manual) next; full-gate fmt/clippy/build/test remains owned by verification task tk-896bf4f43adb."
+          },
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo test --lib config::tests (RED, before strict validation)"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo test --test pool_bounds (RED, before pool bounds)"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo test (GREEN, after implementation)"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo clippy --tests -j 4 -- -D warnings"
+            }
+          ]
+        }
+      ],
+      "verification": "RED/GREEN recorded in persisted engineer report: config validation tests failed before strict parsing; pool bound test hit 20s pre-fix safety timeout; post-fix cargo test, fmt, and clippy passed.",
+      "summary": "Task checkpoint completed",
+      "implementation_summary": "Task checkpoint completed",
+      "filesTouched": [
+        ".env.example",
+        "src/config.rs",
+        "src/store.rs",
+        "tests/pool_bounds.rs"
+      ],
+      "touched_files": [
+        ".env.example",
+        "src/config.rs",
+        "src/store.rs",
+        "tests/pool_bounds.rs"
+      ],
+      "checkpointSha": "35096817e338939c4dfa66ea91f7ff92e967480e",
+      "completedAt": "2026-07-10T16:38:59.957Z",
+      "completed_at": "2026-07-10T16:38:59.957Z"
+    },
+    {
+      "id": "tk-252520f7698a",
+      "title": "Protect manual-memory deletion in SQL",
+      "type": "code",
+      "section": "Resilience boundaries",
+      "status": "done",
+      "priority": 1,
+      "created_at": "2026-07-10T16:01:42.578Z",
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-5724ed81c6dc"
+        }
+      ],
+      "metadata": {
+        "tdd_intent": "inline",
+        "delegation_hint": "delegate_preferred"
+      },
+      "contract_refs": {
+        "implements": [
+          "AC1"
+        ],
+        "respects": [
+          "C1",
+          "C3"
+        ],
+        "not_applicable_reason": "No separate verification obligation beyond AC1; task directly implements SQL predicate."
+      },
+      "evidence_policy": "test",
+      "assignedTo": "agent",
+      "started_at": "2026-07-10T16:39:34.329Z",
+      "subagent_reports": [
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 1,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-252520f7698a",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-252520f7698a"
+          },
+          "agent": "adv-engineer",
+          "status": "complete",
+          "files_touched": [
+            "src/store.rs",
+            "src/server.rs",
+            "tests/recall_it.rs",
+            "README.md"
+          ],
+          "verification": [
+            {
+              "command": "cargo check --tests  # RED (pre-implementation): 5× E0599 no method named `forget_manual` found for struct `Store` — required API absent",
+              "exit_code": 101,
+              "summary": "RED confirmed: forget_manual API/behavior absent before implementation (compile failed on the new test)."
+            },
+            {
+              "command": "cargo test --test recall_it -- --ignored --nocapture forget_manual_enforces_namespace_and_manual_source",
+              "exit_code": 0,
+              "summary": "GREEN: DB-backed deletion test passed — wrong namespace→0, ingested source→0, unknown id→0, matching manual→1, repeated delete→0, and the ingested row survived. (adv_run_test runId tr_mrf68f34_499d9412)"
+            },
+            {
+              "command": "cargo fmt --check",
+              "exit_code": 0,
+              "summary": "Format clean. (adv_run_test runId tr_mrf68o41_e4cc203f)"
+            },
+            {
+              "command": "cargo clippy --all-targets -- -D warnings",
+              "exit_code": 0,
+              "summary": "Clippy clean with warnings as errors. (adv_run_test runId tr_mrf68vhy_57db0443)"
+            },
+            {
+              "command": "cargo build",
+              "exit_code": 0,
+              "summary": "Binary/library build clean."
+            },
+            {
+              "command": "cargo test",
+              "exit_code": 0,
+              "summary": "Default sweep green: 20 unit tests + tests/pool_bounds.rs pass; the two tests/recall_it.rs tests are #[ignore] (require Postgres)."
+            }
+          ],
+          "decisions": [
+            {
+              "what": "Enforced deletion with a single static SQL statement carrying three predicates (`id`, `namespace`, `source = 'manual'`).",
+              "why": "The predicate set is fixed (no dynamic columns), so a literal query is the simplest structural enforcement and satisfies C3/DONT1 without any pre-read or app-layer branch."
+            },
+            {
+              "what": "Made `ForgetParams.namespace` a bare required `String` (no `Option`, no `#[serde(default)]`).",
+              "why": "Makes `namespace` required at both the rmcp JSON-schema layer and serde deserialization, so 'forget requires namespace' is structural rather than a runtime guard."
+            },
+            {
+              "what": "Marked the new deletion test `#[ignore = \"requires Postgres\"]` and seeded rows with a zero vector of `EMBEDDING_DIM` via `store.upsert`.",
+              "why": "Keeps the default `cargo test` sweep DB-free (consistent with the existing integration test) while still running under `--ignored` against the dev DB; the zero vector avoids downloading the embedding model because the deletion predicate is model-independent."
+            },
+            {
+              "what": "Used a separate raw-sqlx pool in the test for cleanup, scoped to the test's unique namespace.",
+              "why": "Avoids adding a test-only method to the production `Store`; the unique namespace makes leftovers non-colliding even if cleanup fails."
+            }
+          ],
+          "blockers": [],
+          "scope_drift": null,
+          "follow_ups": [],
+          "required_main_agent_actions": [],
+          "related_scan": "Confirmed the only callers of the old `Store::forget` were the server handler and the two cleanup sites in tests/recall_it.rs; all updated to `forget_manual`. The remaining `soft-deleted` string in src/ingest.rs (lines 55/67) describes ADV source-entry supersession during ingestion input filtering — unrelated to the `forget` MCP tool and out of scope; left untouched.",
+          "context_update_for_adv": {
+            "what_ads_needs_to_know": "AC1 implemented and DB-verified for tk-252520f7698a. `Store::forget(id)` removed; new `Store::forget_manual(id, namespace)` runs one SQL statement `DELETE FROM memories WHERE id = $1 AND namespace = $2 AND source = 'manual'` and returns rows_affected (0/1) — structural enforcement (C3) with no pre-read and no app-layer source check (DONT1). `ForgetParams.namespace` is now a required String (schema + deserialization). README forget-tool row updated to 'Restricted hard deletion'. TDD: RED = 5× E0599 forget_manual missing; GREEN = DB-backed test passes. fmt --check, clippy --all-targets -D warnings, cargo build, and the default cargo test sweep all exit 0.",
+            "suggested_next_action": "Mark tk-252520f7698a done and proceed to the next ready task. Config validation (AC2), pool bounds (AC3 store side already present), scheduler/batching (AC4/AC5), cooperative shutdown (AC6), and docs/CI/dependency cleanup (AC8) are sibling tasks and were left untouched. When the AC8 docs task runs, the README `forget` row already reads 'restricted hard deletion'."
+          },
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo check --tests  # RED (pre-implementation): 5× E0599 no method named `forget_manual` found for struct `Store` — required API absent"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --test recall_it -- --ignored --nocapture forget_manual_enforces_namespace_and_manual_source"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo build"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test"
+            }
+          ]
+        }
+      ],
+      "verification": "RED/GREEN recorded in ENGINEER_REPORT: missing forget_manual compilation failure pre-change; ignored DB deletion test and fmt, clippy, build, default tests pass post-change.",
+      "summary": "Task checkpoint completed",
+      "implementation_summary": "Task checkpoint completed",
+      "filesTouched": [
+        "README.md",
+        "src/server.rs",
+        "src/store.rs",
+        "tests/recall_it.rs"
+      ],
+      "touched_files": [
+        "README.md",
+        "src/server.rs",
+        "src/store.rs",
+        "tests/recall_it.rs"
+      ],
+      "checkpointSha": "b835605305f531dd0771c856f6bfc20bf25962f9",
+      "completedAt": "2026-07-10T16:52:13.567Z",
+      "completed_at": "2026-07-10T16:52:13.567Z"
+    },
+    {
+      "id": "tk-b9e215a63d1a",
+      "title": "Build bounded priority embedding scheduler",
+      "type": "code",
+      "section": "Scheduler and lifecycle",
+      "status": "done",
+      "priority": 2,
+      "created_at": "2026-07-10T16:01:52.717Z",
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-252520f7698a"
+        }
+      ],
+      "metadata": {
+        "tdd_intent": "inline",
+        "delegation_hint": "delegate_preferred"
+      },
+      "contract_refs": {
+        "implements": [
+          "AC4",
+          "AC5",
+          "AC6"
+        ],
+        "respects": [
+          "C2",
+          "C4",
+          "C5"
+        ],
+        "not_applicable_reason": "Implements all scheduler/lifecycle contract obligations; persistence batching follows in a dependent task."
+      },
+      "evidence_policy": "test",
+      "assignedTo": "agent",
+      "started_at": "2026-07-10T16:52:48.539Z",
+      "subagent_reports": [
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 1,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-b9e215a63d1a",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-b9e215a63d1a"
+          },
+          "agent": "adv-engineer",
+          "status": "complete",
+          "files_touched": [
+            "src/scheduler.rs",
+            "src/server.rs",
+            "src/lib.rs"
+          ],
+          "verification": [
+            {
+              "command": "cargo build",
+              "exit_code": 0,
+              "summary": "Finished dev profile; scheduler module + rewired server/lib compile clean."
+            },
+            {
+              "command": "cargo fmt -- --check",
+              "exit_code": 0,
+              "summary": "No formatting diffs after cargo fmt."
+            },
+            {
+              "command": "cargo clippy --all-targets -- -D warnings",
+              "exit_code": 0,
+              "summary": "Clippy clean with warnings as errors across all targets."
+            },
+            {
+              "command": "cargo test",
+              "exit_code": 0,
+              "summary": "29 lib tests + 1 pool_bounds integration test pass; 2 recall_it tests ignored (require Postgres + model download)."
+            },
+            {
+              "command": "cargo test --lib scheduler::",
+              "exit_code": 0,
+              "summary": "9 scheduler tests pass: shapes, empty-batch no-op, over-max rejection (AC4), recorder-proven interactive-before-next-ingest order (AC5), recorder-proven cooperative shutdown where active batch finishes and no next batch starts/worker exits (AC6), and batch-output length/dimension validation."
+            }
+          ],
+          "decisions": [
+            {
+              "what": "Owned the single embedder inside the scheduler worker; EpisodeServer and the ingestion loop now hold only a cloneable SchedulerHandle (bounded mpsc senders).",
+              "why": "C4 requires one model instance and bounded scheduling rather than a second BGE model. Constructing LocalEmbedder once and moving it into the worker makes duplication structurally impossible in production."
+            },
+            {
+              "what": "Biased tokio::select! branch order is shutdown -> interactive -> ingest, with a shutdown borrow check also at the top of each loop iteration.",
+              "why": "When not shutting down, a queued interactive (recall/remember) job is always selected before another ingest batch (AC5). Listing shutdown first guarantees that once cancellation is signaled, no further batch is started even if ingest jobs are already queued (AC6)."
+            },
+            {
+              "what": "Worker awaits each spawn_blocking job to completion before selecting the next job (one active job at a time).",
+              "why": "Preserves the one-model memory budget and makes fairness deterministic: an already-queued interactive job wins before the next ingest batch, while active spawn_blocking inference is never aborted (C5 — Tokio cannot cancel it)."
+            },
+            {
+              "what": "Empty and over-max (>64) batches are rejected at the SchedulerHandle before any job is scheduled; the ingestion loop additionally partitions with Vec::chunks(INGEST_BATCH_MAX).",
+              "why": "AC4 requires a defined bounded batch size and that empty batches do not invoke embedding. Handle-level guards make the contract enforceable and directly testable regardless of caller."
+            },
+            {
+              "what": "Added pure validate_batch_output (length + every-vector dimension) in the scheduler module and call it before per-item upsert; on mismatch the batch is skipped with structured namespace/batch context.",
+              "why": "Design §3 batch contract: mismatches fail that batch and leave items eligible for the next reconcile. Placing the validator in the scheduler module keeps the batch contract with the scheduler and makes it unit-testable."
+            },
+            {
+              "what": "Retained per-item exists_source dedup and per-item upsert in run_ingestion_loop instead of switching to bulk.",
+              "why": "Bulk DB dedup/upsert is explicitly owned by the dependent task tk-252520f7698a; this task scopes to the scheduler + lifecycle only. Embedding is now bounded/batched; persistence batching is deferred."
+            },
+            {
+              "what": "Barrier-based recorder tests use #[tokio::test(flavor = \"multi_thread\", worker_threads = 2)].",
+              "why": "They block the test thread on a std::sync::mpsc recv to observe the active embedder. On the default current_thread runtime that single-thread block deadlocked (the worker could not run); multi_thread lets the spawned worker progress on another thread and also better reflects the #[tokio::main] production runtime. Documented inline."
+            }
+          ],
+          "blockers": [],
+          "scope_drift": null,
+          "follow_ups": [
+            "Dependent task tk-252520f7698a: replace per-item exists_source/upsert in run_ingestion_loop with bulk source-id lookup + transactional bounded-batch upsert (static SQL/QueryBuilder). The scheduler already hands it bounded ≤64 batches."
+          ],
+          "required_main_agent_actions": [],
+          "related_scan": "Scanned the whole embedding subsystem for the same pattern (inline spawn_blocking inference, unbounded per-item embedding, discarded ingestion JoinHandle) and migrated every production site: server.rs embed_query (interactive) and lib.rs run_ingestion_loop (ingestion) both now route through the single scheduler. Confirmed via grep that no production code calls embedder.embed/embed_one or spawn_blocking for inference outside src/scheduler.rs, and that no JoinHandle::abort exists anywhere. The only remaining direct LocalEmbedder use is the #[ignore] integration test recall_it.rs, which is out of production scope and was left unchanged.",
+          "context_update_for_adv": {
+            "what_ads_needs_to_know": "Bounded priority embedding scheduler implemented in new src/scheduler.rs and wired into src/server.rs (recall/remember via handle.embed_one) and src/lib.rs (run() owns the in-tree watch shutdown signal + BOTH the ingestion and scheduler-worker JoinHandles and drives cooperative shutdown after stdio; run_ingestion_loop chunks eligible items into ≤64, routes each chunk through handle.embed_batch, validates output length/dims, then keeps the existing per-item dedup/upsert). AC4 (INGEST_BATCH_MAX=64 + over-max rejection + chunking), AC5 (recorder test proves [Ingest, Interactive, Ingest] order), AC6 (recorder test proves active batch finishes, no next batch starts, worker exits) are test-covered; C4/C5 are structural (single LocalEmbedder moved into the scheduler, no second model, no JoinHandle::abort anywhere, all inference funneled through the scheduler's one-job-at-a-time spawn_blocking). Whole crate is green: build, fmt --check, clippy -D warnings, and full test sweep (29 lib + 1 pool_bounds integration pass; 2 recall_it tests remain #[ignore] for Postgres/model).",
+            "suggested_next_action": "Proceed to the dependent persistence task (tk-252520f7698a): replace the retained per-item exists_source/upsert in run_ingestion_loop with a bulk source-id query + transactional bounded-batch upsert. The scheduler already delivers bounded ≤64 embedding batches, so that task only changes persistence, not embedding."
+          },
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo build"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt -- --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --lib scheduler::"
+            }
+          ]
+        },
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 2,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-b9e215a63d1a",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-b9e215a63d1a"
+          },
+          "agent": "adv-engineer",
+          "status": "complete",
+          "files_touched": [
+            "src/scheduler.rs"
+          ],
+          "verification": [
+            {
+              "command": "cargo test --lib scheduler::",
+              "exit_code": 0,
+              "summary": "11 scheduler tests pass: original 9 plus 2 new regression tests (closed_interactive_does_not_terminate_ingest_queue, closed_ingest_does_not_terminate_interactive_queue)."
+            },
+            {
+              "command": "cargo fmt -- --check",
+              "exit_code": 0,
+              "summary": "No formatting diffs."
+            },
+            {
+              "command": "cargo clippy --all-targets -- -D warnings",
+              "exit_code": 0,
+              "summary": "Clippy clean with warnings as errors."
+            },
+            {
+              "command": "cargo test --lib",
+              "exit_code": 0,
+              "summary": "31 lib tests pass (20 pre-existing + 11 scheduler)."
+            },
+            {
+              "command": "cargo test",
+              "exit_code": 0,
+              "summary": "Full sweep: 31 lib + 1 pool_bounds integration pass; 2 recall_it tests ignored (require Postgres + model)."
+            }
+          ],
+          "decisions": [
+            {
+              "what": "Wrapped each receiver in Option and introduced a Sel enum (Shutdown / InteractiveClosed / IngestClosed / Job); each select arm is guarded by `if <rx>.is_some()`.",
+              "why": "A closed mpsc::Receiver returns None from recv() immediately and is therefore always ready. Leaving it in a biased select either spins or — as in the reported bug — maps to a loop exit that starves/abandons the other queue. The guard removes a closed channel from polling; the worker keeps servicing the open queue and exits only on shutdown or when both are closed. This is the structural fix the review asked for."
+            },
+            {
+              "what": "Added two barrier/yield-driven regression tests (one per channel direction) that drive run_worker directly with separately controlled senders.",
+              "why": "The bug only manifests when one sender class disappears while the other still has work. Dropping one sender in the test reproduces it deterministically: on the old code the surviving queue's job never starts (or its send fails), so the tests fail; on the fixed code they pass. Covering both directions pins the symmetric fix."
+            },
+            {
+              "what": "Used the multi_thread flavor for the new tests (and kept it on the prior barrier tests).",
+              "why": "They block the test thread on a std::sync::mpsc recv / rely on the worker making progress independently; the default current_thread runtime deadlocks, as established in attempt 1."
+            }
+          ],
+          "blockers": [],
+          "scope_drift": null,
+          "follow_ups": [],
+          "required_main_agent_actions": [],
+          "related_scan": "Confirmed both channel arms are handled identically (InteractiveClosed/IngestClosed) and grep-checked the subsystem for any other `select!` + `None => break` pattern: run_worker was the only such site, so no sibling instance remains. AC5 ordering and AC6 shutdown paths were re-run and still pass.",
+          "context_update_for_adv": {
+            "what_ads_needs_to_know": "Review finding fixed structurally in src/scheduler.rs run_worker. Previously each recv() arm mapped None (one sender class dropped) straight to a loop exit, so a closed-but-always-ready channel could terminate the worker and abandon the other queue. Now the receivers are wrapped in Option and a Sel enum distinguishes Shutdown / InteractiveClosed / IngestClosed / Job; each select arm is guarded by `if <rx>.is_some()` so a closed channel is removed from polling instead of being treated as work. The worker continues servicing the surviving queue and exits ONLY on shutdown or when BOTH queues are closed. AC5 fairness is unchanged (interactive still preferred while both are open) and AC6 shutdown behavior is unchanged. Added two deterministic regression tests that fail on the old mapping and pass now: closed_interactive_does_not_terminate_ingest_queue (barrier-held active ingest job1 + queued job2, drop interactive, assert job2 still starts/completes) and closed_ingest_does_not_terminate_interactive_queue (close ingest while interactive empty, then assert a later interactive job is still serviced). Whole crate green: fmt --check clean, clippy --all-targets -D warnings clean, build clean, 31 lib tests + 1 pool_bounds integration pass (2 recall_it still #[ignore]).",
+            "suggested_next_action": "Continue to the dependent persistence task (tk-252520f7698a) for bulk dedup/upsert; the scheduler fix is isolated to run_worker and does not change the public handle API or the ingestion loop."
+          },
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --lib scheduler::"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt -- --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --lib"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test"
+            }
+          ]
+        }
+      ],
+      "verification": "ENGINEER_REPORT records focused scheduler RED/GREEN, channel-closure regression tests, cargo build, fmt, clippy, and full cargo test passing.",
+      "summary": "Task checkpoint completed",
+      "implementation_summary": "Task checkpoint completed",
+      "filesTouched": [
+        "src/lib.rs",
+        "src/scheduler.rs",
+        "src/server.rs"
+      ],
+      "touched_files": [
+        "src/lib.rs",
+        "src/scheduler.rs",
+        "src/server.rs"
+      ],
+      "checkpointSha": "58dc34faf4659e9cf2ae9012945b72ea22356246",
+      "completedAt": "2026-07-10T17:33:28.646Z",
+      "completed_at": "2026-07-10T17:33:28.646Z"
+    },
+    {
+      "id": "tk-4dc6dd1eb05e",
+      "title": "Batch durable ingestion and transactional persistence",
+      "type": "code",
+      "section": "Scheduler and lifecycle",
+      "status": "done",
+      "priority": 3,
+      "created_at": "2026-07-10T16:02:05.244Z",
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-b9e215a63d1a"
+        }
+      ],
+      "metadata": {
+        "tdd_intent": "inline",
+        "delegation_hint": "delegate_preferred"
+      },
+      "contract_refs": {
+        "implements": [
+          "AC4",
+          "AC7"
+        ],
+        "respects": [
+          "C2",
+          "C4",
+          "DONT3"
+        ]
+      },
+      "evidence_policy": "test",
+      "assignedTo": "agent",
+      "started_at": "2026-07-10T17:33:39.377Z",
+      "subagent_reports": [
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 1,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-4dc6dd1eb05e",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-4dc6dd1eb05e"
+          },
+          "agent": "adv-engineer",
+          "status": "complete",
+          "files_touched": [
+            "src/store.rs",
+            "src/lib.rs",
+            "tests/ingest_batch_it.rs"
+          ],
+          "verification": [
+            {
+              "command": "cargo fmt --check",
+              "exit_code": 0,
+              "summary": "Formatting clean across src/ and tests/."
+            },
+            {
+              "command": "cargo clippy --all-targets -- -D warnings",
+              "exit_code": 0,
+              "summary": "Clippy clean with warnings denied (lib + bins + integration tests)."
+            },
+            {
+              "command": "cargo build",
+              "exit_code": 0,
+              "summary": "Dev build succeeds."
+            },
+            {
+              "command": "cargo test",
+              "exit_code": 0,
+              "summary": "Default sweep green: 36 lib unit tests (incl. 5 new: partition_65_yields_two_bounded_batches, partition_boundaries, ingest_source_ids_skips_manual_and_preserves_order, filter_eligible_dedups_and_preserves_stable_reflection_ids, filter_eligible_empty_existing_keeps_all) + pool_bounds; 5 Postgres-gated integration tests ignored."
+            },
+            {
+              "command": "cargo test --test ingest_batch_it -- --ignored",
+              "exit_code": 0,
+              "summary": "Postgres-gated: bulk_dedup_returns_existing_subset_and_preserves_reflection_ids, batch_upsert_65_via_two_partitions_persists_all (64+1 -> 65 rows), failed_partition_rolls_back_and_does_not_poison_next (wrong-dim batch rolls back atomically; later partition persists) all pass; stable across repeated concurrent runs."
+            },
+            {
+              "command": "cargo test --test recall_it -- --ignored forget_manual",
+              "exit_code": 0,
+              "summary": "Retained single-row `upsert` + `exists_source` still behave (AC1 deletion test passes) — no regression to the kept API."
+            }
+          ],
+          "decisions": [
+            {
+              "what": "Kept `Store::upsert` and `Store::exists_source` public and added new bulk methods alongside them, rather than deleting the single-row API.",
+              "why": "`upsert` is still used by the `remember` MCP tool (server.rs) and `exists_source` by the `forget_manual` integration test; the task only requires removing them from the ingestion loop. Deleting them would widen scope into server.rs."
+            },
+            {
+              "what": "Factored loop logic into pure helpers (`ingest_source_ids`, `filter_eligible`, `partition_ranges`) plus an async `reconcile_root`.",
+              "why": "Makes AC4 batching (65 -> 2 partitions) and stable-id dedup unit-testable without a database or the infinite loop, while keeping scheduler/lifecycle behavior byte-for-byte intact (shutdown checks preserved in the loop wrapper and inside reconcile_root)."
+            },
+            {
+              "what": "`upsert_batch` takes parallel `&[MemoryInput]` + `&[Vec<f32>]` and re-asserts equal length.",
+              "why": "Caller already proves length via `validate_batch_output`; the defensive re-check is cheap and makes misuse fail loudly. Avoids forcing the caller to allocate a zipped slice."
+            },
+            {
+              "what": "Used a server-side `vector(1024)` wrong-dimension insert to force a deterministic transaction failure in the rollback test.",
+              "why": "Production avoids this via `validate_batch_output`, but the store-level transaction must still be all-or-nothing; a wrong dim reliably aborts the multi-row INSERT and proves rollback without abstracting `Store` behind a trait (which would have touched server.rs)."
+            },
+            {
+              "what": "Namespace-prefixed all integration-test ids (`{ns}::{raw}`).",
+              "why": "`memories.id` is a global (non-namespaced) primary key. Generic ids like `pw-1` collided across concurrently-running tests on the PK, producing a flaky 63-vs-65 count; qualifying ids makes tests concurrency-safe against the shared dev DB."
+            }
+          ],
+          "blockers": [],
+          "scope_drift": null,
+          "follow_ups": [
+            "The ignored integration tests in tests/ingest_batch_it.rs need a pgvector Postgres; they are not wired into any CI job. If CI gains a pgvector service, these can run with `--ignored` like recall_it.rs (separate task, not in scope here)."
+          ],
+          "required_main_agent_actions": [],
+          "related_scan": "Verified the only `format!` uses in src/ are non-mutation (lib test helper content strings, ingest.rs stable-id parsing, server.rs mem-id generation) — none build SQL. Confirmed `recall` (store.rs) continues to use static `&'static str` SQL per the existing sqlx-0.9 `SqlSafeStr` constraint; new mutation SQL uses `QueryBuilder` binds only. Confirmed `remember` (server.rs) still uses the retained single-row `upsert` and is unaffected.",
+          "context_update_for_adv": {
+            "what_ads_needs_to_know": "Ingestion path is now batched + transactional. New Store methods `existing_source_ids(ns, ids)` (one static-SQL `source_id = ANY($2)` lookup per root) and `upsert_batch(items, embeddings)` (single `INSERT ... ON CONFLICT (id) DO UPDATE` via `sqlx::QueryBuilder` binds inside a transaction; rolls back atomically on error). `run_ingestion_loop` now does bulk dedup per root, partitions eligible items via a pure `partition_ranges` helper (≤64), and persists each partition transactionally with `continue` + namespace logging on embed/validate/upsert failure. Per-item `exists_source`/`upsert` are retained (still used by `remember`/tests) but are no longer on the ingestion loop. Stable ids incl. `rf:*:kind:index` reflection children preserved verbatim. Scheduler selection/lifecycle and all cooperative-shutdown checks (top-of-pass, between-roots, before-each-batch, cancellation-aware sleep) are unchanged. AC4 + AC7 (test portion) satisfied; C2/C4/DONT3 respected.",
+            "suggested_next_action": "Proceed to the next task. Optionally run the Postgres-gated integration suite (`cargo test --test ingest_batch_it -- --ignored`) in CI where a pgvector DB is available; default `cargo test` is green without a DB."
+          },
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo build"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --test ingest_batch_it -- --ignored"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --test recall_it -- --ignored forget_manual"
+            }
+          ]
+        }
+      ],
+      "verification": "ENGINEER_REPORT records TDD, formatter, clippy, build, default tests, and ignored Postgres batch integration suite passing.",
+      "summary": "Task checkpoint completed",
+      "implementation_summary": "Task checkpoint completed",
+      "filesTouched": [
+        "src/lib.rs",
+        "src/store.rs",
+        "tests/ingest_batch_it.rs"
+      ],
+      "touched_files": [
+        "src/lib.rs",
+        "src/store.rs",
+        "tests/ingest_batch_it.rs"
+      ],
+      "checkpointSha": "b10000d9602ae752302cc99db54d0f44d305ac69",
+      "completedAt": "2026-07-10T17:55:21.562Z",
+      "completed_at": "2026-07-10T17:55:21.562Z"
+    },
+    {
+      "id": "tk-2732986d8239",
+      "title": "Align docs, dependencies, release profile, and CI",
+      "type": "code",
+      "section": "Operational hygiene",
+      "status": "done",
+      "priority": 4,
+      "created_at": "2026-07-10T16:02:18.508Z",
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-4dc6dd1eb05e"
+        }
+      ],
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "delegate_preferred"
+      },
+      "contract_refs": {
+        "implements": [
+          "AC8"
+        ],
+        "respects": [
+          "C1",
+          "C2",
+          "DONT4"
+        ],
+        "not_applicable_reason": "Documentation, dependency manifest, release profile, and CI policy work; no new logic-bearing runtime path."
+      },
+      "evidence_policy": "static_check",
+      "assignedTo": "agent",
+      "started_at": "2026-07-10T17:55:35.785Z",
+      "subagent_reports": [
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 1,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-2732986d8239",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-2732986d8239"
+          },
+          "agent": "adv-engineer",
+          "status": "complete",
+          "files_touched": [
+            "Cargo.toml",
+            "Cargo.lock",
+            "README.md",
+            ".env.example",
+            "docker-compose.yml",
+            ".github/workflows/ci.yml",
+            "deny.toml"
+          ],
+          "verification": [
+            {
+              "command": "cargo fmt --all --check",
+              "exit_code": 0,
+              "summary": "Formatting clean (no diffs)."
+            },
+            {
+              "command": "cargo clippy --all-targets -- -D warnings",
+              "exit_code": 0,
+              "summary": "Clippy clean with warnings as errors after dep removal."
+            },
+            {
+              "command": "cargo build --all-targets --locked",
+              "exit_code": 0,
+              "summary": "Build succeeds with the trimmed dependency set and the regenerated, locked Cargo.lock."
+            },
+            {
+              "command": "cargo test --locked",
+              "exit_code": 0,
+              "summary": "36 unit tests pass, 0 fail; Postgres/model integration tests are #[ignore] by design (3 ingest_batch_it, 2 recall_it); pool_bounds non-DB test passes; main + doctests 0."
+            },
+            {
+              "command": "cargo metadata --locked --no-deps --format-version 1",
+              "exit_code": 0,
+              "summary": "Cargo.toml and Cargo.lock are consistent (--locked accepted); root `episode` deps trimmed to the 12 remaining crates."
+            },
+            {
+              "command": "python3 tomllib load Cargo.toml + deny.toml",
+              "exit_code": 0,
+              "summary": "Both parse; profile.release has opt-level/lto/codegen-units/strip; deny.advisories has db-path/db-urls/vulnerability(=deny)/unmaintained/unsound/yanked/notice; notify/chrono/thiserror confirmed absent from [dependencies]."
+            },
+            {
+              "command": "yq parse .github/workflows/ci.yml",
+              "exit_code": 0,
+              "summary": "YAML valid; existing Format/Clippy/Build/Test steps intact and contiguous; new `Dependency advisories` step uses EmbarkStudios/cargo-deny-action@v2 with rust-version=stable, command=check, command-arguments=advisories, arguments=--locked."
+            }
+          ],
+          "decisions": [
+            {
+              "what": "Removed direct deps `notify`, `chrono`, `thiserror` after a source scan (rg found 0 source references to any of them).",
+              "why": "`notify` is a file-watcher for file-watch ingestion, which is unimplemented (ingestion is a periodic reconcile loop; README already said `currently periodic reconcile`) — crate + inotify subgraph fully removed. `chrono`/`thiserror` are never named in our code; both stay in the graph transitively (sqlx `chrono` feature / rmcp), so dropping the redundant direct edges is behavior-preserving. Proven safe by green fmt/clippy/build --locked/test and lock inspection."
+            },
+            {
+              "what": "Added a measured `[profile.release]`: opt-level=3, lto=\"thin\", codegen-units=1, strip=\"symbols\"; left panic at the default \"unwind\" and overflow-checks at default.",
+              "why": "Pins the perf/size knobs that matter for the single deployed `~/.local/bin/episode` binary while avoiding the much slower fat-LTO build and avoiding any change to unwinding semantics. Explicit/measured rather than maximal/aggressive."
+            },
+            {
+              "what": "Added the advisory gate as `EmbarkStudios/cargo-deny-action@v2` with `command: check`, `command-arguments: advisories`, `arguments: --locked`, `rust-version: stable`, plus a repo-defined `deny.toml` scoped to advisories (vulnerability=deny; unmaintained/unsound/yanked/notice=warn).",
+              "why": "Action input schema and `--locked` common option verified against upstream cargo-deny docs (common options go before the subcommand; `--locked` asserts Cargo.lock is unchanged; `-c` defaults to ./deny.toml). `rust-version: stable` is required because the crate uses edition 2024 (cargo >= 1.85). Scoped to advisories and notices-as-warn so a routine notice cannot retroactively break every build, while real vulnerabilities fail CI. Appended as a new step so fmt/clippy/build/test are unchanged."
+            },
+            {
+              "what": "Corrected `.env.example` to state RUST_LOG is not consulted in v0 (commented the assignment) instead of wiring an EnvFilter in src/main.rs.",
+              "why": "Verified in tracing-subscriber 0.3.23 source that `fmt().init()` uses a fixed default filter (INFO) and only honors RUST_LOG when `.with_env_filter(...)` is set, which main.rs does not. AC8 is a docs-alignment task (`align README/.env docs`) and explicitly says not to add features, so I aligned the doc to actual behavior and flagged EnvFilter wiring as an optional follow-up rather than changing runtime behavior."
+            },
+            {
+              "what": "Fixed the stale `docker-compose.yml` comment from `Port 5433` to `Host port 5434`.",
+              "why": "The actual mapping is `5434:5432`, matching `EPISODE_DATABASE_URL` and the README; the `5433` comment was factually wrong about supported configuration. Config-adjacent, factual, low-risk campsite fix within the docs-alignment scope."
+            }
+          ],
+          "blockers": [],
+          "scope_drift": null,
+          "follow_ups": [
+            "Wire `tracing_subscriber::fmt().with_env_filter(EnvFilter::from_default_env())` in src/main.rs so RUST_LOG is honored (make the documented knob real) — only if runtime log control is desired; currently documented as not-wired.",
+            "First CI run executes the live `cargo deny --locked check advisories` (needs network + RustSec DB); if a current vulnerability exists in the dep tree it will deny by design — triage rather than weakening the gate.",
+            "Stale module doc-comment in src/ingest.rs says the ingestion loop `lives in main.rs` (it lives in lib.rs) — outside AC8 docs scope; minor.",
+            "Optionally pin `EmbarkStudios/cargo-deny-action` to a release SHA (currently floating `@v2` major tag) for stricter supply-chain pinning."
+          ],
+          "required_main_agent_actions": [
+            "After merge/CI, confirm the new `Dependency advisories` step is green; if it denies a current vulnerability, triage the advisory (this is the gate functioning, not a wiring defect). I could not run cargo-deny locally (not installed; requires network + advisory DB)."
+          ],
+          "related_scan": "Scanned src/ and tests/ for each dependency before removal: `rg` confirmed 0 references to `notify`, `chrono` (word), and `thiserror` (and no DateTime/Utc/NaiveDate usage; migration timestamps use server-side now() and are never bound/read as chrono types). Verified post-removal via the lockfile: chrono (1) and thiserror (1) remain as transitive packages, notify (0) and inotify (0) are gone. Docs-wise, swept README/.env/docker-compose for the four AC8 alignment targets (restricted manual hard delete, periodic batching, local-only backend, supported config) and corrected every stale claim; no other doc surfaces assert voyage/file-watch/5433/RUST_LOG behavior.",
+          "context_update_for_adv": {
+            "what_ads_needs_to_know": "AC8 implemented and verified locally as feasible. Docs now match code: `forget` is a restricted hard delete of a `manual` row by id+namespace (structural source='manual'); ingestion is a periodic reconcile loop embedded in bounded batches (INGEST_BATCH_MAX=64), not a file watcher; embedding backend is local-only (`EPISODE_EMBED_BACKEND` accepts only `local`, `voyage` rejected at startup). `.env.example` corrected: RUST_LOG is NOT honored in v0 (fmt subscriber built without EnvFilter, fixed INFO). Removed truly-unused direct deps after a source scan: `notify` (file-watch crate, fully removed incl. inotify subgraph), and the redundant direct edges on `chrono` and `thiserror` (both remain available transitively via sqlx/rmcp, so no functional change). Added a measured `[profile.release]` (opt-level=3, lto=thin, codegen-units=1, strip=symbols; panic/unwind unchanged). Extended CI with a locked advisory check using repo-defined policy (`deny.toml`, advisories-only: vulnerability=deny, notices=warn) + published action `EmbarkStudios/cargo-deny-action@v2` running `cargo deny --locked check advisories` against Cargo.lock; existing fmt/clippy/build/test steps are untouched and still pass. Cargo.lock regenerated and `--locked`-consistent. No commit, no nested agents. Residual: the live advisory verdict requires CI/network (cargo-deny not installed locally), so the first run may surface a real current advisory for triage.",
+            "suggested_next_action": "Review the diff (manifest/lock/docs/CI), then proceed with the change's normal gate flow. On first CI run, watch the new `Dependency advisories` step output; if it denies a current vulnerability, route to remediation (do not weaken the deny.toml gate without evidence). If runtime log control matters, spawn a small follow-up to wire EnvFilter in src/main.rs."
+          },
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt --all --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo build --all-targets --locked"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --locked"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo metadata --locked --no-deps --format-version 1"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: python3 tomllib load Cargo.toml + deny.toml"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: yq parse .github/workflows/ci.yml"
+            }
+          ]
+        }
+      ],
+      "verification": "Installed cargo-deny 0.20.2; corrected deny.toml to supported advisory configuration; cargo deny --locked check advisories passes (run tr_mrf9s1kx_8261c649).",
+      "summary": "Task checkpoint completed",
+      "implementation_summary": "Task checkpoint completed",
+      "filesTouched": [
+        "deny.toml"
+      ],
+      "touched_files": [
+        "deny.toml"
+      ],
+      "checkpointSha": "2daa00fe3190294a9b22d4c15517c7d994fe2681",
+      "completedAt": "2026-07-10T18:29:22.228Z",
+      "completed_at": "2026-07-10T18:29:22.228Z"
+    },
+    {
+      "id": "tk-896bf4f43adb",
+      "title": "Verify resilience contract end to end",
+      "type": "verification",
+      "section": "Verification",
+      "status": "done",
+      "priority": 5,
+      "created_at": "2026-07-10T16:02:30.231Z",
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-2732986d8239"
+        }
+      ],
+      "metadata": {
+        "tdd_intent": "separate_verification",
+        "delegation_hint": "delegate_preferred"
+      },
+      "contract_refs": {
+        "verifies": [
+          "AC1",
+          "AC2",
+          "AC3",
+          "AC4",
+          "AC5",
+          "AC6",
+          "AC7",
+          "AC8"
+        ],
+        "respects": [
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "C5",
+          "DONT1",
+          "DONT2",
+          "DONT3",
+          "DONT4"
+        ]
+      },
+      "evidence_policy": "test",
+      "assignedTo": "agent",
+      "started_at": "2026-07-10T18:16:32.624Z",
+      "verification": "Final verifier passed fmt, clippy, locked build/test, ignored Postgres suites, and cargo deny --locked check advisories (run tr_mrf9s1kx_8261c649).",
+      "summary": "Task checkpoint completed",
+      "implementation_summary": "Task checkpoint completed",
+      "filesTouched": [],
+      "touched_files": [],
+      "checkpointSha": "2daa00fe3190294a9b22d4c15517c7d994fe2681",
+      "completedAt": "2026-07-10T18:29:44.443Z",
+      "completed_at": "2026-07-10T18:29:44.443Z",
+      "subagent_reports": [
+        {
+          "schema_version": "1.0",
+          "change_id": "improveEpisodeResilience",
+          "attempt": 1,
+          "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+          "task_id": "tk-896bf4f43adb",
+          "scope": {
+            "kind": "task",
+            "task_id": "tk-896bf4f43adb"
+          },
+          "agent": "adv-reviewer",
+          "phase": "review",
+          "verdict": "READY",
+          "blocking_findings": [],
+          "nonblocking_findings": [],
+          "changes_made": [],
+          "wisdom_candidates": [],
+          "verification": {
+            "tests_run": [
+              "cargo fmt --all --check",
+              "cargo clippy --all-targets -- -D warnings",
+              "cargo build --all-targets --locked",
+              "cargo test --locked",
+              "cargo deny --locked check advisories",
+              "cargo test --locked --test recall_it forget_manual_enforces_namespace_and_manual_source -- --ignored --nocapture",
+              "cargo test --locked --test ingest_batch_it -- --ignored --nocapture"
+            ],
+            "results": "pass",
+            "evidence": "All targeted checks passed. Default tests: 36 unit tests + pool_bounds passed, ignored DB tests skipped as expected in default sweep. Explicit DB integration checks passed using existing healthy episode-db on localhost:5434: forget_manual namespace/source behavior 1/1, ingest_batch_it 3/3. cargo-deny advisories passed with --locked. format/clippy/build passed."
+          },
+          "scope_drift": null,
+          "risks": [
+            "Did not run full embed_store_recall_ranks_semantically ignored test because it downloads/uses the real embedding model and was outside the resilience acceptance checks reviewed here.",
+            "A first docker compose up attempt in the ADV worktree hit an existing global episode-db container_name conflict; no repo files changed, and the transient network/volume created by that failed attempt were removed before report submission."
+          ],
+          "required_main_agent_actions": [],
+          "consumer_warnings": [
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo fmt --all --check"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo build --all-targets --locked"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --locked"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --locked --test recall_it forget_manual_enforces_namespace_and_manual_source -- --ignored --nocapture"
+            },
+            {
+              "kind": "verification_missing",
+              "message": "No adv_run_test evidence found for reported command: cargo test --locked --test ingest_batch_it -- --ignored --nocapture"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:episode-resilience-discovery"
+      },
+      "agent": "adv-researcher",
+      "topic": "Episode resilience: sqlx pool lifecycle, Tokio graceful cancellation + bounded concurrency, fastembed batch API — discovery opportunity scout + architecture validation",
+      "sources": [
+        {
+          "label": "SQLx PoolOptions (docs.rs, canonical)",
+          "locator": "https://docs.rs/sqlx/latest/sqlx/pool/struct.PoolOptions.html",
+          "summary": "acquire_timeout caps total Pool::acquire() wait across semaphore+liveness-test+connect phases; test_before_acquire defaults true (pings idle conn, can disable + use before_acquire for age-gated ping); max_lifetime non-infinite recommended (retire conns to let PG clean parse trees/caches); idle_timeout closes idle conns; min_connections warms pool and is best-effort with a deadline. connect() opens at least max(1,min_connections)."
+        },
+        {
+          "label": "SQLx PgPoolOptions (docs.rs)",
+          "locator": "https://docs.rs/sqlx/latest/sqlx/postgres/type.PgPoolOptions.html",
+          "summary": "new() = sane light-duty default; production should set max_connections. acquire_slow_threshold/acquire_time_level give pool-acquire observability without code changes."
+        },
+        {
+          "label": "fastembed-rs TextEmbedding::embed API reference",
+          "locator": "https://github.com/anush008/fastembed-rs/blob/main/_autodocs/api-reference/text-embedding.md",
+          "summary": "embed(texts, batch_size: Option<usize>) takes a batch and returns Vec<Embedding>; default batch size 256; tokenization is parallelized across inputs internally. Current per-item embed_one loop defeats built-in batching + internal parallelism."
+        },
+        {
+          "label": "Tokio JoinHandle::abort / AbortHandle (docs.rs)",
+          "locator": "https://docs.rs/tokio/latest/tokio/task/struct.JoinHandle.html",
+          "summary": "abort() cancels an async task (cancellation may lag; is_finished can be false post-abort). CRITICAL: spawn_blocking tasks (the fastembed embed call) CANNOT be aborted — abort is a no-op once running. Graceful shutdown must be cooperative for the ingestion worker, not abort-based."
+        },
+        {
+          "label": "Tokio select! cancellation safety (docs.rs)",
+          "locator": "https://docs.rs/tokio/latest/tokio/macro.select.html",
+          "summary": "select! in a loop requires cancel-safe branches; dropping an unfinished future must be a no-op. Recommended graceful-shutdown shape: select! { _ = shutdown.cancelled/changed() => break, _ = tick/work => {} }."
+        }
+      ],
+      "architecture_assessment": "Proposal scope is well-aligned with canonical Rust/Tokio/SQLx best practice; deviations are all in the CURRENT code, not the proposed direction. (1) store.rs connect() uses only max_connections — no acquire_timeout/idle_timeout/max_lifetime/min_connections, so 'bounded pool lifecycle' is a real, doc-backed gap; note SQLx already defaults acquire_timeout (~30s) and test_before_acquire=true, so bounding is about making limits explicit + adding retirement, not fixing an unbounded-hang. (2) embed.rs Mutex<TextEmbedding> serializes recall/remember/ingest, and lib.rs run_ingestion_loop calls embed_one per item inside spawn_blocking — double anti-pattern: it discards fastembed's native batch API (batch_size default 256) AND its internal tokenization parallelism, and holds the single embedder mutex once per item, maximally starving interactive recall. Batching ingestion into one embed(Vec<String>) call per flush is the by-the-book fix. (3) lib.rs spawns the ingestion loop detached (tokio::spawn, handle dropped) with no shutdown ownership; graceful cancellation is doc-supported but has a sharp edge: the embed step runs in spawn_blocking which JoinHandle::abort CANNOT stop — shutdown MUST be cooperative (check a cancellation signal between batches / via select!), not abort-based. tokio-util (CancellationToken) is NOT currently a dependency; a watch/Notify-based signal avoids adding a dep, or add tokio-util deliberately. (4) config.rs silently falls back on every invalid value (pool_size, interval) and silently drops malformed EPISODE_PROJECT_ROOTS entries (split_once('=') -> None -> filtered) — matches the 'deterministic validation + report rejected entries' scope; boring fix is typed parse returning Result with per-entry diagnostics.",
+      "validation": {
+        "status": "pass",
+        "blockers": [],
+        "notes": "Proposed direction is validated against canonical docs for all three researched surfaces. No blockers. Edge cases the design phase must pin down, not blockers: (a) spawn_blocking is un-abortable => cooperative shutdown only; (b) fastembed batch embed keeps ordering (Vec<Embedding> 1:1 with inputs) so batch upsert can zip inputs+embeddings — verify empty-batch and dim-check paths; (c) bounding recall/ingest contention should prefer a SEPARATE embedder instance or a bounded worker for ingestion rather than sharing the one recall-serving mutex, else batching still blocks recall during a large flush; (d) namespace-required manual-only forget is a store-layer predicate change (DELETE ... WHERE id=$1 AND namespace=$2 AND source='manual') — structurally correct per P33, keep it in SQL not app logic."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "low",
+        "tradeoffs": [
+          "Explicit pool limits (acquire_timeout/idle_timeout/max_lifetime/min_connections) add config surface + env docs but make failure modes deterministic and observable; SQLx already applies sane defaults so under-tuning is safe.",
+          "Batching ingestion embeds (one embed() per flush) massively cuts per-item mutex churn and model-call overhead, but a very large single batch increases peak memory and one long blocking call; mitigate with a bounded flush size (not the full backlog) rather than default 256-cap reliance.",
+          "Cooperative graceful shutdown (watch/Notify/select! or tokio-util CancellationToken) adds a small amount of lifecycle plumbing but is the only correct option because the embed step is spawn_blocking and cannot be aborted.",
+          "Separating the ingestion embedder from the recall embedder removes recall starvation but doubles model memory (~one extra BGE-large instance); a bounded single-worker ingest queue is the lighter-weight alternative that keeps one model."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Keep abort()-based shutdown on the ingestion JoinHandle",
+            "disposition": "rejected",
+            "rationale": "JoinHandle::abort is a no-op on the running spawn_blocking embed task (Tokio docs); it cannot guarantee clean shutdown and risks tearing down mid-DB-write. Cooperative cancellation between batches is required."
+          },
+          {
+            "option": "Keep per-item embed_one loop but drop the mutex hold time",
+            "disposition": "rejected",
+            "rationale": "Defeats fastembed's native batch API + internal tokenization parallelism (batch_size default 256); batch embed per flush is both simpler and faster and is the documented usage."
+          },
+          {
+            "option": "Add tokio-util CancellationToken dependency for shutdown",
+            "disposition": "deferred",
+            "rationale": "Idiomatic and clean, but tokio-util is not yet a dep; a tokio::sync::watch or Notify signal already in-tree achieves cooperative cancellation with zero new deps. Design phase should pick one explicitly — either is acceptable; avoid inventing an ad-hoc AtomicBool poll."
+          },
+          {
+            "option": "Enforce namespace/manual-only forget in application code",
+            "disposition": "rejected",
+            "rationale": "P33 structural-correctness: encode the constraint in the DELETE predicate (id + namespace + source='manual') so ingested rows are undeletable via the tool regardless of caller, not via a Rust guard that can be bypassed."
+          }
+        ],
+        "recommendation": "Proceed to design. Anchor design on: (1) explicit PgPoolOptions bounds (acquire_timeout, idle_timeout, max_lifetime, optional min_connections) with values surfaced as documented env vars; (2) batch ingestion via one fastembed embed(Vec<String>) per bounded flush + batch upsert (zip inputs:embeddings, ordering guaranteed), and isolate ingestion embedding from recall (bounded ingest worker or separate embedder) so recall is not starved; (3) cooperative graceful shutdown for the owned ingestion task using an in-tree watch/Notify signal + select! (NOT abort — embed is spawn_blocking); (4) typed config validation returning Result with per-entry rejected-root diagnostics; (5) store-layer namespace-required, source='manual' forget predicate. All five are boring, doc-backed, and structurally enforced."
+      },
+      "recommendation": "Proceed to design with the five anchors above. No architectural blockers; the proposed direction matches canonical SQLx/Tokio/fastembed usage. The single sharpest edge to encode explicitly in design.md: ingestion embedding runs in spawn_blocking and is un-abortable, so shutdown must be cooperative and recall/ingest isolation must be real (separate embedder or bounded worker) not just batched.",
+      "follow_ups": [
+        "Design must decide tokio-util CancellationToken vs in-tree watch/Notify for shutdown signalling.",
+        "Design must set a bounded ingest flush size rather than relying on fastembed's 256 default to cap peak memory.",
+        "Cargo.toml dependency hygiene: proposal claims unused deps (e.g. notify present but ingestion loop is interval-poll, not notify-driven) + Voyage backend advertised-but-unimplemented — verify and reconcile capability signaling in a design task."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-validator"
+      },
+      "agent": "adv-researcher",
+      "topic": "Independent design validation: Improve Episode resilience",
+      "sources": [
+        {
+          "label": "Tokio spawn_blocking docs (1.49.0)",
+          "locator": "https://docs.rs/tokio/1.49.0/tokio/task/fn.spawn_blocking.html",
+          "summary": "Verbatim: tasks spawned via spawn_blocking cannot be aborted once running; runtime shutdown waits indefinitely for started blocking tasks. Confirms design's rejection of JoinHandle::abort and cooperative watch+select! shutdown (C5, AC6)."
+        },
+        {
+          "label": "Tokio JoinHandle::abort / AbortHandle docs",
+          "locator": "https://docs.rs/tokio/1.49.0/tokio/task/struct.AbortHandle.html",
+          "summary": "abort on a running spawn_blocking task has no effect (only prevents a still-queued task from starting). Validates cooperative cancellation before each batch as the only correct mechanism."
+        },
+        {
+          "label": "SQLx PgPoolOptions docs",
+          "locator": "https://docs.rs/sqlx/latest/sqlx/postgres/type.PgPoolOptions.html",
+          "summary": "PgPoolOptions = PoolOptions<Postgres>; supports acquire_timeout, max_lifetime, idle_timeout, max_connections, test_before_acquire (default true). acquire_timeout caps total wait across semaphore + connection testing + new-connection establishment. Confirms AC3 pool bounds feasible; unavailable DB fails within acquire limit when acquiring lazily."
+        },
+        {
+          "label": "SQLx test_before_acquire / max_lifetime docs",
+          "locator": "https://docs.rs/sqlx/latest/sqlx/any/type.AnyPoolOptions.html",
+          "summary": "test_before_acquire defaults true (Connection::ping); max_lifetime retires connections. Design 'keep connection testing enabled' relies on this default; recommend making it explicit."
+        },
+        {
+          "label": "FastEmbed-rs TextEmbedding::embed docs",
+          "locator": "https://github.com/anush008/fastembed-rs/blob/main/_autodocs/api-reference/text-embedding.md",
+          "summary": "embed(texts, batch_size) -> Vec<Embedding> returns one vector per input in input order; batch_size 0 errors. Confirms scheduler zip(input,output) stable-order and 64-item cap feasible against existing Embedder::embed(&[String]) trait with no new API."
+        },
+        {
+          "label": "Repo source: src/store.rs forget + sqlx SqlSafeStr note",
+          "locator": "/home/jon/dev/episode/src/store.rs:124-130,76-79",
+          "summary": "Current forget(id) is DELETE WHERE id=$1 (no namespace/source guard) confirms the AC1 gap. sqlx 0.9 rejects dynamic String SQL (SqlSafeStr), so bulk upsert must use bound static statements in a transaction, not format!."
+        },
+        {
+          "label": "Repo source: src/lib.rs detached ingestion + per-item loop",
+          "locator": "/home/jon/dev/episode/src/lib.rs:44-58,85-122",
+          "summary": "Ingestion task is tokio::spawn detached, no JoinHandle/shutdown; loop does per-item exists_source + spawn_blocking embed + upsert (unbounded). Confirms AC4/AC5/AC6 targets and that batched scheduler is a real structural improvement."
+        },
+        {
+          "label": "Repo source: src/config.rs silent fallbacks",
+          "locator": "/home/jon/dev/episode/src/config.rs:38-73",
+          "summary": "pool_size/interval use unwrap_or defaults; unknown EPISODE_EMBED_BACKEND falls through to Local; project-root pairs silently filter_map-drop malformed entries. Confirms DONT2 violations AC2 fixes."
+        },
+        {
+          "label": "Repo: Cargo.toml + grep(notify|thiserror)",
+          "locator": "/home/jon/dev/episode/Cargo.toml:11,17",
+          "summary": "notify and thiserror declared but zero src/ references. Confirms AC8 dead-dependency removal is accurate."
+        },
+        {
+          "label": "Repo: README.md + .env.example advertising",
+          "locator": "/home/jon/dev/episode/README.md:26,37,52 ; /home/jon/dev/episode/.env.example:10-14",
+          "summary": "README calls forget 'Soft-remove', diagram says '.adv/*.jsonl watcher' (actually periodic), README+.env advertise voyage as valid though lib.rs bails at runtime. Confirms AC8 doc fixes and rejected 'leave Voyage selectable'."
+        },
+        {
+          "label": "Repo: absence of .github/workflows",
+          "locator": "/home/jon/dev/episode/.github (not found); docker-compose.yml only",
+          "summary": "No CI workflow exists. AC8 'CI includes dependency advisory checking' requires CREATING CI (fmt/clippy/build/test + advisory), not amending an existing pipeline. Design 'retain fmt/clippy/build/test' understates that the pipeline must be authored."
+        }
+      ],
+      "architecture_assessment": "Boring, structurally-correct hardening of an existing single-model local MCP server, well-matched to verified library behavior. (1) Protected deletion collapses to one SQL predicate (DELETE ... AND namespace=$2 AND source='manual') returning rows_affected fully structural (P33), satisfies C3/DONT1; every AC1 case (wrong namespace, ingested source, unknown id, repeat) deterministically yields removed:0. (2) Strict config parsing replacing unwrap_or/filter_map silent fallbacks discharges AC2/DONT2. (3) SQLx pool bounds are all real PgPoolOptions methods. (4/5) Single-model bounded priority scheduler (64-item batches, biased select draining interactive work before next ingest batch, one active spawn_blocking job) keeps one model instance (C4) while bounding peak memory and preserving recall fairness; FastEmbed order-preserving batch embed makes the zip/validate persistence path sound. (6) Cooperative watch+select! shutdown is doc-mandated, not preference Tokio confirms spawn_blocking cannot be aborted, so JoinHandle::abort is genuinely unavailable; rejected-alternatives table is doc-accurate. (7/8) Dead-dep removal and doc corrections match repo reality. No contract compromise: every AC/constraint/avoidance maps to a concrete mechanism; no export/UI/multi-tenant-auth scope creep (respects C1, DONT4). Residual risks are verifiability seams, not architecture defects: AC5 and AC3 are timing/lifecycle properties whose tests are deterministic only if the design exposes the needed seams an observable scheduler execution-order hook for AC5, and lazy pool acquisition (connect_lazy + acquire) so failure surfaces through acquire_timeout for AC3.",
+      "validation": {
+        "status": "caution",
+        "blockers": [],
+        "notes": "PASS on architecture and contract fidelity; CAUTION on three verifiability/spec-precision gaps to resolve in planning so AC7 tests are deterministic: (a) AC5 fairness needs an explicit observability seam (recorded job execution order or test-visible scheduler hook) otherwise the 'recall selected before next ingest batch' test is racy. (b) AC3 'acquisition error within the configured acquire limit' is only reliably provable with lazy acquisition (connect_lazy + acquire); current connect() eagerly opens a connection and fails at pool build, not via acquire_timeout. (c) AC8/AC7 'CI retains fmt/clippy/build/test' understates that NO .github/workflows exists CI must be authored, with the advisory tool (cargo-audit vs cargo-deny) and lockfile-locked invocation named. Minor: make test_before_acquire=true explicit; bulk dedup/upsert must use bound static SQL in a transaction (sqlx 0.9 SqlSafeStr); confirm exploded plane-2 reflection children yield stable source_ids for bulk exists."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "medium",
+        "tradeoffs": [
+          "Single-model biased scheduler bounds memory and preserves recall fairness (C4) but serializes embedding through one active spawn_blocking job, so a full 64-item ingest batch can add one batch of head-of-line latency to a queued recall bounded by the 64 cap but a real latency-vs-memory tradeoff.",
+          "Cooperative-only shutdown (no abort) means teardown may wait for an in-flight spawn_blocking inference to finish; unavoidable per Tokio semantics, trading bounded shutdown latency for correctness.",
+          "SQL-predicate-only deletion (no pre-read) is structurally strongest and matches C3, but yields removed:0 indistinguishably for wrong-namespace, protected-source, and unknown-id acceptable per AC1 (all four intended to return removed:0) but gives callers no diagnostic distinction.",
+          "Transaction-per-partition upsert isolates failures (batch reappears next reconcile) but makes partial progress the normal case, so tests must assert eventual not single-pass convergence.",
+          "Strict fail-fast config improves determinism (AC2/DONT2) but is a breaking change for any deployment relying on silent fallback mitigated by documenting exact accepted values, but the existing Vision environment must be validated."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "App-layer source/namespace check before delete",
+            "disposition": "rejected",
+            "rationale": "Heuristic/app-layer guard is weaker than a SQL predicate and violates C3/DONT1 (P33). SQL-predicate choice is correct."
+          },
+          {
+            "option": "JoinHandle::abort for ingestion shutdown",
+            "disposition": "rejected",
+            "rationale": "Tokio docs confirm spawn_blocking cannot be aborted once running; abort is a no-op on active inference. Cooperative watch+select! is the only correct mechanism (C5, AC6)."
+          },
+          {
+            "option": "Second BGE model instance for ingestion vs interactive",
+            "disposition": "rejected",
+            "rationale": "Doubles model memory; contradicts C4. Bounded biased scheduler achieves fairness without the memory cost."
+          },
+          {
+            "option": "Unbounded / default-256 ingestion batch",
+            "disposition": "rejected",
+            "rationale": "Weak peak-memory and fairness control; violates DONT3. 64-item cap gives a deterministic fairness boundary."
+          },
+          {
+            "option": "Keep Voyage selectable",
+            "disposition": "rejected",
+            "rationale": "Advertises unavailable behavior (lib.rs bails at runtime); strict enum failing on voyage/unknown is more honest and satisfies AC2 + doc-accuracy AC8."
+          },
+          {
+            "option": "Eager pool connect() (status quo) for AC3",
+            "disposition": "deferred",
+            "rationale": "Eager connect surfaces DB-unavailable at pool-build, not via acquire_timeout. For AC3 to be objectively testable, prefer lazy acquisition (connect_lazy + acquire) or restate the measured surface."
+          }
+        ],
+        "recommendation": "Proceed to planning (PASS on architecture; no contract compromise). Before planning-gate approval, tighten three verifiability seams so AC7 tests are deterministic: (1) specify an observable scheduler execution-order hook for AC5; (2) specify lazy pool acquisition (connect_lazy + acquire) or restate AC3's measured surface; (3) scope AC8 as authoring a new .github CI workflow (fmt+clippy+build+test + a named, lockfile-locked advisory tool such as cargo-deny or cargo-audit). Also make test_before_acquire=true explicit, use bound static SQL in a transaction for bulk upsert, and confirm exploded reflection child source_ids remain stable for bulk dedup."
+      },
+      "recommendation": "CAUTION (proceed with fixes). Architecturally sound, boring in the right ways, doc-backed on its two novel claims (spawn_blocking non-abortability; SQLx pool bounds), free of contract compromise or scope creep. Advance to planning after resolving three testability/spec-precision gaps (AC5 observability seam, AC3 lazy-acquire measured surface, AC8 CI-must-be-authored + named advisory tool) plus minor bulk-SQL and explicit-test_before_acquire notes.",
+      "follow_ups": [
+        "Planning: define the scheduler's test-observable execution-order seam for AC5 (ordered event log or injected recorder) so recall-before-next-ingest-batch is asserted deterministically, not via sleep/race.",
+        "Planning: choose connect_lazy + acquire for the AC3 test path (or restate AC3's measured surface) so 'acquisition error within acquire limit' is exercised through acquire_timeout rather than eager pool build.",
+        "Planning: AC8 requires creating .github/workflows CI (none exists today); name the advisory tool (cargo-deny or cargo-audit) and pin a locked invocation.",
+        "Execution: bulk dedup should use WHERE namespace=$1 AND source_id = ANY($2) (mirrors existing recall ANY pattern); bulk upsert must use bound static statements inside a transaction (sqlx 0.9 SqlSafeStr).",
+        "Execution: make PgPoolOptions.test_before_acquire(true) explicit rather than relying on the default; confirm exploded plane-2 reflection child rows expose stable source_ids for the bulk exists query."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-5724ed81c6dc",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-5724ed81c6dc"
+      },
+      "agent": "adv-engineer",
+      "status": "complete",
+      "files_touched": [
+        "src/config.rs",
+        "src/store.rs",
+        ".env.example",
+        "tests/pool_bounds.rs"
+      ],
+      "verification": [
+        {
+          "command": "CARGO_BUILD_JOBS=4 cargo test --lib config::tests (RED, before strict validation)",
+          "exit_code": 1,
+          "summary": "RED: 10 strict-validation tests failed under the previous permissive parsing (zero/invalid pool, zero/invalid interval, unknown backend, voyage unsupported, malformed/empty/empty-ns/empty-path roots); 5 passed. Confirms AC2 behavior was missing."
+        },
+        {
+          "command": "CARGO_BUILD_JOBS=4 cargo test --test pool_bounds (RED, before pool bounds)",
+          "exit_code": 1,
+          "summary": "RED: unavailable_db_errors_within_acquire_bound hung the full 20.00s safety timeout (Elapsed) under sqlx's 30s default acquire_timeout — acquire bound not enforced."
+        },
+        {
+          "command": "CARGO_BUILD_JOBS=4 cargo test (GREEN, after implementation)",
+          "exit_code": 0,
+          "summary": "GREEN: 20 lib unit tests passed (15 config incl. all AC2 cases, 2 store pool-options pinning, 3 pre-existing ingest); tests/pool_bounds.rs passed in 5.00s (acquisition error within the 5s bound); recall_it remains ignored (needs DB/model); doctests 0."
+        },
+        {
+          "command": "cargo fmt --check",
+          "exit_code": 0,
+          "summary": "Formatting clean across touched files."
+        },
+        {
+          "command": "CARGO_BUILD_JOBS=4 cargo clippy --tests -j 4 -- -D warnings",
+          "exit_code": 0,
+          "summary": "Clippy clean with -D warnings (removed an unused test helper that tripped dead_code)."
+        }
+      ],
+      "decisions": [
+        {
+          "what": "Factored Config::from_env to delegate to a pure internal from_vars(iter) and unit-tested through it.",
+          "why": "Rust 2024 marks std::env set_var/remove_var unsafe; a pure seam gives deterministic, parallel-safe tests with no env mutation and no unsafe blocks (P33)."
+        },
+        {
+          "what": "Pinned explicit pool constants (5s acquire, 10m idle, 30m max lifetime, test_before_acquire(true)) in a pub(crate) pool_options() builder instead of relying on sqlx defaults.",
+          "why": "AC3 requires finite, explicit bounds; pinning them means a sqlx upgrade cannot silently change pool semantics, and the pure builder is unit-testable without a database."
+        },
+        {
+          "what": "Proved the acquire bound with a never-accepting localhost TcpListener wrapped in a 20s tokio::time::timeout safety net.",
+          "why": "The kernel completes the TCP handshake (backlog) but the PostgreSQL handshake never answers, so the client hangs inside connection establishment — exactly what acquire_timeout bounds — fully deterministic and DB-free. It drove the real eager connect+migrate path and returned an acquisition error in 5.00s."
+        },
+        {
+          "what": "Left the EmbedBackend::Voyage variant and the lib.rs match arm in place; config rejects 'voyage' at validation.",
+          "why": "lib.rs is outside this task's allowed file set (deletion/docs belong to other tasks); rejecting at validation satisfies AC2 without expanding scope. The now-unreachable arm is surfaced as a follow-up."
+        },
+        {
+          "what": "Kept documented defaults for ABSENT optional vars while making PRESENT-but-invalid values error.",
+          "why": "DONT2 forbids silent correction of invalid input, not documented defaults for unset vars; this preserves backward-compatible startup for the common case while eliminating the silent fallback."
+        }
+      ],
+      "blockers": [],
+      "scope_drift": null,
+      "follow_ups": [
+        "lib.rs `EmbedBackend::Voyage => anyhow::bail!(...)` arm is now unreachable via the env path (config rejects 'voyage' at validation); safe to collapse/simplify when lib.rs is in scope — not this task.",
+        "README documentation of the local-only backend and validation behavior is owned by AC8 task tk-2732986d8239 (out of scope here); only .env.example was updated in this task."
+      ],
+      "required_main_agent_actions": [],
+      "related_scan": "Grep'd all call sites of Config::from_env, EmbedBackend, pool_size, ingest_interval_secs, and Store::forget. from_env has a single caller (lib.rs::run) which now correctly fails fast on invalid config. Store::forget (server.rs:131, tests/recall_it.rs) is owned by AC1 task tk-252520f7698a and was left untouched. No same-pattern validation gaps remained in the touched config/pool surfaces after the fix.",
+      "context_update_for_adv": {
+        "what_ads_needs_to_know": "AC2 + AC3 done within scope. Config::from_env now validates strictly via an internal pure from_vars seam: invalid/zero EPISODE_DB_POOL_SIZE and EPISODE_INGEST_INTERVAL_SECS, unknown/unsupported EPISODE_EMBED_BACKEND (only 'local' accepted; 'voyage' rejected as unsupported), and malformed/empty EPISODE_PROJECT_ROOTS entries all fail with the variable name + offending value + expected form; documented defaults still apply for absent vars; local backend retained. Store::connect now builds the pool through pool_options() with pinned constants (acquire 5s, idle 10m, max lifetime 30m, test_before_acquire(true), configured max_connections) and still runs eager sqlx::migrate!. Deterministic unavailable-DB proof: a hung-listener endpoint returns a pool acquisition error in 5.00s (RED was a 20.00s safety-timeout hang under the sqlx 30s default). fmt --check clean; clippy --tests -D warnings clean; cargo test: 20 lib unit tests pass, pool_bounds integration passes, recall_it stays ignored. Note: adv_run_test returned a service error ('Failed to query Workflow'), so RED/GREEN evidence was captured via direct cargo runs and recorded in `verification` rather than through the ADV evidence tool. Only the four allowed surfaces were touched: src/config.rs, src/store.rs, .env.example, tests/pool_bounds.rs.",
+        "suggested_next_action": "Config validation (AC2) and SQLx pool bounds (AC3) are implemented and verified. Unblock and delegate the dependent deletion task tk-252520f7698a (AC1 forget_manual) next; full-gate fmt/clippy/build/test remains owned by verification task tk-896bf4f43adb."
+      },
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo test --lib config::tests (RED, before strict validation)"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo test --test pool_bounds (RED, before pool bounds)"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo test (GREEN, after implementation)"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: CARGO_BUILD_JOBS=4 cargo clippy --tests -j 4 -- -D warnings"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-252520f7698a",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-252520f7698a"
+      },
+      "agent": "adv-engineer",
+      "status": "complete",
+      "files_touched": [
+        "src/store.rs",
+        "src/server.rs",
+        "tests/recall_it.rs",
+        "README.md"
+      ],
+      "verification": [
+        {
+          "command": "cargo check --tests  # RED (pre-implementation): 5× E0599 no method named `forget_manual` found for struct `Store` — required API absent",
+          "exit_code": 101,
+          "summary": "RED confirmed: forget_manual API/behavior absent before implementation (compile failed on the new test)."
+        },
+        {
+          "command": "cargo test --test recall_it -- --ignored --nocapture forget_manual_enforces_namespace_and_manual_source",
+          "exit_code": 0,
+          "summary": "GREEN: DB-backed deletion test passed — wrong namespace→0, ingested source→0, unknown id→0, matching manual→1, repeated delete→0, and the ingested row survived. (adv_run_test runId tr_mrf68f34_499d9412)"
+        },
+        {
+          "command": "cargo fmt --check",
+          "exit_code": 0,
+          "summary": "Format clean. (adv_run_test runId tr_mrf68o41_e4cc203f)"
+        },
+        {
+          "command": "cargo clippy --all-targets -- -D warnings",
+          "exit_code": 0,
+          "summary": "Clippy clean with warnings as errors. (adv_run_test runId tr_mrf68vhy_57db0443)"
+        },
+        {
+          "command": "cargo build",
+          "exit_code": 0,
+          "summary": "Binary/library build clean."
+        },
+        {
+          "command": "cargo test",
+          "exit_code": 0,
+          "summary": "Default sweep green: 20 unit tests + tests/pool_bounds.rs pass; the two tests/recall_it.rs tests are #[ignore] (require Postgres)."
+        }
+      ],
+      "decisions": [
+        {
+          "what": "Enforced deletion with a single static SQL statement carrying three predicates (`id`, `namespace`, `source = 'manual'`).",
+          "why": "The predicate set is fixed (no dynamic columns), so a literal query is the simplest structural enforcement and satisfies C3/DONT1 without any pre-read or app-layer branch."
+        },
+        {
+          "what": "Made `ForgetParams.namespace` a bare required `String` (no `Option`, no `#[serde(default)]`).",
+          "why": "Makes `namespace` required at both the rmcp JSON-schema layer and serde deserialization, so 'forget requires namespace' is structural rather than a runtime guard."
+        },
+        {
+          "what": "Marked the new deletion test `#[ignore = \"requires Postgres\"]` and seeded rows with a zero vector of `EMBEDDING_DIM` via `store.upsert`.",
+          "why": "Keeps the default `cargo test` sweep DB-free (consistent with the existing integration test) while still running under `--ignored` against the dev DB; the zero vector avoids downloading the embedding model because the deletion predicate is model-independent."
+        },
+        {
+          "what": "Used a separate raw-sqlx pool in the test for cleanup, scoped to the test's unique namespace.",
+          "why": "Avoids adding a test-only method to the production `Store`; the unique namespace makes leftovers non-colliding even if cleanup fails."
+        }
+      ],
+      "blockers": [],
+      "scope_drift": null,
+      "follow_ups": [],
+      "required_main_agent_actions": [],
+      "related_scan": "Confirmed the only callers of the old `Store::forget` were the server handler and the two cleanup sites in tests/recall_it.rs; all updated to `forget_manual`. The remaining `soft-deleted` string in src/ingest.rs (lines 55/67) describes ADV source-entry supersession during ingestion input filtering — unrelated to the `forget` MCP tool and out of scope; left untouched.",
+      "context_update_for_adv": {
+        "what_ads_needs_to_know": "AC1 implemented and DB-verified for tk-252520f7698a. `Store::forget(id)` removed; new `Store::forget_manual(id, namespace)` runs one SQL statement `DELETE FROM memories WHERE id = $1 AND namespace = $2 AND source = 'manual'` and returns rows_affected (0/1) — structural enforcement (C3) with no pre-read and no app-layer source check (DONT1). `ForgetParams.namespace` is now a required String (schema + deserialization). README forget-tool row updated to 'Restricted hard deletion'. TDD: RED = 5× E0599 forget_manual missing; GREEN = DB-backed test passes. fmt --check, clippy --all-targets -D warnings, cargo build, and the default cargo test sweep all exit 0.",
+        "suggested_next_action": "Mark tk-252520f7698a done and proceed to the next ready task. Config validation (AC2), pool bounds (AC3 store side already present), scheduler/batching (AC4/AC5), cooperative shutdown (AC6), and docs/CI/dependency cleanup (AC8) are sibling tasks and were left untouched. When the AC8 docs task runs, the README `forget` row already reads 'restricted hard deletion'."
+      },
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo check --tests  # RED (pre-implementation): 5× E0599 no method named `forget_manual` found for struct `Store` — required API absent"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --test recall_it -- --ignored --nocapture forget_manual_enforces_namespace_and_manual_source"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo build"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-b9e215a63d1a",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-b9e215a63d1a"
+      },
+      "agent": "adv-engineer",
+      "status": "complete",
+      "files_touched": [
+        "src/scheduler.rs",
+        "src/server.rs",
+        "src/lib.rs"
+      ],
+      "verification": [
+        {
+          "command": "cargo build",
+          "exit_code": 0,
+          "summary": "Finished dev profile; scheduler module + rewired server/lib compile clean."
+        },
+        {
+          "command": "cargo fmt -- --check",
+          "exit_code": 0,
+          "summary": "No formatting diffs after cargo fmt."
+        },
+        {
+          "command": "cargo clippy --all-targets -- -D warnings",
+          "exit_code": 0,
+          "summary": "Clippy clean with warnings as errors across all targets."
+        },
+        {
+          "command": "cargo test",
+          "exit_code": 0,
+          "summary": "29 lib tests + 1 pool_bounds integration test pass; 2 recall_it tests ignored (require Postgres + model download)."
+        },
+        {
+          "command": "cargo test --lib scheduler::",
+          "exit_code": 0,
+          "summary": "9 scheduler tests pass: shapes, empty-batch no-op, over-max rejection (AC4), recorder-proven interactive-before-next-ingest order (AC5), recorder-proven cooperative shutdown where active batch finishes and no next batch starts/worker exits (AC6), and batch-output length/dimension validation."
+        }
+      ],
+      "decisions": [
+        {
+          "what": "Owned the single embedder inside the scheduler worker; EpisodeServer and the ingestion loop now hold only a cloneable SchedulerHandle (bounded mpsc senders).",
+          "why": "C4 requires one model instance and bounded scheduling rather than a second BGE model. Constructing LocalEmbedder once and moving it into the worker makes duplication structurally impossible in production."
+        },
+        {
+          "what": "Biased tokio::select! branch order is shutdown -> interactive -> ingest, with a shutdown borrow check also at the top of each loop iteration.",
+          "why": "When not shutting down, a queued interactive (recall/remember) job is always selected before another ingest batch (AC5). Listing shutdown first guarantees that once cancellation is signaled, no further batch is started even if ingest jobs are already queued (AC6)."
+        },
+        {
+          "what": "Worker awaits each spawn_blocking job to completion before selecting the next job (one active job at a time).",
+          "why": "Preserves the one-model memory budget and makes fairness deterministic: an already-queued interactive job wins before the next ingest batch, while active spawn_blocking inference is never aborted (C5 — Tokio cannot cancel it)."
+        },
+        {
+          "what": "Empty and over-max (>64) batches are rejected at the SchedulerHandle before any job is scheduled; the ingestion loop additionally partitions with Vec::chunks(INGEST_BATCH_MAX).",
+          "why": "AC4 requires a defined bounded batch size and that empty batches do not invoke embedding. Handle-level guards make the contract enforceable and directly testable regardless of caller."
+        },
+        {
+          "what": "Added pure validate_batch_output (length + every-vector dimension) in the scheduler module and call it before per-item upsert; on mismatch the batch is skipped with structured namespace/batch context.",
+          "why": "Design §3 batch contract: mismatches fail that batch and leave items eligible for the next reconcile. Placing the validator in the scheduler module keeps the batch contract with the scheduler and makes it unit-testable."
+        },
+        {
+          "what": "Retained per-item exists_source dedup and per-item upsert in run_ingestion_loop instead of switching to bulk.",
+          "why": "Bulk DB dedup/upsert is explicitly owned by the dependent task tk-252520f7698a; this task scopes to the scheduler + lifecycle only. Embedding is now bounded/batched; persistence batching is deferred."
+        },
+        {
+          "what": "Barrier-based recorder tests use #[tokio::test(flavor = \"multi_thread\", worker_threads = 2)].",
+          "why": "They block the test thread on a std::sync::mpsc recv to observe the active embedder. On the default current_thread runtime that single-thread block deadlocked (the worker could not run); multi_thread lets the spawned worker progress on another thread and also better reflects the #[tokio::main] production runtime. Documented inline."
+        }
+      ],
+      "blockers": [],
+      "scope_drift": null,
+      "follow_ups": [
+        "Dependent task tk-252520f7698a: replace per-item exists_source/upsert in run_ingestion_loop with bulk source-id lookup + transactional bounded-batch upsert (static SQL/QueryBuilder). The scheduler already hands it bounded ≤64 batches."
+      ],
+      "required_main_agent_actions": [],
+      "related_scan": "Scanned the whole embedding subsystem for the same pattern (inline spawn_blocking inference, unbounded per-item embedding, discarded ingestion JoinHandle) and migrated every production site: server.rs embed_query (interactive) and lib.rs run_ingestion_loop (ingestion) both now route through the single scheduler. Confirmed via grep that no production code calls embedder.embed/embed_one or spawn_blocking for inference outside src/scheduler.rs, and that no JoinHandle::abort exists anywhere. The only remaining direct LocalEmbedder use is the #[ignore] integration test recall_it.rs, which is out of production scope and was left unchanged.",
+      "context_update_for_adv": {
+        "what_ads_needs_to_know": "Bounded priority embedding scheduler implemented in new src/scheduler.rs and wired into src/server.rs (recall/remember via handle.embed_one) and src/lib.rs (run() owns the in-tree watch shutdown signal + BOTH the ingestion and scheduler-worker JoinHandles and drives cooperative shutdown after stdio; run_ingestion_loop chunks eligible items into ≤64, routes each chunk through handle.embed_batch, validates output length/dims, then keeps the existing per-item dedup/upsert). AC4 (INGEST_BATCH_MAX=64 + over-max rejection + chunking), AC5 (recorder test proves [Ingest, Interactive, Ingest] order), AC6 (recorder test proves active batch finishes, no next batch starts, worker exits) are test-covered; C4/C5 are structural (single LocalEmbedder moved into the scheduler, no second model, no JoinHandle::abort anywhere, all inference funneled through the scheduler's one-job-at-a-time spawn_blocking). Whole crate is green: build, fmt --check, clippy -D warnings, and full test sweep (29 lib + 1 pool_bounds integration pass; 2 recall_it tests remain #[ignore] for Postgres/model).",
+        "suggested_next_action": "Proceed to the dependent persistence task (tk-252520f7698a): replace the retained per-item exists_source/upsert in run_ingestion_loop with a bulk source-id query + transactional bounded-batch upsert. The scheduler already delivers bounded ≤64 embedding batches, so that task only changes persistence, not embedding."
+      },
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo build"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt -- --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --lib scheduler::"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 2,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-b9e215a63d1a",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-b9e215a63d1a"
+      },
+      "agent": "adv-engineer",
+      "status": "complete",
+      "files_touched": [
+        "src/scheduler.rs"
+      ],
+      "verification": [
+        {
+          "command": "cargo test --lib scheduler::",
+          "exit_code": 0,
+          "summary": "11 scheduler tests pass: original 9 plus 2 new regression tests (closed_interactive_does_not_terminate_ingest_queue, closed_ingest_does_not_terminate_interactive_queue)."
+        },
+        {
+          "command": "cargo fmt -- --check",
+          "exit_code": 0,
+          "summary": "No formatting diffs."
+        },
+        {
+          "command": "cargo clippy --all-targets -- -D warnings",
+          "exit_code": 0,
+          "summary": "Clippy clean with warnings as errors."
+        },
+        {
+          "command": "cargo test --lib",
+          "exit_code": 0,
+          "summary": "31 lib tests pass (20 pre-existing + 11 scheduler)."
+        },
+        {
+          "command": "cargo test",
+          "exit_code": 0,
+          "summary": "Full sweep: 31 lib + 1 pool_bounds integration pass; 2 recall_it tests ignored (require Postgres + model)."
+        }
+      ],
+      "decisions": [
+        {
+          "what": "Wrapped each receiver in Option and introduced a Sel enum (Shutdown / InteractiveClosed / IngestClosed / Job); each select arm is guarded by `if <rx>.is_some()`.",
+          "why": "A closed mpsc::Receiver returns None from recv() immediately and is therefore always ready. Leaving it in a biased select either spins or — as in the reported bug — maps to a loop exit that starves/abandons the other queue. The guard removes a closed channel from polling; the worker keeps servicing the open queue and exits only on shutdown or when both are closed. This is the structural fix the review asked for."
+        },
+        {
+          "what": "Added two barrier/yield-driven regression tests (one per channel direction) that drive run_worker directly with separately controlled senders.",
+          "why": "The bug only manifests when one sender class disappears while the other still has work. Dropping one sender in the test reproduces it deterministically: on the old code the surviving queue's job never starts (or its send fails), so the tests fail; on the fixed code they pass. Covering both directions pins the symmetric fix."
+        },
+        {
+          "what": "Used the multi_thread flavor for the new tests (and kept it on the prior barrier tests).",
+          "why": "They block the test thread on a std::sync::mpsc recv / rely on the worker making progress independently; the default current_thread runtime deadlocks, as established in attempt 1."
+        }
+      ],
+      "blockers": [],
+      "scope_drift": null,
+      "follow_ups": [],
+      "required_main_agent_actions": [],
+      "related_scan": "Confirmed both channel arms are handled identically (InteractiveClosed/IngestClosed) and grep-checked the subsystem for any other `select!` + `None => break` pattern: run_worker was the only such site, so no sibling instance remains. AC5 ordering and AC6 shutdown paths were re-run and still pass.",
+      "context_update_for_adv": {
+        "what_ads_needs_to_know": "Review finding fixed structurally in src/scheduler.rs run_worker. Previously each recv() arm mapped None (one sender class dropped) straight to a loop exit, so a closed-but-always-ready channel could terminate the worker and abandon the other queue. Now the receivers are wrapped in Option and a Sel enum distinguishes Shutdown / InteractiveClosed / IngestClosed / Job; each select arm is guarded by `if <rx>.is_some()` so a closed channel is removed from polling instead of being treated as work. The worker continues servicing the surviving queue and exits ONLY on shutdown or when BOTH queues are closed. AC5 fairness is unchanged (interactive still preferred while both are open) and AC6 shutdown behavior is unchanged. Added two deterministic regression tests that fail on the old mapping and pass now: closed_interactive_does_not_terminate_ingest_queue (barrier-held active ingest job1 + queued job2, drop interactive, assert job2 still starts/completes) and closed_ingest_does_not_terminate_interactive_queue (close ingest while interactive empty, then assert a later interactive job is still serviced). Whole crate green: fmt --check clean, clippy --all-targets -D warnings clean, build clean, 31 lib tests + 1 pool_bounds integration pass (2 recall_it still #[ignore]).",
+        "suggested_next_action": "Continue to the dependent persistence task (tk-252520f7698a) for bulk dedup/upsert; the scheduler fix is isolated to run_worker and does not change the public handle API or the ingestion loop."
+      },
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --lib scheduler::"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt -- --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --lib"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-4dc6dd1eb05e",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-4dc6dd1eb05e"
+      },
+      "agent": "adv-engineer",
+      "status": "complete",
+      "files_touched": [
+        "src/store.rs",
+        "src/lib.rs",
+        "tests/ingest_batch_it.rs"
+      ],
+      "verification": [
+        {
+          "command": "cargo fmt --check",
+          "exit_code": 0,
+          "summary": "Formatting clean across src/ and tests/."
+        },
+        {
+          "command": "cargo clippy --all-targets -- -D warnings",
+          "exit_code": 0,
+          "summary": "Clippy clean with warnings denied (lib + bins + integration tests)."
+        },
+        {
+          "command": "cargo build",
+          "exit_code": 0,
+          "summary": "Dev build succeeds."
+        },
+        {
+          "command": "cargo test",
+          "exit_code": 0,
+          "summary": "Default sweep green: 36 lib unit tests (incl. 5 new: partition_65_yields_two_bounded_batches, partition_boundaries, ingest_source_ids_skips_manual_and_preserves_order, filter_eligible_dedups_and_preserves_stable_reflection_ids, filter_eligible_empty_existing_keeps_all) + pool_bounds; 5 Postgres-gated integration tests ignored."
+        },
+        {
+          "command": "cargo test --test ingest_batch_it -- --ignored",
+          "exit_code": 0,
+          "summary": "Postgres-gated: bulk_dedup_returns_existing_subset_and_preserves_reflection_ids, batch_upsert_65_via_two_partitions_persists_all (64+1 -> 65 rows), failed_partition_rolls_back_and_does_not_poison_next (wrong-dim batch rolls back atomically; later partition persists) all pass; stable across repeated concurrent runs."
+        },
+        {
+          "command": "cargo test --test recall_it -- --ignored forget_manual",
+          "exit_code": 0,
+          "summary": "Retained single-row `upsert` + `exists_source` still behave (AC1 deletion test passes) — no regression to the kept API."
+        }
+      ],
+      "decisions": [
+        {
+          "what": "Kept `Store::upsert` and `Store::exists_source` public and added new bulk methods alongside them, rather than deleting the single-row API.",
+          "why": "`upsert` is still used by the `remember` MCP tool (server.rs) and `exists_source` by the `forget_manual` integration test; the task only requires removing them from the ingestion loop. Deleting them would widen scope into server.rs."
+        },
+        {
+          "what": "Factored loop logic into pure helpers (`ingest_source_ids`, `filter_eligible`, `partition_ranges`) plus an async `reconcile_root`.",
+          "why": "Makes AC4 batching (65 -> 2 partitions) and stable-id dedup unit-testable without a database or the infinite loop, while keeping scheduler/lifecycle behavior byte-for-byte intact (shutdown checks preserved in the loop wrapper and inside reconcile_root)."
+        },
+        {
+          "what": "`upsert_batch` takes parallel `&[MemoryInput]` + `&[Vec<f32>]` and re-asserts equal length.",
+          "why": "Caller already proves length via `validate_batch_output`; the defensive re-check is cheap and makes misuse fail loudly. Avoids forcing the caller to allocate a zipped slice."
+        },
+        {
+          "what": "Used a server-side `vector(1024)` wrong-dimension insert to force a deterministic transaction failure in the rollback test.",
+          "why": "Production avoids this via `validate_batch_output`, but the store-level transaction must still be all-or-nothing; a wrong dim reliably aborts the multi-row INSERT and proves rollback without abstracting `Store` behind a trait (which would have touched server.rs)."
+        },
+        {
+          "what": "Namespace-prefixed all integration-test ids (`{ns}::{raw}`).",
+          "why": "`memories.id` is a global (non-namespaced) primary key. Generic ids like `pw-1` collided across concurrently-running tests on the PK, producing a flaky 63-vs-65 count; qualifying ids makes tests concurrency-safe against the shared dev DB."
+        }
+      ],
+      "blockers": [],
+      "scope_drift": null,
+      "follow_ups": [
+        "The ignored integration tests in tests/ingest_batch_it.rs need a pgvector Postgres; they are not wired into any CI job. If CI gains a pgvector service, these can run with `--ignored` like recall_it.rs (separate task, not in scope here)."
+      ],
+      "required_main_agent_actions": [],
+      "related_scan": "Verified the only `format!` uses in src/ are non-mutation (lib test helper content strings, ingest.rs stable-id parsing, server.rs mem-id generation) — none build SQL. Confirmed `recall` (store.rs) continues to use static `&'static str` SQL per the existing sqlx-0.9 `SqlSafeStr` constraint; new mutation SQL uses `QueryBuilder` binds only. Confirmed `remember` (server.rs) still uses the retained single-row `upsert` and is unaffected.",
+      "context_update_for_adv": {
+        "what_ads_needs_to_know": "Ingestion path is now batched + transactional. New Store methods `existing_source_ids(ns, ids)` (one static-SQL `source_id = ANY($2)` lookup per root) and `upsert_batch(items, embeddings)` (single `INSERT ... ON CONFLICT (id) DO UPDATE` via `sqlx::QueryBuilder` binds inside a transaction; rolls back atomically on error). `run_ingestion_loop` now does bulk dedup per root, partitions eligible items via a pure `partition_ranges` helper (≤64), and persists each partition transactionally with `continue` + namespace logging on embed/validate/upsert failure. Per-item `exists_source`/`upsert` are retained (still used by `remember`/tests) but are no longer on the ingestion loop. Stable ids incl. `rf:*:kind:index` reflection children preserved verbatim. Scheduler selection/lifecycle and all cooperative-shutdown checks (top-of-pass, between-roots, before-each-batch, cancellation-aware sleep) are unchanged. AC4 + AC7 (test portion) satisfied; C2/C4/DONT3 respected.",
+        "suggested_next_action": "Proceed to the next task. Optionally run the Postgres-gated integration suite (`cargo test --test ingest_batch_it -- --ignored`) in CI where a pgvector DB is available; default `cargo test` is green without a DB."
+      },
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo build"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --test ingest_batch_it -- --ignored"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --test recall_it -- --ignored forget_manual"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-2732986d8239",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-2732986d8239"
+      },
+      "agent": "adv-engineer",
+      "status": "complete",
+      "files_touched": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "README.md",
+        ".env.example",
+        "docker-compose.yml",
+        ".github/workflows/ci.yml",
+        "deny.toml"
+      ],
+      "verification": [
+        {
+          "command": "cargo fmt --all --check",
+          "exit_code": 0,
+          "summary": "Formatting clean (no diffs)."
+        },
+        {
+          "command": "cargo clippy --all-targets -- -D warnings",
+          "exit_code": 0,
+          "summary": "Clippy clean with warnings as errors after dep removal."
+        },
+        {
+          "command": "cargo build --all-targets --locked",
+          "exit_code": 0,
+          "summary": "Build succeeds with the trimmed dependency set and the regenerated, locked Cargo.lock."
+        },
+        {
+          "command": "cargo test --locked",
+          "exit_code": 0,
+          "summary": "36 unit tests pass, 0 fail; Postgres/model integration tests are #[ignore] by design (3 ingest_batch_it, 2 recall_it); pool_bounds non-DB test passes; main + doctests 0."
+        },
+        {
+          "command": "cargo metadata --locked --no-deps --format-version 1",
+          "exit_code": 0,
+          "summary": "Cargo.toml and Cargo.lock are consistent (--locked accepted); root `episode` deps trimmed to the 12 remaining crates."
+        },
+        {
+          "command": "python3 tomllib load Cargo.toml + deny.toml",
+          "exit_code": 0,
+          "summary": "Both parse; profile.release has opt-level/lto/codegen-units/strip; deny.advisories has db-path/db-urls/vulnerability(=deny)/unmaintained/unsound/yanked/notice; notify/chrono/thiserror confirmed absent from [dependencies]."
+        },
+        {
+          "command": "yq parse .github/workflows/ci.yml",
+          "exit_code": 0,
+          "summary": "YAML valid; existing Format/Clippy/Build/Test steps intact and contiguous; new `Dependency advisories` step uses EmbarkStudios/cargo-deny-action@v2 with rust-version=stable, command=check, command-arguments=advisories, arguments=--locked."
+        }
+      ],
+      "decisions": [
+        {
+          "what": "Removed direct deps `notify`, `chrono`, `thiserror` after a source scan (rg found 0 source references to any of them).",
+          "why": "`notify` is a file-watcher for file-watch ingestion, which is unimplemented (ingestion is a periodic reconcile loop; README already said `currently periodic reconcile`) — crate + inotify subgraph fully removed. `chrono`/`thiserror` are never named in our code; both stay in the graph transitively (sqlx `chrono` feature / rmcp), so dropping the redundant direct edges is behavior-preserving. Proven safe by green fmt/clippy/build --locked/test and lock inspection."
+        },
+        {
+          "what": "Added a measured `[profile.release]`: opt-level=3, lto=\"thin\", codegen-units=1, strip=\"symbols\"; left panic at the default \"unwind\" and overflow-checks at default.",
+          "why": "Pins the perf/size knobs that matter for the single deployed `~/.local/bin/episode` binary while avoiding the much slower fat-LTO build and avoiding any change to unwinding semantics. Explicit/measured rather than maximal/aggressive."
+        },
+        {
+          "what": "Added the advisory gate as `EmbarkStudios/cargo-deny-action@v2` with `command: check`, `command-arguments: advisories`, `arguments: --locked`, `rust-version: stable`, plus a repo-defined `deny.toml` scoped to advisories (vulnerability=deny; unmaintained/unsound/yanked/notice=warn).",
+          "why": "Action input schema and `--locked` common option verified against upstream cargo-deny docs (common options go before the subcommand; `--locked` asserts Cargo.lock is unchanged; `-c` defaults to ./deny.toml). `rust-version: stable` is required because the crate uses edition 2024 (cargo >= 1.85). Scoped to advisories and notices-as-warn so a routine notice cannot retroactively break every build, while real vulnerabilities fail CI. Appended as a new step so fmt/clippy/build/test are unchanged."
+        },
+        {
+          "what": "Corrected `.env.example` to state RUST_LOG is not consulted in v0 (commented the assignment) instead of wiring an EnvFilter in src/main.rs.",
+          "why": "Verified in tracing-subscriber 0.3.23 source that `fmt().init()` uses a fixed default filter (INFO) and only honors RUST_LOG when `.with_env_filter(...)` is set, which main.rs does not. AC8 is a docs-alignment task (`align README/.env docs`) and explicitly says not to add features, so I aligned the doc to actual behavior and flagged EnvFilter wiring as an optional follow-up rather than changing runtime behavior."
+        },
+        {
+          "what": "Fixed the stale `docker-compose.yml` comment from `Port 5433` to `Host port 5434`.",
+          "why": "The actual mapping is `5434:5432`, matching `EPISODE_DATABASE_URL` and the README; the `5433` comment was factually wrong about supported configuration. Config-adjacent, factual, low-risk campsite fix within the docs-alignment scope."
+        }
+      ],
+      "blockers": [],
+      "scope_drift": null,
+      "follow_ups": [
+        "Wire `tracing_subscriber::fmt().with_env_filter(EnvFilter::from_default_env())` in src/main.rs so RUST_LOG is honored (make the documented knob real) — only if runtime log control is desired; currently documented as not-wired.",
+        "First CI run executes the live `cargo deny --locked check advisories` (needs network + RustSec DB); if a current vulnerability exists in the dep tree it will deny by design — triage rather than weakening the gate.",
+        "Stale module doc-comment in src/ingest.rs says the ingestion loop `lives in main.rs` (it lives in lib.rs) — outside AC8 docs scope; minor.",
+        "Optionally pin `EmbarkStudios/cargo-deny-action` to a release SHA (currently floating `@v2` major tag) for stricter supply-chain pinning."
+      ],
+      "required_main_agent_actions": [
+        "After merge/CI, confirm the new `Dependency advisories` step is green; if it denies a current vulnerability, triage the advisory (this is the gate functioning, not a wiring defect). I could not run cargo-deny locally (not installed; requires network + advisory DB)."
+      ],
+      "related_scan": "Scanned src/ and tests/ for each dependency before removal: `rg` confirmed 0 references to `notify`, `chrono` (word), and `thiserror` (and no DateTime/Utc/NaiveDate usage; migration timestamps use server-side now() and are never bound/read as chrono types). Verified post-removal via the lockfile: chrono (1) and thiserror (1) remain as transitive packages, notify (0) and inotify (0) are gone. Docs-wise, swept README/.env/docker-compose for the four AC8 alignment targets (restricted manual hard delete, periodic batching, local-only backend, supported config) and corrected every stale claim; no other doc surfaces assert voyage/file-watch/5433/RUST_LOG behavior.",
+      "context_update_for_adv": {
+        "what_ads_needs_to_know": "AC8 implemented and verified locally as feasible. Docs now match code: `forget` is a restricted hard delete of a `manual` row by id+namespace (structural source='manual'); ingestion is a periodic reconcile loop embedded in bounded batches (INGEST_BATCH_MAX=64), not a file watcher; embedding backend is local-only (`EPISODE_EMBED_BACKEND` accepts only `local`, `voyage` rejected at startup). `.env.example` corrected: RUST_LOG is NOT honored in v0 (fmt subscriber built without EnvFilter, fixed INFO). Removed truly-unused direct deps after a source scan: `notify` (file-watch crate, fully removed incl. inotify subgraph), and the redundant direct edges on `chrono` and `thiserror` (both remain available transitively via sqlx/rmcp, so no functional change). Added a measured `[profile.release]` (opt-level=3, lto=thin, codegen-units=1, strip=symbols; panic/unwind unchanged). Extended CI with a locked advisory check using repo-defined policy (`deny.toml`, advisories-only: vulnerability=deny, notices=warn) + published action `EmbarkStudios/cargo-deny-action@v2` running `cargo deny --locked check advisories` against Cargo.lock; existing fmt/clippy/build/test steps are untouched and still pass. Cargo.lock regenerated and `--locked`-consistent. No commit, no nested agents. Residual: the live advisory verdict requires CI/network (cargo-deny not installed locally), so the first run may surface a real current advisory for triage.",
+        "suggested_next_action": "Review the diff (manifest/lock/docs/CI), then proceed with the change's normal gate flow. On first CI run, watch the new `Dependency advisories` step output; if it denies a current vulnerability, route to remediation (do not weaken the deny.toml gate without evidence). If runtime log control matters, spawn a small follow-up to wire EnvFilter in src/main.rs."
+      },
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt --all --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo build --all-targets --locked"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --locked"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo metadata --locked --no-deps --format-version 1"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: python3 tomllib load Cargo.toml + deny.toml"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: yq parse .github/workflows/ci.yml"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveEpisodeResilience",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveEpisodeResilience",
+      "task_id": "tk-896bf4f43adb",
+      "scope": {
+        "kind": "task",
+        "task_id": "tk-896bf4f43adb"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [],
+      "changes_made": [],
+      "wisdom_candidates": [],
+      "verification": {
+        "tests_run": [
+          "cargo fmt --all --check",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo build --all-targets --locked",
+          "cargo test --locked",
+          "cargo deny --locked check advisories",
+          "cargo test --locked --test recall_it forget_manual_enforces_namespace_and_manual_source -- --ignored --nocapture",
+          "cargo test --locked --test ingest_batch_it -- --ignored --nocapture"
+        ],
+        "results": "pass",
+        "evidence": "All targeted checks passed. Default tests: 36 unit tests + pool_bounds passed, ignored DB tests skipped as expected in default sweep. Explicit DB integration checks passed using existing healthy episode-db on localhost:5434: forget_manual namespace/source behavior 1/1, ingest_batch_it 3/3. cargo-deny advisories passed with --locked. format/clippy/build passed."
+      },
+      "scope_drift": null,
+      "risks": [
+        "Did not run full embed_store_recall_ranks_semantically ignored test because it downloads/uses the real embedding model and was outside the resilience acceptance checks reviewed here.",
+        "A first docker compose up attempt in the ADV worktree hit an existing global episode-db container_name conflict; no repo files changed, and the transient network/volume created by that failed attempt were removed before report submission."
+      ],
+      "required_main_agent_actions": [],
+      "consumer_warnings": [
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo fmt --all --check"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo build --all-targets --locked"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --locked"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --locked --test recall_it forget_manual_enforces_namespace_and_manual_source -- --ignored --nocapture"
+        },
+        {
+          "kind": "verification_missing",
+          "message": "No adv_run_test evidence found for reported command: cargo test --locked --test ingest_batch_it -- --ignored --nocapture"
+        }
+      ]
+    }
+  ],
+  "deltas": {},
+  "wisdom": [],
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-07-10T15:45:53.669Z",
+      "completed_by": "agent",
+      "approval_evidence": "User approved the proposed problem statement and namespace-required, manual-only deletion boundary.",
+      "artifact_evidence": {
+        "kind": "proposal",
+        "content_hash": "2268e4d2ac90de03a1309d97e782470fc50364dde7302746e859bacc7d7dd1c1",
+        "non_whitespace_chars": 1306,
+        "checked_at": "2026-07-10T15:29:13.857Z"
+      }
+    },
+    "discovery": {
+      "status": "done",
+      "started_at": "2026-07-10T15:54:19.101Z",
+      "completed_at": "2026-07-10T15:54:39.164Z",
+      "completed_by": "agent",
+      "approval_evidence": "User approved agreement; typed standard contract minted from the approved agreement with 17 items.",
+      "artifact_evidence": {
+        "kind": "agreement",
+        "content_hash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "non_whitespace_chars": 2154,
+        "checked_at": "2026-07-10T15:29:13.858Z"
+      }
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-07-10T16:01:03.868Z",
+      "completed_by": "agent",
+      "approval_evidence": "Design persisted and independently validated by adv-researcher. Validator returned CAUTION with high confidence, no contract conflict; testability seams resolved in design.",
+      "artifact_evidence": {
+        "kind": "design",
+        "content_hash": "790b6d8c06d0296055480f4e869c41757f22321f02422231fca7241bef9b22a3",
+        "non_whitespace_chars": 5627,
+        "checked_at": "2026-07-10T15:29:13.859Z"
+      }
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-07-10T16:10:33.998Z",
+      "completed_by": "agent",
+      "approval_evidence": "User approved six-task dependency graph covering every standard contract item."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-07-10T18:34:03.988Z",
+      "completed_by": "agent",
+      "approval_evidence": "All six planned tasks checkpointed; final verifier passed all local, integration, and advisory checks."
+    },
+    "acceptance": {
+      "status": "done",
+      "started_at": "2026-07-10T18:34:09.918Z",
+      "completed_at": "2026-07-10T18:57:24.420Z",
+      "completed_by": "user",
+      "approval_evidence": "User accepted delivered work; persisted review matrix covers all 17 contract items and independent reviewer verdict is READY.",
+      "artifact_evidence": {
+        "kind": "acceptance",
+        "content_hash": "0bb6a2b2b7b5c46b69e09f008acf9c9bcae9729cbbdae2dd857456b468693ec5",
+        "non_whitespace_chars": 1243,
+        "checked_at": "2026-07-10T15:29:13.861Z"
+      }
+    },
+    "release": {
+      "status": "pending"
+    }
+  },
+  "reentry_history": [],
+  "origin": {
+    "kind": "discovery",
+    "source_artifact": "episode-full-repo-review-2026-07-10"
+  },
+  "contract": {
+    "version": 1,
+    "rigor": "standard",
+    "source": {
+      "artifact": "agreement",
+      "contentHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+      "approvedAt": "2026-07-10T15:54:33.109Z"
+    },
+    "items": [
+      {
+        "id": "AC1",
+        "kind": "acceptance_criterion",
+        "text": "`forget` requires `namespace`; its persistence operation deletes only a matching `source = 'manual'` row in that namespace. Wrong namespace, ingested source, unknown id, and repeated deletion return `removed: 0`.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC2",
+        "kind": "acceptance_criterion",
+        "text": "Invalid or zero pool size/ingest interval, unknown embedding backend, and malformed/empty project-root entries cause startup validation to fail with the offending input name and expected format.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC3",
+        "kind": "acceptance_criterion",
+        "text": "The SQLx pool config sets finite acquire, idle, and maximum-lifetime bounds. An unavailable database returns an acquisition error within the configured acquire limit.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC4",
+        "kind": "acceptance_criterion",
+        "text": "Ingestion uses a defined bounded batch size. With at least 65 eligible memories, it makes multiple batches rather than one unbounded call.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC5",
+        "kind": "acceptance_criterion",
+        "text": "If recall queues during ingest, it is selected before the next ingestion batch begins.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC6",
+        "kind": "acceptance_criterion",
+        "text": "Shutdown is cooperative: after active work returns, no new batch starts and the owned ingestion task exits before process completion.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC7",
+        "kind": "acceptance_criterion",
+        "text": "Automated tests cover deletion namespace/source behavior, config validation, pool/store behavior, batching, recall fairness, and shutdown. Format, clippy, build, and tests pass.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "AC8",
+        "kind": "acceptance_criterion",
+        "text": "README and environment documentation accurately describe manual-only hard deletion, periodic ingestion, and unsupported Voyage behavior. CI includes dependency advisory checking; unused dependencies are removed and release profile settings are explicit.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "test",
+        "status": "approved"
+      },
+      {
+        "id": "C1",
+        "kind": "constraint",
+        "text": "Local MCP service only; no network-exposed multi-tenant authorization.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "static_check",
+        "status": "approved"
+      },
+      {
+        "id": "C2",
+        "kind": "constraint",
+        "text": "Retain Rust, pgvector, and BGE local embeddings.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "static_check",
+        "status": "approved"
+      },
+      {
+        "id": "C3",
+        "kind": "constraint",
+        "text": "Use SQL predicates for deletion enforcement.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "static_check",
+        "status": "approved"
+      },
+      {
+        "id": "C4",
+        "kind": "constraint",
+        "text": "Keep one model instance; use bounded scheduling rather than a second BGE instance.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "static_check",
+        "status": "approved"
+      },
+      {
+        "id": "C5",
+        "kind": "constraint",
+        "text": "Use cooperative cancellation; do not rely on aborting active `spawn_blocking` inference.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "static_check",
+        "status": "approved"
+      },
+      {
+        "id": "DONT1",
+        "kind": "avoidance",
+        "text": "App-layer-only deletion authorization.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "review",
+        "status": "approved"
+      },
+      {
+        "id": "DONT2",
+        "kind": "avoidance",
+        "text": "Silent configuration fallbacks.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "review",
+        "status": "approved"
+      },
+      {
+        "id": "DONT3",
+        "kind": "avoidance",
+        "text": "Unbounded ingestion batches.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "review",
+        "status": "approved"
+      },
+      {
+        "id": "DONT4",
+        "kind": "avoidance",
+        "text": "New export, UI, or unrelated memory-product scope.",
+        "sourceArtifact": "agreement",
+        "sourceHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+        "verificationRequired": true,
+        "evidencePolicy": "review",
+        "status": "approved"
+      }
+    ],
+    "amendments": [],
+    "reviewMatrix": {
+      "reviewedAt": "2026-07-10T18:34:28.064Z",
+      "rows": [
+        {
+          "contractId": "AC1",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "Ignored Postgres deletion test passed; src/store.rs SQL predicate requires id, namespace, manual source."
+        },
+        {
+          "contractId": "AC2",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "Locked suite passes config validation tests in src/config.rs."
+        },
+        {
+          "contractId": "AC3",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "tests/pool_bounds.rs passed; explicit pool bounds in src/store.rs."
+        },
+        {
+          "contractId": "AC4",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "Ignored ingest_batch_it 65-item partitions and persistence tests passed."
+        },
+        {
+          "contractId": "AC5",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "Scheduler recorder priority test passed in cargo test --locked."
+        },
+        {
+          "contractId": "AC6",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "Scheduler and ingestion shutdown boundary tests passed."
+        },
+        {
+          "contractId": "AC7",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "test",
+          "evidence": "fmt, clippy, locked build, locked test, and ignored integration suites passed."
+        },
+        {
+          "contractId": "AC8",
+          "kind": "acceptance_criterion",
+          "status": "pass",
+          "evidencePolicy": "static_check",
+          "evidence": "README/.env/CI/Cargo manifest inspected; cargo deny advisories passed."
+        },
+        {
+          "contractId": "C1",
+          "kind": "constraint",
+          "status": "respected",
+          "evidencePolicy": "static_check",
+          "evidence": "Local stdio MCP architecture retained."
+        },
+        {
+          "contractId": "C2",
+          "kind": "constraint",
+          "status": "respected",
+          "evidencePolicy": "static_check",
+          "evidence": "Rust, pgvector, and single local BGE embedder retained."
+        },
+        {
+          "contractId": "C3",
+          "kind": "constraint",
+          "status": "respected",
+          "evidencePolicy": "static_check",
+          "evidence": "Deletion enforcement is one SQL predicate in Store::forget_manual."
+        },
+        {
+          "contractId": "C4",
+          "kind": "constraint",
+          "status": "respected",
+          "evidencePolicy": "static_check",
+          "evidence": "Single embedder is moved into Scheduler worker; no second instance."
+        },
+        {
+          "contractId": "C5",
+          "kind": "constraint",
+          "status": "respected",
+          "evidencePolicy": "static_check",
+          "evidence": "watch cancellation and awaited handles; no JoinHandle::abort."
+        },
+        {
+          "contractId": "DONT1",
+          "kind": "avoidance",
+          "status": "respected",
+          "evidencePolicy": "review",
+          "evidence": "Independent reviewer READY; no app-layer deletion authorization."
+        },
+        {
+          "contractId": "DONT2",
+          "kind": "avoidance",
+          "status": "respected",
+          "evidencePolicy": "review",
+          "evidence": "Strict config parsing rejects invalid present values."
+        },
+        {
+          "contractId": "DONT3",
+          "kind": "avoidance",
+          "status": "respected",
+          "evidencePolicy": "review",
+          "evidence": "INGEST_BATCH_MAX=64 and scheduler guards oversized jobs."
+        },
+        {
+          "contractId": "DONT4",
+          "kind": "avoidance",
+          "status": "respected",
+          "evidencePolicy": "review",
+          "evidence": "Independent reviewer found no scope drift."
+        }
+      ]
+    }
+  },
+  "acceptanceCriteria": [
+    "`forget` requires `namespace`; its persistence operation deletes only a matching `source = 'manual'` row in that namespace. Wrong namespace, ingested source, unknown id, and repeated deletion return `removed: 0`.",
+    "Invalid or zero pool size/ingest interval, unknown embedding backend, and malformed/empty project-root entries cause startup validation to fail with the offending input name and expected format.",
+    "The SQLx pool config sets finite acquire, idle, and maximum-lifetime bounds. An unavailable database returns an acquisition error within the configured acquire limit.",
+    "Ingestion uses a defined bounded batch size. With at least 65 eligible memories, it makes multiple batches rather than one unbounded call.",
+    "If recall queues during ingest, it is selected before the next ingestion batch begins.",
+    "Shutdown is cooperative: after active work returns, no new batch starts and the owned ingestion task exits before process completion.",
+    "Automated tests cover deletion namespace/source behavior, config validation, pool/store behavior, batching, recall fairness, and shutdown. Format, clippy, build, and tests pass.",
+    "README and environment documentation accurately describe manual-only hard deletion, periodic ingestion, and unsupported Voyage behavior. CI includes dependency advisory checking; unused dependencies are removed and release profile settings are explicit."
+  ],
+  "documents": {
+    "proposal": "## Why\n\nEpisode provides working local semantic recall, but must safely serve multiple local agent sessions and retain reliable behavior under malformed configuration, database stalls, ingest load, and process shutdown.\n\n## Scope\n\n- Require a namespace for deletion and permit deletion only of manually created memories; ingested ADV wisdom/reflections remain protected.\n- Validate all operator-facing configuration deterministically.\n- Bound database-pool acquisition and connection lifetime behavior.\n- Replace per-item ingestion work with bounded batching and prioritize interactive recall between ingestion batches.\n- Give the ingestion worker an owned lifecycle and cooperative graceful shutdown path.\n- Expand unit and integration coverage across config, MCP namespace semantics, store behavior, embedding contracts, and ingestion lifecycle.\n- Reconcile backend capability signaling, environment documentation, dependency hygiene, CI advisory checks, release profile settings, and README behavior claims.\n\n## Out of scope\n\n- Network-exposed multi-tenant auth or external deletion-token management.\n- Replacing pgvector, Rust, or the local embedding model.\n- Unrelated memory features such as export or UI.\n\n## Expected outcome\n\nA local Episode deployment rejects unsafe configuration, protects cross-namespace and ingested memories from accidental deletion, handles bounded database failures, ingests efficiently without starving interactive recall, shuts down cleanly, and proves these properties with automated tests.\n\n# Discovery Findings\n\n## Discovery Checklist\n\n| Step | Status | Evidence |\n|---|---|---|\n| Origin validation | PASS | Local discovery change; no cross-project origin. |\n| Skill discovery | PASS | `adv-user-intuit` used for deletion model; `adv-opportunity-scout` and `adv-arch-detection` loaded for discovery. |\n| Prior research extension | PASS | Extends `episode-full-repo-review-2026-07-10`; new findings: README says soft-remove while SQL uses hard `DELETE`, and `spawn_blocking` embedding requires cooperative—not abort-only—shutdown. |\n| Conflict scan | PASS | One active change: this change; no archived/active conflicts. Validation has expected pre-prep `NO_TASKS`/`NO_DELTAS` warnings. Agenda empty. |\n| Edge cases | PASS | Covered below. |\n| Design depth | PASS | Resolved technical directions below; no unresolved user-value tradeoff. |\n| Draft spec deltas | PASS | Concrete requirement candidates below. |\n| Related pattern scan | PASS | `forget`, config parsing, and ingestion control have single production surfaces; README/tests contain the related behavior/documentation sites. |\n| Completeness verification | PASS | Full target-operation surfaces scanned. |\n| LBP check | PASS | Uses documented SQLx pool bounds, FastEmbed batching, and Tokio cooperative cancellation. |\n| Opportunity scout | PASS | Five contract-tied candidates found; adopted into draft agreement. |\n\n## Skills Considered\n\n| Skill | Match | Action |\n|---|---|---|\n| `adv-user-intuit` | Deletion policy has concrete alternatives | Used; user selected namespace + manual-only. |\n| `adv-opportunity-scout` | Broad resilience and architecture scope | Used; five bounded candidates assessed. |\n| `adv-arch-detection` | Rust persistence/concurrency boundaries | Used; `cargo-deps` unavailable, so coverage degraded to source/test analysis. |\n\n## Extends\n\nExtends `episode-full-repo-review-2026-07-10`.\n\nNew findings:\n- `README.md:26` claims `forget` is soft-remove; `src/store.rs:125` issues a hard `DELETE`.\n- `src/lib.rs:50-52` drops the ingestion task handle. Tokio documents that aborting a `spawn_blocking` task cannot stop a running embedding call; shutdown must be cooperative.\n\n## Conflict Scan\n\n- `adv_change_list includeArchived:true`: only `improveEpisodeResilience`; no coordination conflict.\n- `adv_change_validate strict:true`: no errors; `NO_TASKS` and `NO_DELTAS` expected before prep.\n- `adv_agenda_list`: no related agenda items.\n- `adv_spec search/list`: no deployed specs in this project; requirements are introduced as this change's contract.\n\n## Current State\n\n- `src/server.rs:51-54,126-135`: deletion accepts only `id`.\n- `src/store.rs:123-129`: deletion hard-removes by id without namespace/source predicate.\n- `src/config.rs:38-73`: invalid numbers and unknown backends silently default; malformed root entries are silently skipped.\n- `src/store.rs:18-21`: pool only sets maximum connections.\n- `src/embed.rs:29-52`: one mutex serializes all embedding.\n- `src/lib.rs:68-127`: sequential exists/embed/upsert loop; task lifecycle detached.\n- `README.md:26,37,52`: soft-remove, file-watch, and Voyage wording must match shipped behavior.\n\n## Edge Cases\n\n| Gap | Failure modes to handle |\n|---|---|\n| Deletion | Correct id with wrong namespace; correct id for an ingested memory; unknown id; repeated deletion. |\n| Config | `0`, non-numeric, or overflow pool/interval; unknown backend; `namespace=` / `=path` / missing `=` project root. |\n| Pool | Unavailable database; acquisition timeout; stale idle connection after long-running service. |\n| Batching | Empty final batch; embedding failure for one batch; duplicate source IDs; batch reaches maximum size. |\n| Recall fairness | Recall arrives during an ingest flush; cancellation arrives while `spawn_blocking` is running. |\n| Shutdown | Cancellation before first pass; cancellation after batch dispatch; database failure while draining. |\n\n## Open Design Questions\n\n| Question | Direction | Trust model | Blast radius | Alternatives |\n|---|---|---|---|---|\n| Delete enforcement | SQL predicate on `(id, namespace, source = 'manual')` | Agent-only local MCP boundary | Memory integrity | App-layer check rejected: bypassable. |\n| Embed scheduling | One bounded worker with interactive recall priority between bounded ingest batches | Agent-only | Recall latency and memory use | Second model instance rejected: doubles BGE memory. |\n| Shutdown | Owned task plus cooperative cancellation signal | Agent-only | Clean process exit | `JoinHandle::abort` rejected for running `spawn_blocking`. |\n| Pool policy | Explicit finite acquire, idle, and lifetime bounds | Operator-configured local service | Failure latency and stale connections | Defaults-only rejected: unbounded acquire behavior. |\n\n## Draft Spec Deltas\n\n- `rq-episodeResilience01` — protected deletion.\n  - Given a memory id and namespace, when `forget` targets a manual memory in that namespace, then exactly that row is deleted.\n  - Given a wrong namespace or non-manual source, when `forget` runs, then zero rows are deleted.\n- `rq-episodeResilience02` — deterministic configuration.\n  - Given invalid numeric, backend, or project-root input, when Episode starts, then startup fails with the variable/entry name and expected format.\n- `rq-episodeResilience03` — bounded pool lifecycle.\n  - Given an unavailable or stale database connection, when pool acquisition exceeds its configured bound, then Episode returns a bounded error rather than waiting indefinitely.\n- `rq-episodeResilience04` — fair bounded ingestion.\n  - Given 65+ eligible memories, when ingestion runs, then embedding occurs in bounded batches and an interactive recall queued during ingest is selected before the next ingest batch.\n- `rq-episodeResilience05` — cooperative shutdown.\n  - Given shutdown during ingestion, when the active batch returns, then no new batch begins and the ingestion task exits before process completion.\n- `rq-episodeResilience06` — proven/documented behavior.\n  - Given CI and documented operator configuration, when checks run, then configuration, deletion, batching, lifecycle, and persistence invariants are tested and public docs match actual semantics.\n\n## Related Pattern Scan\n\n- `forget`: production path limited to `src/server.rs` and `src/store.rs`; integration cleanup calls are in `tests/recall_it.rs`; README is drifted.\n- `EPISODE_*`: all production environment parsing is centralized in `src/config.rs`.\n- `run_ingestion_loop`: one startup call and one loop definition in `src/lib.rs`; no hidden secondary ingestion control path.\n\n## Completeness Verification\n\n- Problem completeness: high confidence. Deletion, configuration, pool, embed scheduling, ingestion, shutdown, tests, CI, and documentation surfaces were scanned. No secondary production surfaces found outside `server.rs`, `store.rs`, `config.rs`, `embed.rs`, `lib.rs`, tests, and README.\n- Solution scope: high confidence. Scope covers the full local MCP boundary and runtime path, not only the original deletion symptom. Network multi-tenancy and new memory product features remain explicitly out of scope.\n\n## LBP Check\n\nNo external replacement applies; this is a local Rust service correction. Direction follows official documented APIs:\n- SQLx `PoolOptions`: finite acquire/idle/lifetime bounds.\n- FastEmbed: bounded text batches via `embed(texts, batch_size)`.\n- Tokio: cooperative cancellation because `spawn_blocking` cannot be force-aborted while running.\n\n## Discovery Opportunity Scout\n\nAdopted contract-tied opportunities:\n1. Bounded batch embedding and persistence.\n2. Interactive recall priority between ingestion batches.\n3. Cooperative lifecycle cancellation.\n4. Explicit `PgPoolOptions` lifecycle bounds.\n5. Typed config validation and diagnostics.\n\n### AMBIGUITY ANALYSIS — no ambiguity findings\n\nCoverage: B:C F:C S:C M:C\n\n## Recommended Objectives\n\n1. Protect local shared-memory deletion structurally.\n2. Make startup and database failure behavior deterministic and bounded.\n3. Preserve interactive recall while ingesting durable ADV memories.\n4. Make ingestion lifecycle controllable and observable through tests.\n5. Align source, CI, and documentation with actual supported behavior.",
+    "problemStatement": "Episode is operational, but its shared-memory boundary, startup/config behavior, resource lifecycle, ingestion throughput, and automated verification are not yet reliable enough for sustained multi-agent use.\n\nObserved problems:\n- `forget(id)` has no namespace or source-class constraint.\n- Configuration silently falls back for invalid values and malformed project-root entries.\n- The database pool has no bounded acquisition or lifecycle policy.\n- A single embedding mutex serializes recall, remember, and ingestion; ingestion also performs per-item dedup/embed/upsert work.\n- The background ingestion task is detached and lacks graceful shutdown ownership.\n- Key server, store, embedder, and configuration behavior lacks direct test coverage.\n- The configured Voyage backend is advertised but intentionally unimplemented; unused dependencies and undocumented tuning variables add confusion.\n\nThis follow-up makes those boundaries explicit, observable, tested, and operationally bounded without changing Episode's purpose as a local persistent decision-memory MCP server.",
+    "design": "# Design: Improve Episode resilience\n\n## Architecture\n\nKeep Episode local, single-model, and PostgreSQL-backed. Replace implicit trust and lifecycle behavior with typed inputs, SQL predicates, bounded worker queues, and owned shutdown handles.\n\n## 1. Protected deletion\n\n- `ForgetParams` gains required `namespace`.\n- Replace `Store::forget(id)` with `Store::forget_manual(id, namespace)`.\n- Store executes one SQL statement:\n  `DELETE FROM memories WHERE id = $1 AND namespace = $2 AND source = 'manual'`.\n- `removed` remains the response signal. The service never performs a pre-read or app-layer source check.\n- README calls this restricted hard deletion, not soft removal.\n\n## 2. Deterministic configuration and pool policy\n\n- Parse `EPISODE_DB_POOL_SIZE` and `EPISODE_INGEST_INTERVAL_SECS` as non-zero bounded integers; invalid inputs return `Config::from_env()` errors naming the variable and expected form.\n- Parse `EPISODE_EMBED_BACKEND` as an explicit enum. `local` is supported. `voyage` and unknown values fail validation as unsupported rather than starting then aborting later.\n- Parse every `EPISODE_PROJECT_ROOTS` entry as non-empty `namespace=absolute-or-relative-path`; any malformed entry fails validation with its entry text.\n- Configure `PgPoolOptions` with explicit constants: acquire timeout 5 seconds, idle timeout 10 minutes, max lifetime 30 minutes, current configured maximum connections, and `test_before_acquire(true)`.\n- Keep eager database connection and migrations at startup. Prove the configured acquisition bound with an unreachable test endpoint wrapped in a deterministic timeout; do not change startup semantics solely for a test seam.\n- Document supported variables and supported local-only embedding backend in `.env.example` and README.\n\n## 3. Bounded priority embedding scheduler\n\n- Introduce a scheduler owning the existing single local embedder.\n- Accept two typed job classes through bounded channels: interactive (`recall`/`remember`, one text) and ingestion (one bounded batch).\n- Scheduler uses biased selection and an injected execution recorder in tests: after an active batch finishes, it selects queued interactive work before another ingestion batch.\n- Each selected job invokes the existing synchronous embedder in `spawn_blocking`; the scheduler awaits completion before selecting another job. This preserves the one-model memory budget and makes fairness deterministic: one active batch may finish, but an already queued interactive job wins before the next ingest batch.\n- Ingestion batch maximum is 64 items. Empty batches do not invoke the scheduler.\n- Batch output length and every vector dimension are validated before persistence; mismatches fail that batch and emit structured error context.\n\n## 4. Batched ingestion and persistence\n\n- For each project root, parse both ADV sources, collect stable source ids, and query existing ids in bulk. Preserve the existing source ids—including exploded reflection children—through the batch path.\n- Partition remaining items into batches of at most 64.\n- Submit one batch embedding job per partition; zip input and embedding output in stable order.\n- Persist each completed partition through a transaction and static SQL/`QueryBuilder` binds; never construct mutation SQL with string formatting.\n- A failed partition logs its namespace and leaves later partitions eligible for the next reconcile.\n- The loop yields at each batch boundary; it never starts another ingestion batch ahead of queued interactive work.\n\n## 5. Cooperative lifecycle\n\n- `run()` creates an in-tree `tokio::sync::watch` shutdown signal and retains the ingestion `JoinHandle`.\n- `run_ingestion_loop` uses cancellation-aware `select!` before waiting for the next interval and before beginning each batch. It does not attempt `JoinHandle::abort` for active `spawn_blocking` inference.\n- After stdio service completion, `run()` signals shutdown and awaits ingestion task termination. Active embedding may finish; no subsequent batch begins.\n- Scheduler shutdown closes ingestion intake after cancellation and exits after the active job returns. Interactive requests are not accepted during process teardown.\n\n## 6. Verification and hygiene\n\n- Unit tests: config table cases; deletion SQL predicate behavior; scheduler priority/order via recorder; empty/error batch behavior; cancellation boundaries.\n- Integration tests: manual deletion succeeds only in matching namespace; ingested deletion is protected; bulk dedup/upsert; bounded batches; eager connection to unreachable endpoint exits within the configured bound.\n- CI: retain existing format/clippy/build/test workflow and add a locked dependency advisory check with a repository-defined tool/action.\n- Remove `notify` and `thiserror` if no shipped code uses them. Add explicit release profile settings after measuring build output.\n\n## Independent validator result\n\n`adv-researcher` validation: CAUTION, high confidence, no contract conflict.\n\nResolved before planning:\n- Scheduler includes an observable execution-order seam for AC5.\n- Pool acquisition proof uses eager-connect behavior, an unreachable endpoint, and deterministic timeout; startup remains eager.\n- Existing CI is extended rather than replaced.\n- Batch mutations use static SQL/`QueryBuilder` bindings and a transaction.\n\n## Alternatives rejected\n\n| Alternative | Reason |\n|---|---|\n| App-layer deletion guard | SQL predicate is the structural enforcement boundary. |\n| Second BGE model for ingestion | Doubles model memory. |\n| Unbounded/default-size ingestion batch | Weak peak-memory and fairness control. |\n| `JoinHandle::abort` shutdown | Tokio cannot abort a running `spawn_blocking` task. |\n| Leaving Voyage selectable | Advertises unavailable behavior. |\n\n## Risks and mitigations\n\n| Risk | Mitigation |\n|---|---|\n| Active batch delays recall | Maximum 64-item batch; interactive jobs win before next batch. |\n| Batch persistence fails partly | Transaction per batch; remaining work reappears on next reconcile. |\n| Shutdown during inference | Cooperative stop after active job returns; no next batch. |\n| Config migration breaks deployment | Document exact accepted values; validate existing Vision environment in tests/manual verification. |\n\n## Contract mapping\n\n- AC1: protected deletion.\n- AC2: deterministic config parsing.\n- AC3: explicit pool limits plus bounded eager-connect proof.\n- AC4-AC5: 64-item batch scheduler and recorded interactive priority.\n- AC6: owned cooperative lifecycle.\n- AC7-AC8: tests, CI, docs, dependency/profile cleanup.",
+    "agreement": "# Agreement: Improve Episode resilience\n\nApproved by user on 2026-07-10.\n\n## Objectives\n\n1. Protect manual and ingested memory integrity.\n2. Reject invalid runtime configuration deterministically.\n3. Bound database and ingestion resource behavior.\n4. Keep recall responsive during ingestion.\n5. Prove behavior and align documentation/CI with shipped semantics.\n\n## Acceptance Criteria\n\n1. `forget` requires `namespace`; its persistence operation deletes only a matching `source = 'manual'` row in that namespace. Wrong namespace, ingested source, unknown id, and repeated deletion return `removed: 0`.\n2. Invalid or zero pool size/ingest interval, unknown embedding backend, and malformed/empty project-root entries cause startup validation to fail with the offending input name and expected format.\n3. The SQLx pool config sets finite acquire, idle, and maximum-lifetime bounds. An unavailable database returns an acquisition error within the configured acquire limit.\n4. Ingestion uses a defined bounded batch size. With at least 65 eligible memories, it makes multiple batches rather than one unbounded call.\n5. If recall queues during ingest, it is selected before the next ingestion batch begins.\n6. Shutdown is cooperative: after active work returns, no new batch starts and the owned ingestion task exits before process completion.\n7. Automated tests cover deletion namespace/source behavior, config validation, pool/store behavior, batching, recall fairness, and shutdown. Format, clippy, build, and tests pass.\n8. README and environment documentation accurately describe manual-only hard deletion, periodic ingestion, and unsupported Voyage behavior. CI includes dependency advisory checking; unused dependencies are removed and release profile settings are explicit.\n\n## Constraints\n\n- Local MCP service only; no network-exposed multi-tenant authorization.\n- Retain Rust, pgvector, and BGE local embeddings.\n- Use SQL predicates for deletion enforcement.\n- Keep one model instance; use bounded scheduling rather than a second BGE instance.\n- Use cooperative cancellation; do not rely on aborting active `spawn_blocking` inference.\n\n## Avoidances\n\n- App-layer-only deletion authorization.\n- Silent configuration fallbacks.\n- Unbounded ingestion batches.\n- New export, UI, or unrelated memory-product scope.\n\n## Evidence basis\n\n- Episode full-repository review, 2026-07-10.\n- Official SQLx `PoolOptions`, Tokio `JoinHandle`/`select!`, and FastEmbed batch API research collected during discovery.",
+    "executiveSummary": "# Episode resilience — Executive Summary\n\n## Outcome\n\nEpisode now protects shared memory deletion, rejects unsafe configuration, bounds database and ingestion work, prioritizes interactive recall, and shuts down cooperatively.\n\n## Value\n\nLocal agent sessions cannot delete ingested or cross-namespace memories through the MCP tool. Configuration and database failures now surface predictably. Durable-memory ingestion no longer monopolizes the single embedding model across unbounded work.\n\n## Delivered\n\n- SQL-enforced manual-only deletion scoped by id and namespace.\n- Strict configuration parsing and explicit SQLx pool lifecycle bounds.\n- One-model, bounded 64-item priority scheduler; interactive work wins before the next ingest batch.\n- Cooperative shutdown with owned ingestion and scheduler handles.\n- Bulk dedup and transactional batch persistence.\n- Updated documentation, dependency hygiene, release profile, and CI advisory gate.\n\n## Verification\n\n- `cargo fmt --all --check` — pass.\n- `cargo clippy --all-targets -- -D warnings` — pass.\n- `cargo build --all-targets --locked` — pass.\n- `cargo test --locked` — pass.\n- Postgres deletion and batch integration suites — pass.\n- `cargo deny --locked check advisories` — pass.\n- Independent acceptance review — READY; no blocking findings.\n\n## Release Readiness Summary\n\nHarden review: READY. Release build, format, clippy, locked build/test, advisory scan, and ignored Postgres/model integrations all passed. No blocking release risks found.\n\nNon-blocking development note: `docker-compose.yml` pins `container_name: episode-db`, which can conflict across parallel worktrees.\n\n## Risks and follow-up\n\n- Maintain cargo-deny configuration as its schema evolves.\n- No open release blocker.",
+    "acceptance": "# Acceptance\n\nReviewed at: 2026-07-10T18:34:28.064Z\n\n## Contract Review Matrix\n\n| ID | Kind | Requirement | Status | Evidence |\n|---|---|---|---|---|\n| AC1 | acceptance_criterion | `forget` requires `namespace`; its persistence operation deletes only a matching `source = 'manual'` row in that namespace. Wrong namespace, ingested source, unknown id, and repeated deletion return `removed: 0`. | pass | Ignored Postgres deletion test passed; src/store.rs SQL predicate requires id, namespace, manual source. |\n| AC2 | acceptance_criterion | Invalid or zero pool size/ingest interval, unknown embedding backend, and malformed/empty project-root entries cause startup validation to fail with the offending input name and expected format. | pass | Locked suite passes config validation tests in src/config.rs. |\n| AC3 | acceptance_criterion | The SQLx pool config sets finite acquire, idle, and maximum-lifetime bounds. An unavailable database returns an acquisition error within the configured acquire limit. | pass | tests/pool_bounds.rs passed; explicit pool bounds in src/store.rs. |\n| AC4 | acceptance_criterion | Ingestion uses a defined bounded batch size. With at least 65 eligible memories, it makes multiple batches rather than one unbounded call. | pass | Ignored ingest_batch_it 65-item partitions and persistence tests passed. |\n| AC5 | acceptance_criterion | If recall queues during ingest, it is selected before the next ingestion batch begins. | pass | Scheduler recorder priority test passed in cargo test --locked. |\n| AC6 | acceptance_criterion | Shutdown is cooperative: after active work returns, no new batch starts and the owned ingestion task exits before process completion. | pass | Scheduler and ingestion shutdown boundary tests passed. |\n| AC7 | acceptance_criterion | Automated tests cover deletion namespace/source behavior, config validation, pool/store behavior, batching, recall fairness, and shutdown. Format, clippy, build, and tests pass. | pass | fmt, clippy, locked build, locked test, and ignored integration suites passed. |\n| AC8 | acceptance_criterion | README and environment documentation accurately describe manual-only hard deletion, periodic ingestion, and unsupported Voyage behavior. CI includes dependency advisory checking; unused dependencies are removed and release profile settings are explicit. | pass | README/.env/CI/Cargo manifest inspected; cargo deny advisories passed. |\n| C1 | constraint | Local MCP service only; no network-exposed multi-tenant authorization. | respected | Local stdio MCP architecture retained. |\n| C2 | constraint | Retain Rust, pgvector, and BGE local embeddings. | respected | Rust, pgvector, and single local BGE embedder retained. |\n| C3 | constraint | Use SQL predicates for deletion enforcement. | respected | Deletion enforcement is one SQL predicate in Store::forget_manual. |\n| C4 | constraint | Keep one model instance; use bounded scheduling rather than a second BGE instance. | respected | Single embedder is moved into Scheduler worker; no second instance. |\n| C5 | constraint | Use cooperative cancellation; do not rely on aborting active `spawn_blocking` inference. | respected | watch cancellation and awaited handles; no JoinHandle::abort. |\n| DONT1 | avoidance | App-layer-only deletion authorization. | respected | Independent reviewer READY; no app-layer deletion authorization. |\n| DONT2 | avoidance | Silent configuration fallbacks. | respected | Strict config parsing rejects invalid present values. |\n| DONT3 | avoidance | Unbounded ingestion batches. | respected | INGEST_BATCH_MAX=64 and scheduler guards oversized jobs. |\n| DONT4 | avoidance | New export, UI, or unrelated memory-product scope. | respected | Independent reviewer found no scope drift. |\n\n"
+  },
+  "artifacts": {
+    "proposal": {
+      "updatedAt": "2026-07-10T15:51:30.251Z",
+      "contentHash": "b8b4c95aa9d510acc490b14ca804dbb8bd6f7836b190b2dde6fa7db7855deedb",
+      "source": "temporal",
+      "readable": false
+    },
+    "problemStatement": {
+      "updatedAt": "2026-07-10T15:28:40.165Z",
+      "contentHash": "d49b1a5783d12ce443c38bbd6f6d4704c3c4d62f773c6f89b9e08da4f055df64",
+      "source": "temporal",
+      "readable": false
+    },
+    "design": {
+      "updatedAt": "2026-07-10T16:00:42.646Z",
+      "contentHash": "790b6d8c06d0296055480f4e869c41757f22321f02422231fca7241bef9b22a3",
+      "source": "temporal",
+      "readable": false
+    },
+    "agreement": {
+      "updatedAt": "2026-07-10T15:54:11.345Z",
+      "contentHash": "fe6049ca355d39b17ed8a637e3c3453cf87a9ea6e8214e63af594e2a5e859669",
+      "source": "temporal",
+      "readable": false
+    },
+    "executiveSummary": {
+      "updatedAt": "2026-07-10T19:03:03.625Z",
+      "contentHash": "f57b58661a2ae178fcf663dc41c24bfa9ba559e83ad72d02f75ee4aeafdee01b",
+      "source": "temporal",
+      "readable": false
+    }
+  },
+  "lastSignalAt": "2026-07-10T19:03:03.625Z",
+  "adv_project_id": "098dab10ebf50e5c885fb94eef48afda85032788",
+  "clarify_findings": [
+    {
+      "code": "CLARIFY_ASSUMPTION_HEAVY",
+      "severity": "warning",
+      "message": "Proposal references authentication/authorization without specifying the model. What auth mechanism will be used?",
+      "recorded_at": "2026-07-10T15:29:25.262Z"
+    }
+  ],
+  "worktree_auto_managed": true
+}
