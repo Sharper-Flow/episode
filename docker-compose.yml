@@ -1,0 +1,26 @@
+# Dev-only Postgres + pgvector for episode's memory store.
+# Dedicated to agent memory — NOT any product database.
+# Port 5433 avoids clashing with other local Postgres instances (e.g. 5432).
+
+services:
+  episode-db:
+    image: pgvector/pgvector:pg16
+    container_name: episode-db
+    environment:
+      POSTGRES_USER: episode
+      POSTGRES_PASSWORD: episode
+      POSTGRES_DB: episode
+    ports:
+      - "5433:5432"
+    volumes:
+      - episode-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U episode -d episode"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  episode-db-data:
+    driver: local
