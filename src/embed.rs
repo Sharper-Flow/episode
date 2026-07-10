@@ -1,6 +1,11 @@
 //! Text embedding backends. Default is local fastembed (BGE-large, 1024d).
 
+use std::sync::Mutex;
+
 use anyhow::Result;
+use fastembed::{EmbeddingModel, TextEmbedding, TextInitOptions};
+
+use crate::types::EMBEDDING_DIM;
 
 /// Produces `EMBEDDING_DIM`-length vectors for text.
 ///
@@ -16,28 +21,43 @@ pub trait Embedder: Send + Sync {
     }
 }
 
-/// Local fastembed-backed embedder.
+/// Local fastembed-backed embedder (BGE-large-en-v1.5, 1024 dims).
 ///
-/// WORKER B — implement:
-///   - hold a `std::sync::Mutex<fastembed::TextEmbedding>` (fastembed `embed`
-///     takes `&mut self`, so a Mutex gives us `&self` trait access).
-///   - `new()`: `TextEmbedding::try_new(TextInitOptions::new(EmbeddingModel::BGELargeENV15)
-///     .with_show_download_progress(true))`. 1024 dims. Respect `HF_HOME` /
-///     `EPISODE_MODEL_CACHE` env for the model cache dir if set.
-///   - `embed()`: lock the model, call `model.embed(texts, None)` -> `Vec<Vec<f32>>`.
-///     Assert/verify each vector length == `crate::types::EMBEDDING_DIM`.
+/// fastembed `TextEmbedding::embed` takes `&mut self`, so the model is held
+/// behind a `Mutex` to satisfy the `&self` trait method and `Send + Sync`.
 pub struct LocalEmbedder {
-    // WORKER B: model: std::sync::Mutex<fastembed::TextEmbedding>,
+    model: Mutex<TextEmbedding>,
 }
 
 impl LocalEmbedder {
     pub fn new() -> Result<Self> {
-        todo!("WORKER B: init fastembed BGELargeENV15 (1024d)")
+        let model = TextEmbedding::try_new(
+            TextInitOptions::new(EmbeddingModel::BGELargeENV15) // 1024 dims
+                .with_show_download_progress(true),
+        )?;
+        Ok(Self {
+            model: Mutex::new(model),
+        })
     }
 }
 
 impl Embedder for LocalEmbedder {
-    fn embed(&self, _texts: &[String]) -> Result<Vec<Vec<f32>>> {
-        todo!("WORKER B: lock model + fastembed embed")
+    fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+        let mut model = self
+            .model
+            .lock()
+            .map_err(|_| anyhow::anyhow!("embedder mutex poisoned"))?;
+        // fastembed embed(&mut self, texts, batch_size) -> Result<Vec<Vec<f32>>>;
+        // None => default batch size.
+        let out = model.embed(texts.to_vec(), None)?;
+        if let Some(first) = out.first() {
+            anyhow::ensure!(
+                first.len() == EMBEDDING_DIM,
+                "unexpected embedding dim: {} (expected {})",
+                first.len(),
+                EMBEDDING_DIM
+            );
+        }
+        Ok(out)
     }
 }
