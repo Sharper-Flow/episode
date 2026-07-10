@@ -1,10 +1,33 @@
 //! Postgres + pgvector persistence.
 
+use std::time::Duration;
+
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Row};
 
 use crate::types::{MemoryInput, NamespaceStat, RecallHit};
+
+/// Maximum time to wait when acquiring a connection from the pool (AC3).
+const POOL_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
+/// Idle connection lifetime before it is closed (AC3).
+const POOL_IDLE_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+/// Absolute maximum connection lifetime before it is recycled (AC3).
+const POOL_MAX_LIFETIME: Duration = Duration::from_secs(30 * 60);
+
+/// Build the `PgPoolOptions` with the pinned, explicit lifecycle bounds (AC3).
+///
+/// These are set explicitly rather than relying on sqlx defaults so a dependency
+/// upgrade cannot silently change pool semantics. Factored as a pure builder so
+/// the configured bounds are unit-testable without a database.
+pub(crate) fn pool_options(max_connections: u32) -> PgPoolOptions {
+    PgPoolOptions::new()
+        .max_connections(max_connections)
+        .acquire_timeout(POOL_ACQUIRE_TIMEOUT)
+        .idle_timeout(POOL_IDLE_TIMEOUT)
+        .max_lifetime(POOL_MAX_LIFETIME)
+        .test_before_acquire(true)
+}
 
 /// Thin handle over a connection pool. Cheap to clone (Arc inside `PgPool`).
 #[derive(Clone)]
@@ -14,11 +37,12 @@ pub struct Store {
 
 impl Store {
     /// Connect to Postgres, run migrations, and return a pool handle.
+    ///
+    /// Eager by design: opens the pool and runs migrations at startup so a bad
+    /// configuration or unavailable database surfaces immediately, bounded by the
+    /// pool's `acquire_timeout` (AC3).
     pub async fn connect(database_url: &str, pool_size: u32) -> Result<Self> {
-        let pool = PgPoolOptions::new()
-            .max_connections(pool_size)
-            .connect(database_url)
-            .await?;
+        let pool = pool_options(pool_size).connect(database_url).await?;
         sqlx::migrate!("./migrations").run(&pool).await?;
         Ok(Self { pool })
     }
@@ -149,5 +173,29 @@ impl Store {
             })
             .collect();
         Ok(stats)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// AC3: the pool options carry the pinned, explicit lifecycle bounds. Pure
+    /// and database-free — reads the configured values straight off the builder.
+    #[test]
+    fn pool_options_pin_lifecycle_bounds() {
+        let opts = pool_options(7);
+        assert_eq!(opts.get_max_connections(), 7);
+        assert_eq!(opts.get_acquire_timeout(), Duration::from_secs(5));
+        assert_eq!(opts.get_idle_timeout(), Some(Duration::from_secs(10 * 60)));
+        assert_eq!(opts.get_max_lifetime(), Some(Duration::from_secs(30 * 60)));
+        assert!(opts.get_test_before_acquire());
+    }
+
+    #[test]
+    fn pool_options_propagate_max_connections() {
+        // The configured pool size flows through to max_connections unchanged.
+        assert_eq!(pool_options(1).get_max_connections(), 1);
+        assert_eq!(pool_options(20).get_max_connections(), 20);
     }
 }
