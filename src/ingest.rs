@@ -2,11 +2,43 @@
 //!
 //! These are PURE functions (no DB, no embeddings). The ingestion loop that
 //! calls them, dedups, embeds, and upserts lives in `main.rs`.
+//!
+//! Parsing is deliberately lenient: ADV schemas carry many optional fields and
+//! evolve over time, so we work with `serde_json::Value`, skip blank/malformed
+//! lines, and never fail the whole file because one line is bad. A missing
+//! target file is treated as an empty source (`Ok(vec![])`).
 
 use anyhow::Result;
+use serde_json::Value;
 use std::path::Path;
 
-use crate::types::MemoryInput;
+use crate::types::{MemoryInput, MemorySource};
+
+/// Return non-empty string slices out of a JSON value, else `None`.
+fn nonempty_str(v: &Value) -> Option<&str> {
+    v.as_str().filter(|s| !s.is_empty())
+}
+
+/// Read a JSONL file into raw `Value` lines, skipping blank/malformed lines.
+/// Returns `Ok(vec![])` when the file does not exist.
+fn read_jsonl(path: &Path) -> Result<Vec<Value>> {
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let text = std::fs::read_to_string(path)?;
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        match serde_json::from_str::<Value>(trimmed) {
+            Ok(v) if v.is_object() => out.push(v),
+            _ => continue, // malformed or non-object line: skip gracefully
+        }
+    }
+    Ok(out)
+}
 
 /// WORKER C — parse `{adv_dir}/wisdom.jsonl`.
 ///
@@ -19,9 +51,56 @@ use crate::types::MemoryInput;
 /// Rules:
 ///   - skip blank/malformed lines (do NOT fail the whole file — mirror ADV's
 ///     `parseWisdomEntries` graceful-degradation behavior).
+///   - skip entries whose `invalidated_by` is present and non-null
+///     (superseded / soft-deleted).
 ///   - if the file does not exist, return `Ok(vec![])`.
-pub fn parse_wisdom(_namespace: &str, _adv_dir: &Path) -> Result<Vec<MemoryInput>> {
-    todo!("WORKER C: parse wisdom.jsonl")
+pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>> {
+    let path = adv_dir.join("wisdom.jsonl");
+    let mut items = Vec::new();
+
+    for value in read_jsonl(&path)? {
+        let obj = match value.as_object() {
+            Some(o) => o,
+            None => continue,
+        };
+
+        // Superseded / soft-deleted entries are not retrievable.
+        if obj.get("invalidated_by").is_some_and(|v| !v.is_null()) {
+            continue;
+        }
+
+        let id = match obj.get("id").and_then(nonempty_str) {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+        let content = match obj.get("content").and_then(nonempty_str) {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+        let kind = obj
+            .get("type")
+            .and_then(nonempty_str)
+            .map(|s| s.to_string());
+
+        // Metadata = full object minus the `content` key (content is the
+        // embeddable text; everything else is provenance/filter data).
+        let mut metadata = value.clone();
+        if let Some(map) = metadata.as_object_mut() {
+            map.remove("content");
+        }
+
+        items.push(MemoryInput {
+            source_id: Some(id.clone()),
+            id,
+            namespace: namespace.to_string(),
+            source: MemorySource::AdvWisdom,
+            kind,
+            content,
+            metadata,
+        });
+    }
+
+    Ok(items)
 }
 
 /// WORKER C — parse `{adv_dir}/reflections.jsonl`.
@@ -39,7 +118,257 @@ pub fn parse_wisdom(_namespace: &str, _adv_dir: &Path) -> Result<Vec<MemoryInput
 ///   - source: `MemorySource::AdvReflection`
 ///   - content: the text
 ///   - metadata: `{ "change_id": .., "reflection_id": rf_id, "created_at": .. }`
-/// Rules: skip malformed lines; missing file -> `Ok(vec![])`.
-pub fn parse_reflections(_namespace: &str, _adv_dir: &Path) -> Result<Vec<MemoryInput>> {
-    todo!("WORKER C: parse reflections.jsonl")
+/// Rules: skip malformed lines; skip children with empty/whitespace content;
+/// missing file -> `Ok(vec![])`.
+pub fn parse_reflections(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>> {
+    let path = adv_dir.join("reflections.jsonl");
+    let mut items = Vec::new();
+
+    for value in read_jsonl(&path)? {
+        let obj = match value.as_object() {
+            Some(o) => o,
+            None => continue,
+        };
+
+        // Without a usable reflection id we cannot form stable child ids.
+        let rf_id = match obj.get("id").and_then(nonempty_str) {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+
+        let change_id = obj.get("change_id").cloned().unwrap_or(Value::Null);
+        let created_at = obj.get("created_at").cloned().unwrap_or(Value::Null);
+        let metadata = serde_json::json!({
+            "reflection_id": rf_id,
+            "change_id": change_id,
+            "created_at": created_at,
+        });
+
+        let plane2 = match obj.get("plane2").and_then(|v| v.as_object()) {
+            Some(p) => p,
+            None => continue,
+        };
+
+        // friction_items: objects with a `description` field.
+        if let Some(arr) = plane2.get("friction_items").and_then(|v| v.as_array()) {
+            for (i, item) in arr.iter().enumerate() {
+                let desc = item
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                push_reflection_child(
+                    &mut items, &rf_id, namespace, "friction", i, desc, &metadata,
+                );
+            }
+        }
+        // highlights: plain strings.
+        if let Some(arr) = plane2.get("highlights").and_then(|v| v.as_array()) {
+            for (i, item) in arr.iter().enumerate() {
+                if let Some(s) = item.as_str() {
+                    push_reflection_child(
+                        &mut items,
+                        &rf_id,
+                        namespace,
+                        "highlight",
+                        i,
+                        s,
+                        &metadata,
+                    );
+                }
+            }
+        }
+        // improvement_suggestions: plain strings.
+        if let Some(arr) = plane2
+            .get("improvement_suggestions")
+            .and_then(|v| v.as_array())
+        {
+            for (i, item) in arr.iter().enumerate() {
+                if let Some(s) = item.as_str() {
+                    push_reflection_child(
+                        &mut items,
+                        &rf_id,
+                        namespace,
+                        "suggestion",
+                        i,
+                        s,
+                        &metadata,
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(items)
+}
+
+/// Push one exploded reflection child, skipping empty/whitespace content.
+#[allow(clippy::too_many_arguments)]
+fn push_reflection_child(
+    items: &mut Vec<MemoryInput>,
+    rf_id: &str,
+    namespace: &str,
+    kind: &str,
+    index: usize,
+    content: &str,
+    metadata: &Value,
+) {
+    if content.trim().is_empty() {
+        return;
+    }
+    let id = format!("{}:{}:{}", rf_id, kind, index);
+    items.push(MemoryInput {
+        source_id: Some(id.clone()),
+        id,
+        namespace: namespace.to_string(),
+        source: MemorySource::AdvReflection,
+        kind: Some(kind.to_string()),
+        content: content.to_string(),
+        metadata: metadata.clone(),
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    /// Unique temp dir that cleans itself up on drop (no `tempfile` crate).
+    struct TmpDir(PathBuf);
+
+    impl TmpDir {
+        fn new(label: &str) -> Self {
+            let nanos = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "episode-ingest-{}-{}-{}",
+                label,
+                std::process::id(),
+                nanos
+            ));
+            std::fs::create_dir_all(&path).unwrap();
+            TmpDir(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+
+    impl Drop for TmpDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn parse_wisdom_skips_malformed_and_invalidated() {
+        let tmp = TmpDir::new("wisdom");
+        let adv = tmp.path();
+        std::fs::write(
+            adv.join("wisdom.jsonl"),
+            [
+                r#"{"id":"pw-1","type":"gotcha","content":"use X not Y","source_change":"c1","tags":["a","b"]}"#,
+                "this is not json at all",
+                r#"{"id":"pw-2","type":"pattern","content":"valid two","promoted_at":"2026-07-07T02:13:34.418Z"}"#,
+                r#"{"id":"pw-3","type":"gotcha","content":"superseded","invalidated_by":"pw-9"}"#,
+                r#"{"id":"pw-4","type":"gotcha","content":"null-invalidation-kept","invalidated_by":null}"#,
+                "",
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+
+        let got = parse_wisdom("proj", adv).unwrap();
+
+        // pw-3 dropped (invalidated_by non-null); malformed line dropped;
+        // blank dropped; pw-4 kept (invalidated_by is null) => 3 kept.
+        assert_eq!(got.len(), 3);
+
+        let first = &got[0];
+        assert_eq!(first.id, "pw-1");
+        assert_eq!(first.source_id.as_deref(), Some("pw-1"));
+        assert_eq!(first.namespace, "proj");
+        assert_eq!(first.source, MemorySource::AdvWisdom);
+        assert_eq!(first.kind.as_deref(), Some("gotcha"));
+        assert_eq!(first.content, "use X not Y");
+        // metadata keeps provenance, drops the embeddable `content`.
+        assert!(first.metadata.get("content").is_none());
+        assert_eq!(
+            first.metadata.get("type").and_then(|v| v.as_str()),
+            Some("gotcha")
+        );
+        assert_eq!(
+            first.metadata.get("source_change").and_then(|v| v.as_str()),
+            Some("c1")
+        );
+        assert_eq!(
+            first
+                .metadata
+                .get("tags")
+                .and_then(|v| v.as_array())
+                .map(|a| a.len()),
+            Some(2)
+        );
+
+        assert_eq!(got[1].id, "pw-2");
+        assert_eq!(got[2].id, "pw-4");
+    }
+
+    #[test]
+    fn parse_reflections_explodes_plane2_children() {
+        let tmp = TmpDir::new("reflect");
+        let adv = tmp.path();
+        std::fs::write(
+            adv.join("reflections.jsonl"),
+            [
+                r#"{"id":"rf-xyz","change_id":"chg1","created_at":"2026-07-07T00:00:00Z","plane2":{"friction_items":[{"category":"tool_gap","description":"X was hard","tool_name":"foo"}],"highlights":["shipped Y","   "],"improvement_suggestions":["do Z"]}}"#,
+                "garbage line",
+                r#"{"id":"rf-empty","plane2":{"friction_items":[],"highlights":[],"improvement_suggestions":[]}}"#,
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+
+        let got = parse_reflections("proj", adv).unwrap();
+
+        // rf-xyz: 1 friction + 2 highlights (one whitespace -> skipped) + 1 suggestion = 3.
+        // rf-empty contributes 0. garbage line skipped.
+        assert_eq!(got.len(), 3);
+
+        let f = &got[0];
+        assert_eq!(f.id, "rf-xyz:friction:0");
+        assert_eq!(f.source_id.as_deref(), Some("rf-xyz:friction:0"));
+        assert_eq!(f.source, MemorySource::AdvReflection);
+        assert_eq!(f.kind.as_deref(), Some("friction"));
+        assert_eq!(f.content, "X was hard");
+        assert_eq!(f.namespace, "proj");
+        assert_eq!(
+            f.metadata.get("reflection_id").and_then(|v| v.as_str()),
+            Some("rf-xyz")
+        );
+        assert_eq!(
+            f.metadata.get("change_id").and_then(|v| v.as_str()),
+            Some("chg1")
+        );
+        assert_eq!(
+            f.metadata.get("created_at").and_then(|v| v.as_str()),
+            Some("2026-07-07T00:00:00Z")
+        );
+
+        assert_eq!(got[1].id, "rf-xyz:highlight:0");
+        assert_eq!(got[1].content, "shipped Y");
+        assert_eq!(got[2].id, "rf-xyz:suggestion:0");
+        assert_eq!(got[2].content, "do Z");
+    }
+
+    #[test]
+    fn missing_files_return_empty() {
+        let tmp = TmpDir::new("missing");
+        let adv = tmp.path(); // empty dir: no wisdom.jsonl / reflections.jsonl
+        assert!(parse_wisdom("proj", adv).unwrap().is_empty());
+        assert!(parse_reflections("proj", adv).unwrap().is_empty());
+    }
 }
