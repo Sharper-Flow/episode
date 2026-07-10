@@ -1,0 +1,18 @@
+# cargo-deny policy for episode. Scoped to dependency advisories (RustSec) so
+# CI reports known vulnerabilities without adopting bans/licenses/sources policy
+# this repo has not chosen. Consumed by `.github/workflows/ci.yml` via
+# `cargo deny --locked check advisories`, which resolves the dependency graph
+# from the committed Cargo.lock (the build step runs `--locked` first).
+#
+# cargo-deny reference: https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+
+[advisories]
+# RustSec advisory database location and source (cargo-deny defaults).
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Fail for unmaintained or unsound direct dependencies, but do not make every
+# newly-filed transitive notice a release blocker. `workspace` is cargo-deny's
+# supported scope selector for these advisory classes.
+unmaintained = "workspace"
+unsound = "workspace"
+yanked = "warn"

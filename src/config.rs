@@ -1,6 +1,7 @@
 //! Environment-driven configuration.
 
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// A project root to ingest ADV wisdom/reflections from, with its namespace.
@@ -13,9 +14,10 @@ pub struct ProjectRoot {
 /// Embedding backend selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmbedBackend {
-    /// Local fastembed (default).
+    /// Local fastembed (default, and the only backend supported in v0).
     Local,
-    /// Voyage API (`voyage-4-lite`).
+    /// Voyage API (`voyage-4-lite`). Parsed as a known variant but rejected
+    /// during validation as unsupported in v0 (see `Config::from_vars`).
     Voyage,
 }
 
@@ -32,45 +34,42 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self> {
+        Self::from_vars(std::env::vars())
+    }
+
+    /// Parse configuration from an explicit `(key, value)` source, validating
+    /// every field deterministically.
+    ///
+    /// Internal seam so validation can be unit-tested without mutating the
+    /// process environment (Rust 2024 marks `set_var`/`remove_var` unsafe).
+    /// `from_env` delegates here.
+    ///
+    /// Validation policy (AC2 / DONT2):
+    ///   - absent optional vars use their documented defaults;
+    ///   - a *present* but invalid/zero pool size or ingest interval errors,
+    ///     naming the variable and the expected form;
+    ///   - `EPISODE_EMBED_BACKEND` accepts only `local`; `voyage` and unknown
+    ///     values error rather than silently falling back;
+    ///   - every `EPISODE_PROJECT_ROOTS` entry must be a non-empty
+    ///     `namespace=path`; malformed or empty entries error with the entry
+    ///     text.
+    fn from_vars<I: IntoIterator<Item = (String, String)>>(vars: I) -> Result<Self> {
+        let map: HashMap<String, String> = vars.into_iter().collect();
+        let get = |k: &str| -> Option<String> { map.get(k).cloned() };
+
         let database_url =
-            std::env::var("EPISODE_DATABASE_URL").context("EPISODE_DATABASE_URL must be set")?;
+            get("EPISODE_DATABASE_URL").context("EPISODE_DATABASE_URL must be set")?;
 
-        let pool_size = std::env::var("EPISODE_DB_POOL_SIZE")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(10);
+        let pool_size = parse_nonzero(get("EPISODE_DB_POOL_SIZE"), "EPISODE_DB_POOL_SIZE", 10)?;
+        let ingest_interval_secs = parse_nonzero(
+            get("EPISODE_INGEST_INTERVAL_SECS"),
+            "EPISODE_INGEST_INTERVAL_SECS",
+            60,
+        )?;
 
-        let embed_backend = match std::env::var("EPISODE_EMBED_BACKEND")
-            .unwrap_or_else(|_| "local".into())
-            .to_ascii_lowercase()
-            .as_str()
-        {
-            "voyage" => EmbedBackend::Voyage,
-            _ => EmbedBackend::Local,
-        };
-
-        let voyage_api_key = std::env::var("VOYAGE_API_KEY").ok();
-
-        let project_roots = std::env::var("EPISODE_PROJECT_ROOTS")
-            .unwrap_or_default()
-            .split(',')
-            .filter_map(|pair| {
-                let pair = pair.trim();
-                if pair.is_empty() {
-                    return None;
-                }
-                let (ns, path) = pair.split_once('=')?;
-                Some(ProjectRoot {
-                    namespace: ns.trim().to_string(),
-                    path: PathBuf::from(path.trim()),
-                })
-            })
-            .collect();
-
-        let ingest_interval_secs = std::env::var("EPISODE_INGEST_INTERVAL_SECS")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(60);
+        let embed_backend = parse_backend(get("EPISODE_EMBED_BACKEND"))?;
+        let voyage_api_key = get("VOYAGE_API_KEY");
+        let project_roots = parse_project_roots(get("EPISODE_PROJECT_ROOTS"))?;
 
         Ok(Self {
             database_url,
@@ -80,5 +79,289 @@ impl Config {
             project_roots,
             ingest_interval_secs,
         })
+    }
+}
+
+/// Parse a present-then-strict non-zero positive integer, or return the
+/// documented default when the variable is absent. A present value that is
+/// non-numeric, out of range, or zero errors with the variable name, the
+/// offending value, and the expected form.
+fn parse_nonzero<T>(raw: Option<String>, name: &str, default: T) -> Result<T>
+where
+    T: std::str::FromStr + PartialOrd + From<u8> + std::fmt::Display,
+    T::Err: std::fmt::Display,
+{
+    let Some(raw) = raw else {
+        return Ok(default);
+    };
+    let value: T = raw.trim().parse().map_err(|e| {
+        anyhow::anyhow!("{name} must be a non-zero positive integer (got {raw:?}): {e}")
+    })?;
+    if value == T::from(0u8) {
+        anyhow::bail!("{name} must be a non-zero positive integer (got {raw:?})");
+    }
+    Ok(value)
+}
+
+/// Parse the embedding backend. Only `local` is supported in v0. Absent (or
+/// unset) yields the documented `local` default; `voyage` errors as unsupported
+/// (fail at validation instead of starting up and aborting later); any other
+/// value errors as unknown.
+fn parse_backend(raw: Option<String>) -> Result<EmbedBackend> {
+    match raw
+        .as_deref()
+        .map(str::trim)
+        .map(|s| s.to_ascii_lowercase())
+    {
+        None => Ok(EmbedBackend::Local),
+        Some(s) if s == "local" => Ok(EmbedBackend::Local),
+        Some(s) if s == "voyage" => anyhow::bail!(
+            "EPISODE_EMBED_BACKEND value \"voyage\" is unsupported; only \"local\" is supported in v0"
+        ),
+        Some(other) => {
+            anyhow::bail!("EPISODE_EMBED_BACKEND has unknown value {other:?}; expected \"local\"")
+        }
+    }
+}
+
+/// Parse `EPISODE_PROJECT_ROOTS` into validated project roots. An absent or
+/// wholly-empty value yields no roots (no ingestion). Within a non-empty value,
+/// every comma-separated entry must be a non-empty `namespace=path`; an empty
+/// segment (consecutive/trailing comma) or a malformed entry errors, naming the
+/// variable and the offending entry.
+fn parse_project_roots(raw: Option<String>) -> Result<Vec<ProjectRoot>> {
+    let Some(raw) = raw else {
+        return Ok(Vec::new());
+    };
+    if raw.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut roots = Vec::new();
+    for entry in raw.split(',') {
+        let entry = entry.trim();
+        if entry.is_empty() {
+            anyhow::bail!(
+                "EPISODE_PROJECT_ROOTS contains an empty entry; expected non-empty namespace=path entries"
+            );
+        }
+        let (ns, path) = entry.split_once('=').ok_or_else(|| {
+            anyhow::anyhow!(
+                "malformed EPISODE_PROJECT_ROOTS entry {entry:?}: expected non-empty namespace=path"
+            )
+        })?;
+        let ns = ns.trim();
+        let path = path.trim();
+        if ns.is_empty() {
+            anyhow::bail!(
+                "malformed EPISODE_PROJECT_ROOTS entry {entry:?}: namespace must be non-empty (expected namespace=path)"
+            );
+        }
+        if path.is_empty() {
+            anyhow::bail!(
+                "malformed EPISODE_PROJECT_ROOTS entry {entry:?}: path must be non-empty (expected namespace=path)"
+            );
+        }
+        roots.push(ProjectRoot {
+            namespace: ns.to_string(),
+            path: PathBuf::from(path),
+        });
+    }
+    Ok(roots)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DB: &str = "postgres://episode:episode@localhost:5434/episode";
+
+    /// Minimal fully-valid variable set. Tests clone and override the field
+    /// under scrutiny so every case exercises exactly one validation rule.
+    fn base() -> Vec<(String, String)> {
+        vec![
+            ("EPISODE_DATABASE_URL".into(), DB.into()),
+            ("EPISODE_DB_POOL_SIZE".into(), "8".into()),
+            ("EPISODE_INGEST_INTERVAL_SECS".into(), "30".into()),
+            ("EPISODE_EMBED_BACKEND".into(), "local".into()),
+            (
+                "EPISODE_PROJECT_ROOTS".into(),
+                "advance=/home/jon/dev/advance".into(),
+            ),
+        ]
+    }
+
+    fn set(vars: &mut Vec<(String, String)>, key: &str, val: &str) {
+        if let Some(slot) = vars.iter_mut().find(|(k, _)| k == key) {
+            slot.1 = val.into();
+        } else {
+            vars.push((key.into(), val.into()));
+        }
+    }
+
+    #[test]
+    fn valid_config_parses() {
+        let cfg = Config::from_vars(base()).expect("valid config should parse");
+        assert_eq!(cfg.pool_size, 8);
+        assert_eq!(cfg.ingest_interval_secs, 30);
+        assert_eq!(cfg.embed_backend, EmbedBackend::Local);
+        assert_eq!(cfg.project_roots.len(), 1);
+        assert_eq!(cfg.project_roots[0].namespace, "advance");
+    }
+
+    #[test]
+    fn documented_defaults_apply_when_absent() {
+        // Only the database URL is required; everything else has a documented
+        // default (these are defaults for *absent* values, not silent fallbacks
+        // for invalid ones).
+        let cfg = Config::from_vars(vec![("EPISODE_DATABASE_URL".into(), DB.into())])
+            .expect("absent optional vars use documented defaults");
+        assert_eq!(cfg.pool_size, 10);
+        assert_eq!(cfg.ingest_interval_secs, 60);
+        assert_eq!(cfg.embed_backend, EmbedBackend::Local);
+        assert!(cfg.project_roots.is_empty());
+    }
+
+    #[test]
+    fn missing_database_url_errors() {
+        let err = Config::from_vars(vec![]).expect_err("database URL is required");
+        assert!(
+            err.to_string().contains("EPISODE_DATABASE_URL"),
+            "error names the missing variable: {err}"
+        );
+    }
+
+    #[test]
+    fn zero_pool_size_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_DB_POOL_SIZE", "0");
+        let err = Config::from_vars(v).expect_err("zero pool size must fail");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("EPISODE_DB_POOL_SIZE"),
+            "names variable: {msg}"
+        );
+    }
+
+    #[test]
+    fn invalid_pool_size_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_DB_POOL_SIZE", "abc");
+        let err = Config::from_vars(v).expect_err("non-numeric pool size must fail");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("EPISODE_DB_POOL_SIZE"),
+            "names variable: {msg}"
+        );
+        assert!(msg.contains("abc"), "echoes offending value: {msg}");
+    }
+
+    #[test]
+    fn zero_ingest_interval_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_INGEST_INTERVAL_SECS", "0");
+        let err = Config::from_vars(v).expect_err("zero ingest interval must fail");
+        assert!(err.to_string().contains("EPISODE_INGEST_INTERVAL_SECS"));
+    }
+
+    #[test]
+    fn invalid_ingest_interval_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_INGEST_INTERVAL_SECS", "soon");
+        let err = Config::from_vars(v).expect_err("non-numeric interval must fail");
+        let msg = err.to_string();
+        assert!(msg.contains("EPISODE_INGEST_INTERVAL_SECS"));
+        assert!(msg.contains("soon"), "echoes offending value: {msg}");
+    }
+
+    #[test]
+    fn unknown_backend_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_EMBED_BACKEND", "banana");
+        let err = Config::from_vars(v).expect_err("unknown backend must fail");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("EPISODE_EMBED_BACKEND"),
+            "names variable: {msg}"
+        );
+        assert!(msg.contains("banana"), "echoes offending value: {msg}");
+    }
+
+    #[test]
+    fn voyage_backend_rejected_as_unsupported() {
+        // v0 supports only `local`; `voyage` must fail at validation rather than
+        // starting up and aborting later.
+        let mut v = base();
+        set(&mut v, "EPISODE_EMBED_BACKEND", "voyage");
+        let err = Config::from_vars(v).expect_err("voyage is unsupported in v0");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("EPISODE_EMBED_BACKEND"),
+            "names variable: {msg}"
+        );
+        assert!(msg.contains("voyage"), "echoes offending value: {msg}");
+    }
+
+    #[test]
+    fn backend_matching_is_case_insensitive_for_local() {
+        let mut v = base();
+        set(&mut v, "EPISODE_EMBED_BACKEND", "LOCAL");
+        let cfg = Config::from_vars(v).expect("LOCAL should normalize to local");
+        assert_eq!(cfg.embed_backend, EmbedBackend::Local);
+    }
+
+    #[test]
+    fn malformed_root_missing_equals_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_PROJECT_ROOTS", "advance-no-equals");
+        let err = Config::from_vars(v).expect_err("entry without '=' must fail");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("EPISODE_PROJECT_ROOTS"),
+            "names variable: {msg}"
+        );
+        assert!(
+            msg.contains("advance-no-equals"),
+            "echoes offending entry: {msg}"
+        );
+    }
+
+    #[test]
+    fn empty_root_entry_rejected() {
+        // Trailing comma produces an empty segment.
+        let mut v = base();
+        set(&mut v, "EPISODE_PROJECT_ROOTS", "advance=/x,");
+        let err = Config::from_vars(v).expect_err("empty entry must fail");
+        assert!(err.to_string().contains("EPISODE_PROJECT_ROOTS"));
+    }
+
+    #[test]
+    fn empty_namespace_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_PROJECT_ROOTS", "=/home/jon/dev/advance");
+        let err = Config::from_vars(v).expect_err("empty namespace must fail");
+        assert!(err.to_string().contains("EPISODE_PROJECT_ROOTS"));
+    }
+
+    #[test]
+    fn empty_path_rejected() {
+        let mut v = base();
+        set(&mut v, "EPISODE_PROJECT_ROOTS", "advance=");
+        let err = Config::from_vars(v).expect_err("empty path must fail");
+        assert!(err.to_string().contains("EPISODE_PROJECT_ROOTS"));
+    }
+
+    #[test]
+    fn multiple_valid_roots_parse() {
+        let mut v = base();
+        set(
+            &mut v,
+            "EPISODE_PROJECT_ROOTS",
+            "advance=/a,pokeedge=/b,pokeedge-web=/c",
+        );
+        let cfg = Config::from_vars(v).expect("three valid roots should parse");
+        assert_eq!(cfg.project_roots.len(), 3);
+        assert_eq!(cfg.project_roots[0].namespace, "advance");
+        assert_eq!(cfg.project_roots[2].namespace, "pokeedge-web");
     }
 }

@@ -5,17 +5,27 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.103"
-chrono = { version = "0.4.45", features = ["serde"] }
 dotenvy = "0.15.7"
 fastembed = "5.17.2"
-notify = "8.2.0"
 pgvector = { version = "0.4.2", features = ["sqlx"] }
 rmcp = { version = "2.2.0", features = ["server", "transport-io", "macros"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-ring", "postgres", "chrono", "uuid", "macros", "migrate"] }
-thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 uuid = { version = "1.23.4", features = ["v4", "serde"] }
+
+# Measured release profile for the deployed `~/.local/bin/episode` binary.
+# Pins the defaults that matter (opt-level = 3) and trades longer compile time
+# for runtime throughput and a smaller artifact, without the much slower build
+# of fat LTO and without changing unwinding semantics (panic stays "unwind"):
+#   - lto = "thin": cross-crate inlining at modest build cost.
+#   - codegen-units = 1: maximum optimization for the single shipped binary.
+#   - strip = "symbols": smaller on-disk binary; debug info is not needed in prod.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
