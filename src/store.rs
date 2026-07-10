@@ -1,10 +1,11 @@
 //! Postgres + pgvector persistence.
 
+use std::collections::HashSet;
 use std::time::Duration;
 
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 
 use crate::types::{MemoryInput, NamespaceStat, RecallHit};
 
@@ -76,6 +77,71 @@ impl Store {
         Ok(true)
     }
 
+    /// Transactional batch upsert for the ingestion path (AC4 / DONT3 / design §4).
+    ///
+    /// Persists one bounded ingestion partition in a single
+    /// `INSERT ... ON CONFLICT (id) DO UPDATE` statement wrapped in a transaction.
+    /// The statement is built with `sqlx::QueryBuilder` value binds — never
+    /// `format!` — so mutation SQL is never string-constructed from input. `items`
+    /// and `embeddings` are parallel, equal-length slices (the caller validates
+    /// this via [`crate::scheduler::validate_batch_output`]; the length check here
+    /// is defense-in-depth). On any error the transaction rolls back, so the whole
+    /// partition either lands or none of it does; failed partitions remain eligible
+    /// for the next reconcile.
+    ///
+    /// Returns the number of rows affected (inserted or updated). An empty input
+    /// returns `Ok(0)` without opening a transaction.
+    pub async fn upsert_batch(
+        &self,
+        items: &[MemoryInput],
+        embeddings: &[Vec<f32>],
+    ) -> Result<usize> {
+        anyhow::ensure!(
+            items.len() == embeddings.len(),
+            "upsert_batch length mismatch: {} items vs {} embeddings",
+            items.len(),
+            embeddings.len()
+        );
+        if items.is_empty() {
+            return Ok(0);
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        let mut qb: QueryBuilder<Postgres> = QueryBuilder::new(
+            "INSERT INTO memories \
+             (id, namespace, source, source_id, kind, content, metadata, embedding) ",
+        );
+        qb.push_values(
+            items.iter().zip(embeddings.iter()),
+            |mut b, (input, emb)| {
+                b.push_bind(&input.id)
+                    .push_bind(&input.namespace)
+                    .push_bind(input.source.as_str())
+                    .push_bind(&input.source_id)
+                    .push_bind(&input.kind)
+                    .push_bind(&input.content)
+                    .push_bind(&input.metadata)
+                    .push_bind(pgvector::Vector::from(emb.clone()));
+            },
+        );
+        qb.push(
+            " ON CONFLICT (id) DO UPDATE SET \
+                 namespace = EXCLUDED.namespace, \
+                 source = EXCLUDED.source, \
+                 source_id = EXCLUDED.source_id, \
+                 kind = EXCLUDED.kind, \
+                 content = EXCLUDED.content, \
+                 metadata = EXCLUDED.metadata, \
+                 embedding = EXCLUDED.embedding, \
+                 updated_at = now()",
+        );
+
+        let result = qb.build().execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(result.rows_affected() as usize)
+    }
+
     /// Fast dedup check: does a row exist for (namespace, source_id)?
     pub async fn exists_source(&self, namespace: &str, source_id: &str) -> Result<bool> {
         let exists = sqlx::query_scalar::<_, bool>(
@@ -86,6 +152,36 @@ impl Store {
         .fetch_one(&self.pool)
         .await?;
         Ok(exists)
+    }
+
+    /// Bulk dedup lookup for the ingestion path (AC4 / design §4).
+    ///
+    /// Returns the subset of `source_ids` already present in `namespace`, in one
+    /// static-SQL round-trip (`source_id = ANY($2)`) instead of one `EXISTS` per
+    /// item. An empty candidate list short-circuits to an empty set without a
+    /// database call. Null `source_id` rows never match `ANY` against a non-null
+    /// candidate array, so manual rows (no `source_id`) are unaffected. Match
+    /// semantics mirror [`Self::exists_source`] (namespace + source_id only) so
+    /// the bulk path is a drop-in replacement for the per-item path.
+    pub async fn existing_source_ids(
+        &self,
+        namespace: &str,
+        source_ids: &[String],
+    ) -> Result<HashSet<String>> {
+        let mut found = HashSet::new();
+        if source_ids.is_empty() {
+            return Ok(found);
+        }
+        let rows = sqlx::query_scalar::<_, String>(
+            "SELECT source_id FROM memories \
+             WHERE namespace = $1 AND source_id = ANY($2)",
+        )
+        .bind(namespace)
+        .bind(source_ids)
+        .fetch_all(&self.pool)
+        .await?;
+        found.extend(rows);
+        Ok(found)
     }
 
     /// Cosine recall. `score = 1.0 - (embedding <=> query)` (cosine distance -> similarity).
