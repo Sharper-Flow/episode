@@ -1,0 +1,16 @@
+{
+  "archived_at": "2026-07-31T16:53:55.548Z",
+  "capabilities": [],
+  "change_hash": "8b9d1a7bd3af5ef52cd6611dcba5f9347f94dafb338310bc40912b1a7c81b866",
+  "change_id": "strengthenEpisodeOperations",
+  "completed_tasks": 5,
+  "created_at": "2026-07-31T01:33:51.406Z",
+  "current_gate": "release",
+  "last_activity_at": "2026-07-31T16:52:21.331Z",
+  "lifecycle_state": "open",
+  "status": "archived",
+  "summary_hash": "f1922e46291d308a07b7e26c52b08ee60e77290e06a59ba069f60f07976ee9cd",
+  "task_count": 5,
+  "title": "Strengthen episode operations",
+  "version": "1"
+}

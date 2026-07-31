@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "change_id": "strengthenEpisodeOperations",
+  "title": "Strengthen episode operations",
+  "release_notes": {
+    "audience": "internal",
+    "category": "changed",
+    "headline_internal": "Strengthened Episode operational safety and release automation.",
+    "highlights": [
+      "Preserves applied SQLx migration history while checking schema compatibility.",
+      "Adds configurable stderr-only logging and release-profile CI.",
+      "Adds CI-gated release automation plus operational documentation."
+    ],
+    "area": "episode operations"
+  }
+}
