@@ -60,9 +60,11 @@ and capacity evidence for pool/ingestion bounds are maintained in
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust for your environment. All variables are
-validated at startup; invalid values fail with the offending variable name and the
-expected format rather than being silently corrected. Key variables:
+Copy `.env.example` to `.env` and adjust for your environment. Required and
+behavioral settings are validated at startup; invalid values fail with the
+offending variable name and expected format. `EPISODE_LOG_LEVEL` intentionally
+defaults to `INFO` when absent, empty, or invalid so logging cannot prevent
+startup. Key variables:
 
 | Variable | Purpose |
 |---|---|

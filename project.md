@@ -56,7 +56,10 @@ Local deploy: `scripts/deploy.sh` builds and installs the release binary to `~/.
 
 ## Configuration
 
-Copy `.env.example` to `.env`. All variables are validated at startup; invalid values fail with the offending variable name and expected format. Key variables:
+Copy `.env.example` to `.env`. Required and behavioral settings are validated at
+startup; invalid values fail with the offending variable name and expected
+format. `EPISODE_LOG_LEVEL` intentionally defaults to `INFO` when absent, empty,
+or invalid so logging cannot prevent startup. Key variables:
 
 | Variable | Purpose |
 |---|---|

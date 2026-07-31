@@ -17,7 +17,7 @@ The release profile enables aggressive optimizations (`opt-level = 3`, `lto = "t
 ## Verification
 
 - CI job `Release profile` must pass on every push to `main` and every pull request.
-- `scripts/deploy.sh` uses `cargo build --release` and installs the resulting binary to `~/.local/bin/episode`.
+- `scripts/deploy.sh` uses `cargo build --release --locked` and installs the resulting binary to `~/.local/bin/episode`.
 
 ## Constraints
 

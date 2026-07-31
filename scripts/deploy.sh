@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "==> building release"
-cargo build --release
+cargo build --release --locked
 
 dest="${HOME}/.local/bin/episode"
 install -Dm755 target/release/episode "$dest"
