@@ -132,14 +132,18 @@ fn partition_ranges(total: usize, max: usize) -> Vec<Range<usize>> {
 
 /// Outcome of reconciling one project root. `stopped` is set when shutdown was
 /// observed before a batch began, so the caller can break the root loop.
-struct ReconcileOutcome {
-    ingested: usize,
-    stopped: bool,
+pub struct ReconcileOutcome {
+    pub ingested: usize,
+    pub stopped: bool,
 }
 
 /// Reconcile one project root: parse both ADV sources, bulk-dedup against the
 /// store, then embed and persist eligible items in bounded, transactional
 /// partitions.
+///
+/// Exposed as a testability seam so bounded-load cadence measurements can drive
+/// the real ingestion pipeline end-to-end without spawning the full daemon
+/// loop (AC5 / AC9).
 ///
 /// - **Bulk dedup (design §4):** one `existing_source_ids` lookup per root
 ///   replaces the previous per-item `exists_source` calls.
@@ -152,7 +156,7 @@ struct ReconcileOutcome {
 ///   items remain unpersisted and therefore reappear on the next reconcile. A
 ///   bulk-lookup failure skips the whole root for this pass (nothing is
 ///   persisted, so everything reconciles next time).
-async fn reconcile_root(
+pub async fn reconcile_root(
     store: &Store,
     handle: &SchedulerHandle,
     root: &ProjectRoot,

@@ -54,8 +54,9 @@ reconcile loop (see `EPISODE_INGEST_INTERVAL_SECS`), not a file watcher.
 
 Not yet implemented: a Voyage embedding tier, file-watch ingestion.
 Releases are CI-gated; see [`docs/release.md`](docs/release.md) for the
-automation and versioning convention. Operational context and capability specs
-are maintained in [`project.md`](project.md) and [`docs/specs/`](docs/specs/).
+automation and versioning convention. Operational context, capability specs,
+and capacity evidence for pool/ingestion bounds are maintained in
+[`project.md`](project.md) and [`docs/specs/`](docs/specs/).
 
 ## Configuration
 
