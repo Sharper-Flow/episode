@@ -66,3 +66,68 @@ pub struct NamespaceStat {
     pub source: String,
     pub count: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::EMBEDDING_DIM;
+
+    const INIT_SQL: &str = include_str!("../migrations/0001_init.sql");
+
+    fn extract_embedding_dim(sql: &str) -> Option<usize> {
+        for line in sql.lines() {
+            // Strip inline comments before matching.
+            let line = line.split("--").next()?;
+            let lower = line.to_ascii_lowercase();
+            if lower.contains("embedding") && lower.contains("vector(") {
+                let open = lower.find("vector(")? + 7;
+                let close = lower[open..].find(")")? + open;
+                return line[open..close].trim().parse().ok();
+            }
+        }
+        None
+    }
+
+    fn extract_hnsw_index(sql: &str) -> Option<&str> {
+        let start = sql.find("CREATE INDEX IF NOT EXISTS memories_embedding_hnsw")?;
+        let end = sql[start..].find(';')? + start;
+        Some(&sql[start..=end])
+    }
+
+    /// AC1 / SC1: the Rust embedding-dimension constant must agree with the
+    /// persisted schema. This test is database-free — it parses the embedded
+    /// migration SQL and compares it to `EMBEDDING_DIM`. A mismatch means the
+    /// backend could produce vectors that the Postgres column would reject.
+    #[test]
+    fn embedding_dimension_matches_schema() {
+        let dim = extract_embedding_dim(INIT_SQL)
+            .expect("init schema must declare an embedding vector(N) dimension");
+        assert_eq!(
+            dim, EMBEDDING_DIM,
+            "EMBEDDING_DIM constant must equal the schema's vector(N) dimension"
+        );
+    }
+
+    /// AC6: the HNSW index must use cosine distance and state the pgvector
+    /// default parameters explicitly. Fresh databases get the documented shape
+    /// from the initial migration; existing databases keep their creation-time
+    /// parameters, because changing HNSW build parameters requires recreating
+    /// the index (a data migration we deliberately avoid).
+    #[test]
+    fn hnsw_index_uses_cosine_with_explicit_defaults() {
+        let idx = extract_hnsw_index(INIT_SQL)
+            .expect("init schema must declare a memories_embedding_hnsw index");
+        let normalized = idx.to_ascii_lowercase();
+        assert!(
+            normalized.contains("vector_cosine_ops"),
+            "HNSW index must use cosine distance (vector_cosine_ops), got:\n{idx}"
+        );
+        assert!(
+            normalized.contains("m = 16"),
+            "HNSW index must explicitly document m = 16 (pgvector default), got:\n{idx}"
+        );
+        assert!(
+            normalized.contains("ef_construction = 64"),
+            "HNSW index must explicitly document ef_construction = 64 (pgvector default), got:\n{idx}"
+        );
+    }
+}

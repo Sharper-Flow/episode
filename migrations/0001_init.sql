@@ -47,8 +47,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS memories_source_uniq
     WHERE source_id IS NOT NULL;
 
 -- Approximate nearest-neighbour recall via HNSW + cosine distance.
+-- m=16 and ef_construction=64 are the pgvector defaults; stated explicitly
+-- so the migration documents the index shape for fresh databases. Existing
+-- databases keep their creation-time parameters because HNSW build parameters
+-- can only be changed by recreating the index (a data migration we avoid).
 CREATE INDEX IF NOT EXISTS memories_embedding_hnsw
-    ON memories USING hnsw (embedding vector_cosine_ops);
+    ON memories USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
 
 -- Namespace scoping for recall (project + global).
 CREATE INDEX IF NOT EXISTS memories_namespace_idx
