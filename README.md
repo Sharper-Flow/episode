@@ -52,8 +52,9 @@ The embedding backend is local-only in v0: `EPISODE_EMBED_BACKEND` accepts only
 `local` (a `voyage` value is rejected at startup), and ingestion is a periodic
 reconcile loop (see `EPISODE_INGEST_INTERVAL_SECS`), not a file watcher.
 
-Not yet implemented: a Voyage embedding tier, file-watch ingestion, automated
-release.
+Not yet implemented: a Voyage embedding tier, file-watch ingestion.
+Releases are CI-gated; see [`docs/release.md`](docs/release.md) for the
+automation and versioning convention.
 
 ## Development
 

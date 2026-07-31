@@ -31,6 +31,10 @@ jobs:
         # The end-to-end recall test is #[ignore] (needs Postgres + model
         # download), so this runs the unit suite without external services.
         run: cargo test --locked
+      - name: Release profile
+        # Compile the release profile that deploy.sh and the release workflow
+        # use, so CI fails before a release attempt if the profile is broken.
+        run: cargo build --release --locked
       - name: Dependency advisories
         # Locked RustSec advisory check against Cargo.lock. Runs after the
         # `--locked` build so the lockfile is known-consistent; `--locked` keeps
