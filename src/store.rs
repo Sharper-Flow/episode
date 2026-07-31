@@ -48,33 +48,16 @@ impl Store {
         Ok(Self { pool })
     }
 
-    /// Idempotent upsert keyed on stable `id`. Returns true on insert/update.
-    pub async fn upsert(&self, input: &MemoryInput, embedding: &[f32]) -> Result<bool> {
-        let vector = pgvector::Vector::from(embedding.to_vec());
-        sqlx::query(
-            "INSERT INTO memories (id, namespace, source, source_id, kind, content, metadata, embedding) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
-             ON CONFLICT (id) DO UPDATE SET \
-                 namespace = EXCLUDED.namespace, \
-                 source = EXCLUDED.source, \
-                 source_id = EXCLUDED.source_id, \
-                 kind = EXCLUDED.kind, \
-                 content = EXCLUDED.content, \
-                 metadata = EXCLUDED.metadata, \
-                 embedding = EXCLUDED.embedding, \
-                 updated_at = now()",
-        )
-        .bind(&input.id)
-        .bind(&input.namespace)
-        .bind(input.source.as_str())
-        .bind(&input.source_id)
-        .bind(&input.kind)
-        .bind(&input.content)
-        .bind(&input.metadata)
-        .bind(&vector)
-        .execute(&self.pool)
-        .await?;
-        Ok(true)
+    /// Idempotent upsert keyed on stable `id`. Returns `Ok(())` on success.
+    ///
+    /// Delegates to [`Self::upsert_batch`] so the single-row and batch persistence
+    /// paths share one SQL statement and transactional semantics. The acknowledged
+    /// overhead of a one-row transaction is bounded and keeps the codebase free of
+    /// duplicated `ON CONFLICT` clauses.
+    pub async fn upsert(&self, input: &MemoryInput, embedding: &[f32]) -> Result<()> {
+        self.upsert_batch(std::slice::from_ref(input), &[embedding.to_vec()])
+            .await?;
+        Ok(())
     }
 
     /// Transactional batch upsert for the ingestion path (AC4 / DONT3 / design §4).

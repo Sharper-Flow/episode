@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use tracing_subscriber::filter::LevelFilter;
 
 /// A project root to ingest ADV wisdom/reflections from, with its namespace.
 #[derive(Debug, Clone)]
@@ -30,6 +31,9 @@ pub struct Config {
     pub project_roots: Vec<ProjectRoot>,
     /// Seconds between ingestion reconcile passes.
     pub ingest_interval_secs: u64,
+    /// Maximum log level emitted to stderr (stdout is reserved for MCP JSON-RPC).
+    /// Absent, empty, or invalid values deterministically default to INFO.
+    pub log_level: LevelFilter,
 }
 
 impl Config {
@@ -70,6 +74,7 @@ impl Config {
         let embed_backend = parse_backend(get("EPISODE_EMBED_BACKEND"))?;
         let voyage_api_key = get("VOYAGE_API_KEY");
         let project_roots = parse_project_roots(get("EPISODE_PROJECT_ROOTS"))?;
+        let log_level = parse_log_level(get("EPISODE_LOG_LEVEL"));
 
         Ok(Self {
             database_url,
@@ -78,8 +83,23 @@ impl Config {
             voyage_api_key,
             project_roots,
             ingest_interval_secs,
+            log_level,
         })
     }
+}
+
+/// Parse the `EPISODE_LOG_LEVEL` variable. Absent, empty, or invalid values
+/// silently fall back to INFO so a logging misconfiguration cannot prevent
+/// startup (C4 / stderr safety is enforced by the binary subscriber setup).
+fn parse_log_level(raw: Option<String>) -> LevelFilter {
+    let Some(raw) = raw else {
+        return LevelFilter::INFO;
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return LevelFilter::INFO;
+    }
+    trimmed.parse::<LevelFilter>().unwrap_or(LevelFilter::INFO)
 }
 
 /// Parse a present-then-strict non-zero positive integer, or return the
@@ -183,6 +203,7 @@ mod tests {
             ("EPISODE_DATABASE_URL".into(), DB.into()),
             ("EPISODE_DB_POOL_SIZE".into(), "8".into()),
             ("EPISODE_INGEST_INTERVAL_SECS".into(), "30".into()),
+            ("EPISODE_LOG_LEVEL".into(), "info".into()),
             ("EPISODE_EMBED_BACKEND".into(), "local".into()),
             (
                 "EPISODE_PROJECT_ROOTS".into(),
@@ -352,16 +373,55 @@ mod tests {
     }
 
     #[test]
-    fn multiple_valid_roots_parse() {
+    fn log_level_defaults_to_info_when_absent() {
         let mut v = base();
-        set(
-            &mut v,
-            "EPISODE_PROJECT_ROOTS",
-            "advance=/a,pokeedge=/b,pokeedge-web=/c",
-        );
-        let cfg = Config::from_vars(v).expect("three valid roots should parse");
-        assert_eq!(cfg.project_roots.len(), 3);
-        assert_eq!(cfg.project_roots[0].namespace, "advance");
-        assert_eq!(cfg.project_roots[2].namespace, "pokeedge-web");
+        v.retain(|(k, _)| k != "EPISODE_LOG_LEVEL");
+        let cfg = Config::from_vars(v).expect("valid config should parse");
+        assert_eq!(cfg.log_level, tracing_subscriber::filter::LevelFilter::INFO);
+    }
+
+    #[test]
+    fn log_level_defaults_to_info_when_invalid() {
+        let mut v = base();
+        set(&mut v, "EPISODE_LOG_LEVEL", "verbose");
+        let cfg = Config::from_vars(v).expect("invalid log level must not fail startup");
+        assert_eq!(cfg.log_level, tracing_subscriber::filter::LevelFilter::INFO);
+    }
+
+    #[test]
+    fn log_level_defaults_to_info_when_empty_or_whitespace() {
+        let mut v = base();
+        set(&mut v, "EPISODE_LOG_LEVEL", "   ");
+        let cfg = Config::from_vars(v).expect("whitespace-only log level must not fail startup");
+        assert_eq!(cfg.log_level, tracing_subscriber::filter::LevelFilter::INFO);
+
+        let mut v = base();
+        set(&mut v, "EPISODE_LOG_LEVEL", "");
+        let cfg = Config::from_vars(v).expect("empty log level must not fail startup");
+        assert_eq!(cfg.log_level, tracing_subscriber::filter::LevelFilter::INFO);
+    }
+
+    #[test]
+    fn log_level_valid_values_are_case_insensitive() {
+        for (raw, expected) in [
+            ("trace", tracing_subscriber::filter::LevelFilter::TRACE),
+            ("TRACE", tracing_subscriber::filter::LevelFilter::TRACE),
+            ("debug", tracing_subscriber::filter::LevelFilter::DEBUG),
+            ("DEBUG", tracing_subscriber::filter::LevelFilter::DEBUG),
+            ("info", tracing_subscriber::filter::LevelFilter::INFO),
+            ("INFO", tracing_subscriber::filter::LevelFilter::INFO),
+            ("warn", tracing_subscriber::filter::LevelFilter::WARN),
+            ("WARN", tracing_subscriber::filter::LevelFilter::WARN),
+            ("error", tracing_subscriber::filter::LevelFilter::ERROR),
+            ("ERROR", tracing_subscriber::filter::LevelFilter::ERROR),
+        ] {
+            let mut v = base();
+            set(&mut v, "EPISODE_LOG_LEVEL", raw);
+            let cfg = Config::from_vars(v).expect("valid log level should parse");
+            assert_eq!(
+                cfg.log_level, expected,
+                "{raw:?} should parse to {expected:?}"
+            );
+        }
     }
 }

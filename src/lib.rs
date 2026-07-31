@@ -32,8 +32,7 @@ use crate::types::MemoryInput;
 /// bounded priority scheduler, spawn the background ingestion loop, and serve
 /// the MCP protocol over stdio. Owns the ingestion and scheduler task handles
 /// and drives cooperative shutdown when stdio completes (AC6 / C5).
-pub async fn run() -> Result<()> {
-    let cfg = Config::from_env()?;
+pub async fn run(cfg: Config) -> Result<()> {
     tracing::info!(
         roots = cfg.project_roots.len(),
         pool = cfg.pool_size,

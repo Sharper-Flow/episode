@@ -52,7 +52,7 @@ async fn embed_store_recall_ranks_semantically() {
             content: text.to_string(),
             metadata: serde_json::json!({ "test": true }),
         };
-        assert!(store.upsert(&input, &emb).await.expect("upsert"));
+        store.upsert(&input, &emb).await.expect("upsert");
     }
 
     // A query semantically closest to it-3 (vector index), unrelated to espresso.
@@ -120,18 +120,14 @@ async fn forget_manual_enforces_namespace_and_manual_source() {
         content: "ingested row that must be protected from manual deletion".to_string(),
         metadata: serde_json::json!({ "test": true }),
     };
-    assert!(
-        store
-            .upsert(&manual, &zero_vec)
-            .await
-            .expect("upsert manual")
-    );
-    assert!(
-        store
-            .upsert(&ingested, &zero_vec)
-            .await
-            .expect("upsert ingested")
-    );
+    store
+        .upsert(&manual, &zero_vec)
+        .await
+        .expect("upsert manual");
+    store
+        .upsert(&ingested, &zero_vec)
+        .await
+        .expect("upsert ingested");
 
     // 1) Wrong namespace -> 0 (the manual row must survive untouched).
     assert_eq!(
