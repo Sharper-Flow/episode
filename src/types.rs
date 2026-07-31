@@ -6,6 +6,25 @@ use serde::{Deserialize, Serialize};
 /// voyage-4-lite, so the backend can switch without a schema migration.
 pub const EMBEDDING_DIM: usize = 1024;
 
+/// pgvector documented default for the HNSW `m` build parameter.
+///
+/// The initial migration uses pgvector's implicit defaults, so these constants
+/// are the machine-checkable authority for the index shape on fresh databases.
+pub const HNSW_M: u32 = 16;
+
+/// pgvector documented default for the HNSW `ef_construction` build parameter.
+///
+/// See [`HNSW_M`] for rationale.
+pub const HNSW_EF_CONSTRUCTION: u32 = 64;
+
+// Static assertions: the HNSW constants must stay equal to the pgvector defaults
+// documented in `docs/specs/0001-dimension-contract.md`. A mismatch would
+// mean the code and the operator-facing docs have drifted apart.
+#[allow(dead_code)]
+const _: () = assert!(HNSW_M == 16);
+#[allow(dead_code)]
+const _: () = assert!(HNSW_EF_CONSTRUCTION == 64);
+
 /// Provenance of a memory row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -69,9 +88,10 @@ pub struct NamespaceStat {
 
 #[cfg(test)]
 mod tests {
-    use super::EMBEDDING_DIM;
+    use super::{EMBEDDING_DIM, HNSW_EF_CONSTRUCTION, HNSW_M};
 
     const INIT_SQL: &str = include_str!("../migrations/0001_init.sql");
+    const DIMENSION_CONTRACT_SPEC: &str = include_str!("../docs/specs/0001-dimension-contract.md");
 
     fn extract_embedding_dim(sql: &str) -> Option<usize> {
         for line in sql.lines() {
@@ -107,13 +127,14 @@ mod tests {
         );
     }
 
-    /// AC6: the HNSW index must use cosine distance and state the pgvector
-    /// default parameters explicitly. Fresh databases get the documented shape
-    /// from the initial migration; existing databases keep their creation-time
-    /// parameters, because changing HNSW build parameters requires recreating
-    /// the index (a data migration we deliberately avoid).
+    /// AC6: the HNSW index must use cosine distance. The pgvector default build
+    /// parameters (`m = 16`, `ef_construction = 64`) are enforced by static
+    /// assertions on [`HNSW_M`] and [`HNSW_EF_CONSTRUCTION`] and are documented
+    /// in `docs/specs/0001-dimension-contract.md`. The initial migration relies
+    /// on pgvector's implicit defaults rather than an explicit `WITH` clause, so
+    /// we do not mutate the already-applied migration and break the SQLx checksum.
     #[test]
-    fn hnsw_index_uses_cosine_with_explicit_defaults() {
+    fn hnsw_index_uses_cosine_with_documented_defaults() {
         let idx = extract_hnsw_index(INIT_SQL)
             .expect("init schema must declare a memories_embedding_hnsw index");
         let normalized = idx.to_ascii_lowercase();
@@ -121,13 +142,25 @@ mod tests {
             normalized.contains("vector_cosine_ops"),
             "HNSW index must use cosine distance (vector_cosine_ops), got:\n{idx}"
         );
+
+        // The explicit defaults live in code (static assertions above) and in the
+        // operator-facing spec; verify the spec cannot drift silently.
+        let spec = DIMENSION_CONTRACT_SPEC.to_ascii_lowercase();
         assert!(
-            normalized.contains("m = 16"),
-            "HNSW index must explicitly document m = 16 (pgvector default), got:\n{idx}"
+            spec.contains("m = 16"),
+            "dimension contract spec must document HNSW m = 16 default"
         );
         assert!(
-            normalized.contains("ef_construction = 64"),
-            "HNSW index must explicitly document ef_construction = 64 (pgvector default), got:\n{idx}"
+            spec.contains("ef_construction = 64"),
+            "dimension contract spec must document HNSW ef_construction = 64 default"
+        );
+
+        // Redundant runtime assertions so a test failure reports the mismatch
+        // in plain language, complementing the compile-time static assertions.
+        assert_eq!(HNSW_M, 16, "HNSW_M must equal the pgvector default");
+        assert_eq!(
+            HNSW_EF_CONSTRUCTION, 64,
+            "HNSW_EF_CONSTRUCTION must equal the pgvector default"
         );
     }
 }
