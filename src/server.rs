@@ -382,6 +382,23 @@ mod tests {
     }
 
     #[test]
+    fn remember_handler_preserves_invalid_params_from_context_mapper() {
+        let source = include_str!("server.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("server source must contain production code");
+        assert!(
+            production.contains("let metadata = context_to_metadata(p.context)?;"),
+            "remember must propagate the mapper's ErrorData unchanged"
+        );
+        assert!(
+            !production.contains("context_to_metadata(p.context).map_err(internal)"),
+            "remember must not recategorize invalid caller input as an internal error"
+        );
+    }
+
+    #[test]
     fn remember_context_rejects_unknown_keys() {
         let result = serde_json::from_value::<RememberParams>(json!({
             "content": "typo",
