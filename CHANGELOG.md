@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- `remember` accepts optional structured work context, including validated act-then-record action state.
 - CI-gated automated releases triggered after a successful `main` branch CI run.
 - Release profile compilation step added to CI.
 - Release documentation describing versioning, changelog, and artifact conventions.
