@@ -116,7 +116,7 @@ impl EpisodeServer {
         &self,
         Parameters(p): Parameters<RememberParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let metadata = context_to_metadata(p.context).map_err(internal)?;
+        let metadata = context_to_metadata(p.context)?;
         let embedding = self.embed_query(p.content.clone()).await?;
         let id = format!("mem-{}", uuid::Uuid::new_v4().simple());
         let input = MemoryInput {
