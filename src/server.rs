@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::scheduler::SchedulerHandle;
 use crate::store::Store;
-use crate::types::{MemoryContext, MemoryInput, MemorySource};
+use crate::types::{MemoryContext, MemoryInput, MemorySource, RecallFilters};
 
 #[derive(Clone)]
 pub struct EpisodeServer {
@@ -31,6 +31,9 @@ struct RecallParams {
     /// Maximum number of hits to return (default 8).
     #[serde(default)]
     top_k: Option<i64>,
+    /// Optional structured constraints applied with AND semantics.
+    #[serde(default)]
+    filters: Option<RecallFilters>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -95,6 +98,11 @@ impl EpisodeServer {
         &self,
         Parameters(p): Parameters<RecallParams>,
     ) -> Result<CallToolResult, ErrorData> {
+        if let Some(filters) = p.filters.as_ref() {
+            filters
+                .validate()
+                .map_err(|error| ErrorData::invalid_params(error.to_string(), None))?;
+        }
         let embedding = self.embed_query(p.query).await?;
         let namespaces = match p.namespace {
             Some(ns) => vec![ns, "global".to_string()],
@@ -180,7 +188,7 @@ impl ServerHandler for EpisodeServer {
 
 #[cfg(test)]
 mod tests {
-    use super::{RememberParams, context_to_metadata};
+    use super::{RecallFilters, RememberParams, context_to_metadata};
     use crate::types::MemoryContext;
     use serde_json::{Value, json};
     use std::collections::BTreeSet;
@@ -396,6 +404,32 @@ mod tests {
             !production.contains("context_to_metadata(p.context).map_err(internal)"),
             "remember must not recategorize invalid caller input as an internal error"
         );
+    }
+
+    #[test]
+    fn recall_filters_validate_closed_optional_input() {
+        let valid: RecallFilters = serde_json::from_value(json!({
+            "product": "episode",
+            "work_id": "change-1",
+            "tags": ["memory", "recall"],
+            "kinds": ["gotcha", "decision"]
+        }))
+        .expect("valid filters deserialize");
+        assert!(!valid.include_open_followups);
+        valid.validate().expect("valid filters pass");
+
+        for invalid in [
+            json!({"product": " "}),
+            json!({"work_id": ""}),
+            json!({"tags": []}),
+            json!({"tags": ["ok", " "]}),
+            json!({"kinds": []}),
+            json!({"kinds": [""]}),
+        ] {
+            let filters: RecallFilters = serde_json::from_value(invalid).unwrap();
+            assert!(filters.validate().is_err());
+        }
+        assert!(serde_json::from_value::<RecallFilters>(json!({"unknown": true})).is_err());
     }
 
     #[test]

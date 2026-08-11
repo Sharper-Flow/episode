@@ -128,6 +128,54 @@ impl MemoryContext {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct RecallFilters {
+    pub product: Option<String>,
+    pub work_id: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub kinds: Option<Vec<String>>,
+    pub include_open_followups: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecallFilterValidationError(&'static str);
+
+impl fmt::Display for RecallFilterValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for RecallFilterValidationError {}
+
+impl RecallFilters {
+    pub fn validate(&self) -> Result<(), RecallFilterValidationError> {
+        if self.product.as_deref().is_some_and(|v| v.trim().is_empty()) {
+            return Err(RecallFilterValidationError(
+                "product filter must not be blank",
+            ));
+        }
+        if self.work_id.as_deref().is_some_and(|v| v.trim().is_empty()) {
+            return Err(RecallFilterValidationError(
+                "work_id filter must not be blank",
+            ));
+        }
+        for (name, values) in [("tags", &self.tags), ("kinds", &self.kinds)] {
+            if let Some(values) = values
+                && (values.is_empty() || values.iter().any(|v| v.trim().is_empty()))
+            {
+                return Err(RecallFilterValidationError(match name {
+                    "tags" => "tags filter must contain non-blank values",
+                    _ => "kinds filter must contain non-blank values",
+                }));
+            }
+        }
+        Ok(())
+    }
+}
+
 /// An item ready to be embedded and upserted. Produced by ingestion parsing
 /// or the `remember` tool; consumed by the store.
 #[derive(Debug, Clone)]
