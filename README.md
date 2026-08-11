@@ -21,7 +21,7 @@ Persistent **decision memory** for AI coding agents, served over the [Model Cont
 
 | Tool | Purpose |
 |---|---|
-| `recall` | Semantic search over memories (namespace-filtered, top-k) |
+| `recall` | Semantic search with namespace, product, work, tag, and kind filters; open follow-ups excluded by default |
 | `remember` | Write a memory directly (manual, `global` or a project namespace) |
 | `forget` | Restricted hard deletion of a `manual` memory by id + namespace (ingested memories are never affected) |
 | `stats` | Counts by namespace / source |

@@ -162,15 +162,23 @@ impl RecallFilters {
                 "work_id filter must not be blank",
             ));
         }
-        for (name, values) in [("tags", &self.tags), ("kinds", &self.kinds)] {
-            if let Some(values) = values
-                && (values.is_empty() || values.iter().any(|v| v.trim().is_empty()))
-            {
-                return Err(RecallFilterValidationError(match name {
-                    "tags" => "tags filter must contain non-blank values",
-                    _ => "kinds filter must contain non-blank values",
-                }));
-            }
+        if self
+            .tags
+            .as_ref()
+            .is_some_and(|values| values.is_empty() || values.iter().any(|v| v.trim().is_empty()))
+        {
+            return Err(RecallFilterValidationError(
+                "tags filter must contain non-blank values",
+            ));
+        }
+        if self
+            .kinds
+            .as_ref()
+            .is_some_and(|values| values.is_empty() || values.iter().any(|v| v.trim().is_empty()))
+        {
+            return Err(RecallFilterValidationError(
+                "kinds filter must contain non-blank values",
+            ));
         }
         Ok(())
     }

@@ -101,21 +101,21 @@ async fn recall_filters_compose_and_use_metadata_gin() {
     ids.sort();
     assert_eq!(ids, vec!["a", "b"]);
 
-    let index_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'memories_metadata_gin')",
+    let index_definition: String = sqlx::query_scalar(
+        "SELECT indexdef FROM pg_indexes WHERE indexname = 'memories_metadata_gin'",
     )
     .fetch_one(&pool)
     .await
     .expect("index catalog");
-    assert!(index_exists);
-    let mut conn = pool.acquire().await.expect("connection");
-    sqlx::query("SET enable_seqscan = off")
-        .execute(&mut *conn)
+    assert!(index_definition.contains("metadata jsonb_path_ops"));
+    let mut transaction = pool.begin().await.expect("transaction");
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *transaction)
         .await
         .expect("disable seqscan");
     let plan = sqlx::query("EXPLAIN SELECT id FROM memories WHERE metadata @> $1")
         .bind(serde_json::json!({"product":"p"}))
-        .fetch_all(&mut *conn)
+        .fetch_all(&mut *transaction)
         .await
         .expect("explain")
         .into_iter()
@@ -123,6 +123,7 @@ async fn recall_filters_compose_and_use_metadata_gin() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(plan.contains("memories_metadata_gin"), "{plan}");
+    transaction.rollback().await.expect("reset planner state");
 
     sqlx::query("DELETE FROM memories WHERE namespace = $1")
         .bind(&ns)

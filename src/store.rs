@@ -63,7 +63,7 @@ fn build_recall_query(
                 .push(")");
         }
     }
-    if !filters.is_some_and(|filters| filters.include_open_followups) {
+    if !filters.is_some_and(|value| value.include_open_followups) {
         push_and(&mut builder, &mut has_where);
         builder
             .push("NOT (metadata @> ")

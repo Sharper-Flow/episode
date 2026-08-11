@@ -23,6 +23,8 @@ All caller values are bound with sqlx `QueryBuilder`; caller text never enters S
 
 Migration failure or checksum mismatch aborts startup before MCP serving. Namespace expansion, cosine ordering, and top-k clamping remain unchanged.
 
+The first migration on a populated database builds the GIN index synchronously and may delay startup while PostgreSQL holds the required table lock. Plan the first rollout during a suitable maintenance window for large corpora.
+
 ## Boundaries
 
 Automatic product scoping and the C8 probe remain separate. This capability does not add promotion, recency, ranking, ingest-quality, host-capture, typed-column, Concord, or Fleet behavior. Fleet remains intentionally disabled.
