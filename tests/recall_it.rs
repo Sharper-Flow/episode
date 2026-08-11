@@ -60,7 +60,7 @@ async fn embed_store_recall_ranks_semantically() {
         .embed_one("which index type is best for nearest-neighbour vector queries?")
         .expect("embed query");
     let hits = store
-        .recall(&q, &[ns.to_string()], 3)
+        .recall(&q, &[ns.to_string()], 3, None)
         .await
         .expect("recall");
 

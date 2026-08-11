@@ -111,7 +111,7 @@ impl EpisodeServer {
         let top_k = p.top_k.unwrap_or(8).clamp(1, 50);
         let hits = self
             .store
-            .recall(&embedding, &namespaces, top_k)
+            .recall(&embedding, &namespaces, top_k, p.filters.as_ref())
             .await
             .map_err(internal)?;
         Ok(CallToolResult::success(vec![ContentBlock::json(&hits)?]))

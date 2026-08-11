@@ -7,7 +7,76 @@ use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 
-use crate::types::{MemoryInput, NamespaceStat, RecallHit};
+use crate::types::{MemoryInput, NamespaceStat, RecallFilters, RecallHit};
+
+fn push_and(builder: &mut QueryBuilder<Postgres>, has_where: &mut bool) {
+    if *has_where {
+        builder.push(" AND ");
+    } else {
+        builder.push(" WHERE ");
+        *has_where = true;
+    }
+}
+
+fn build_recall_query(
+    vector: pgvector::Vector,
+    namespaces: &[String],
+    top_k: i64,
+    filters: Option<&RecallFilters>,
+) -> QueryBuilder<Postgres> {
+    let mut builder = QueryBuilder::<Postgres>::new(
+        "SELECT id, namespace, source, kind, content, metadata, (1.0 - (embedding <=> ",
+    );
+    builder
+        .push_bind(vector.clone())
+        .push("))::float8 AS score FROM memories");
+    let mut has_where = false;
+    if !namespaces.is_empty() {
+        push_and(&mut builder, &mut has_where);
+        builder
+            .push("namespace = ANY(")
+            .push_bind(namespaces.to_vec())
+            .push(")");
+    }
+    if let Some(filters) = filters {
+        let mut metadata = serde_json::Map::new();
+        if let Some(product) = filters.product.as_ref() {
+            metadata.insert("product".into(), product.clone().into());
+        }
+        if let Some(work_id) = filters.work_id.as_ref() {
+            metadata.insert("work_id".into(), work_id.clone().into());
+        }
+        if let Some(tags) = filters.tags.as_ref() {
+            metadata.insert("tags".into(), serde_json::json!(tags));
+        }
+        if !metadata.is_empty() {
+            push_and(&mut builder, &mut has_where);
+            builder
+                .push("metadata @> ")
+                .push_bind(serde_json::Value::Object(metadata));
+        }
+        if let Some(kinds) = filters.kinds.as_ref() {
+            push_and(&mut builder, &mut has_where);
+            builder
+                .push("kind = ANY(")
+                .push_bind(kinds.clone())
+                .push(")");
+        }
+    }
+    if !filters.is_some_and(|filters| filters.include_open_followups) {
+        push_and(&mut builder, &mut has_where);
+        builder
+            .push("NOT (metadata @> ")
+            .push_bind(serde_json::json!({"action":{"kind":"open_followup"}}))
+            .push(")");
+    }
+    builder
+        .push(" ORDER BY embedding <=> ")
+        .push_bind(vector)
+        .push(" LIMIT ")
+        .push_bind(top_k);
+    builder
+}
 
 /// Maximum time to wait when acquiring a connection from the pool (AC3).
 const POOL_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -173,40 +242,11 @@ impl Store {
         query_embedding: &[f32],
         namespaces: &[String],
         top_k: i64,
+        filters: Option<&RecallFilters>,
     ) -> Result<Vec<RecallHit>> {
         let q = pgvector::Vector::from(query_embedding.to_vec());
-
-        // Two separate `&'static str` query strings: sqlx 0.9 rejects dynamic
-        // `String` SQL via `query()` (`SqlSafeStr`), so the namespace-filtered
-        // and unfiltered variants are written out literally rather than built
-        // with `format!`.
-        let rows = if namespaces.is_empty() {
-            sqlx::query(
-                "SELECT id, namespace, source, kind, content, metadata, \
-                     (1.0 - (embedding <=> $1))::float8 AS score \
-                 FROM memories \
-                 ORDER BY embedding <=> $1 \
-                 LIMIT $2",
-            )
-            .bind(&q)
-            .bind(top_k)
-            .fetch_all(&self.pool)
-            .await?
-        } else {
-            sqlx::query(
-                "SELECT id, namespace, source, kind, content, metadata, \
-                     (1.0 - (embedding <=> $1))::float8 AS score \
-                 FROM memories \
-                 WHERE namespace = ANY($2) \
-                 ORDER BY embedding <=> $1 \
-                 LIMIT $3",
-            )
-            .bind(&q)
-            .bind(namespaces)
-            .bind(top_k)
-            .fetch_all(&self.pool)
-            .await?
-        };
+        let mut query = build_recall_query(q, namespaces, top_k, filters);
+        let rows = query.build().fetch_all(&self.pool).await?;
 
         let hits = rows
             .iter()
@@ -268,6 +308,7 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::EMBEDDING_DIM;
 
     /// AC3: the pool options carry the pinned, explicit lifecycle bounds. Pure
     /// and database-free — reads the configured values straight off the builder.
@@ -286,5 +327,31 @@ mod tests {
         // The configured pool size flows through to max_connections unchanged.
         assert_eq!(pool_options(1).get_max_connections(), 1);
         assert_eq!(pool_options(20).get_max_connections(), 20);
+    }
+
+    #[test]
+    fn recall_query_uses_bound_filters_and_default_open_exclusion() {
+        let filters = RecallFilters {
+            product: Some("secret-product".into()),
+            work_id: Some("secret-work".into()),
+            tags: Some(vec!["secret-tag".into()]),
+            kinds: Some(vec!["secret-kind".into()]),
+            include_open_followups: false,
+        };
+        let query = build_recall_query(
+            pgvector::Vector::from(vec![1.0; EMBEDDING_DIM]),
+            &["project".into(), "global".into()],
+            8,
+            Some(&filters),
+        );
+        let sql_text = query.sql();
+        let sql = sql_text.as_str();
+        assert!(sql.contains("namespace = ANY("));
+        assert!(sql.contains("metadata @>"));
+        assert!(sql.contains("kind = ANY("));
+        assert!(sql.contains("NOT (metadata @>"));
+        for value in ["secret-product", "secret-work", "secret-tag", "secret-kind"] {
+            assert!(!sql.contains(value));
+        }
     }
 }
