@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::scheduler::SchedulerHandle;
 use crate::store::Store;
-use crate::types::{MemoryInput, MemorySource};
+use crate::types::{MemoryContext, MemoryInput, MemorySource};
 
 #[derive(Clone)]
 pub struct EpisodeServer {
@@ -43,6 +43,9 @@ struct RememberParams {
     /// Optional category label (e.g. gotcha, convention, decision).
     #[serde(default)]
     kind: Option<String>,
+    /// Optional caller-owned product, work, repository, tag, and severity context.
+    #[serde(default)]
+    context: Option<MemoryContext>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -57,6 +60,13 @@ struct ForgetParams {
 
 fn internal(e: impl std::fmt::Display) -> ErrorData {
     ErrorData::internal_error(e.to_string(), None)
+}
+
+fn context_to_metadata(context: Option<MemoryContext>) -> serde_json::Result<serde_json::Value> {
+    match context {
+        Some(context) => serde_json::to_value(context),
+        None => Ok(serde_json::json!({})),
+    }
 }
 
 #[tool_router]
@@ -101,6 +111,7 @@ impl EpisodeServer {
         &self,
         Parameters(p): Parameters<RememberParams>,
     ) -> Result<CallToolResult, ErrorData> {
+        let metadata = context_to_metadata(p.context).map_err(internal)?;
         let embedding = self.embed_query(p.content.clone()).await?;
         let id = format!("mem-{}", uuid::Uuid::new_v4().simple());
         let input = MemoryInput {
@@ -110,7 +121,7 @@ impl EpisodeServer {
             source_id: None,
             kind: p.kind,
             content: p.content,
-            metadata: serde_json::json!({}),
+            metadata,
         };
         self.store
             .upsert(&input, &embedding)
@@ -159,5 +170,147 @@ impl ServerHandler for EpisodeServer {
         info.server_info.name = "episode".to_string();
         info.server_info.version = env!("CARGO_PKG_VERSION").to_string();
         info
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RememberParams, context_to_metadata};
+    use crate::types::MemoryContext;
+    use serde_json::{Value, json};
+    use std::collections::BTreeSet;
+
+    fn resolve_object_schema<'a>(root: &'a Value, schema: &'a Value) -> &'a Value {
+        if let Some(reference) = schema.get("$ref").and_then(Value::as_str) {
+            let name = reference
+                .strip_prefix("#/$defs/")
+                .expect("schema reference must target $defs");
+            return &root["$defs"][name];
+        }
+
+        if let Some(branches) = schema.get("anyOf").and_then(Value::as_array) {
+            let object_branch = branches
+                .iter()
+                .find(|branch| {
+                    branch.get("$ref").is_some()
+                        || branch.get("type").and_then(Value::as_str) == Some("object")
+                })
+                .expect("optional context schema must contain an object branch");
+            return resolve_object_schema(root, object_branch);
+        }
+
+        schema
+    }
+
+    #[test]
+    fn remember_context_maps_full_values_exactly() {
+        let params: RememberParams = serde_json::from_value(json!({
+            "content": "preserve context",
+            "namespace": "episode",
+            "kind": "decision",
+            "context": {
+                "product": " concord ",
+                "work_id": "change-42",
+                "work_kind": "change",
+                "origin_repo": "episode",
+                "origin_ref": "concord#46",
+                "tags": ["alpha", "alpha", " beta "],
+                "severity": "high"
+            }
+        }))
+        .expect("supported context must deserialize");
+
+        assert_eq!(params.namespace.as_deref(), Some("episode"));
+        assert_eq!(params.kind.as_deref(), Some("decision"));
+        assert_eq!(
+            context_to_metadata(params.context).expect("context must serialize"),
+            json!({
+                "product": " concord ",
+                "work_id": "change-42",
+                "work_kind": "change",
+                "origin_repo": "episode",
+                "origin_ref": "concord#46",
+                "tags": ["alpha", "alpha", " beta "],
+                "severity": "high"
+            })
+        );
+    }
+
+    #[test]
+    fn remember_context_maps_absent_empty_and_sparse_values() {
+        let absent: RememberParams = serde_json::from_value(json!({ "content": "absent" }))
+            .expect("context must remain optional");
+        assert_eq!(
+            context_to_metadata(absent.context).expect("absent context must serialize"),
+            json!({})
+        );
+
+        let empty: RememberParams =
+            serde_json::from_value(json!({ "content": "empty", "context": {} }))
+                .expect("empty context must deserialize");
+        assert_eq!(
+            context_to_metadata(empty.context).expect("empty context must serialize"),
+            json!({})
+        );
+
+        let sparse: RememberParams = serde_json::from_value(json!({
+            "content": "sparse",
+            "context": { "work_id": "change-7" }
+        }))
+        .expect("sparse context must deserialize");
+        assert_eq!(
+            context_to_metadata(sparse.context).expect("sparse context must serialize"),
+            json!({ "work_id": "change-7" })
+        );
+    }
+
+    #[test]
+    fn remember_context_rejects_unknown_keys() {
+        let result = serde_json::from_value::<RememberParams>(json!({
+            "content": "typo",
+            "context": { "workd_id": "change-42" }
+        }));
+        assert!(
+            result.is_err(),
+            "unknown context keys must reject the request"
+        );
+    }
+
+    #[test]
+    fn remember_context_schema_is_optional_closed_and_exact() {
+        let root = serde_json::to_value(rmcp::schemars::schema_for!(RememberParams))
+            .expect("remember schema must serialize");
+        let required = root["required"]
+            .as_array()
+            .expect("remember schema must list required fields");
+        assert_eq!(required, &[json!("content")]);
+
+        let context = resolve_object_schema(&root, &root["properties"]["context"]);
+        assert_eq!(context["additionalProperties"], json!(false));
+
+        let actual = context["properties"]
+            .as_object()
+            .expect("context schema must expose properties")
+            .keys()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>();
+        let expected = [
+            "origin_ref",
+            "origin_repo",
+            "product",
+            "severity",
+            "tags",
+            "work_id",
+            "work_kind",
+        ]
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+        assert_eq!(actual, expected);
+
+        let empty = MemoryContext::default();
+        assert_eq!(
+            context_to_metadata(Some(empty)).expect("default context must serialize"),
+            json!({})
+        );
     }
 }

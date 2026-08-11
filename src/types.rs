@@ -1,5 +1,6 @@
 //! Shared domain types for episode.
 
+use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Embedding dimensionality. Fits both fastembed (BGE-large / BGE-M3) and
@@ -45,6 +46,31 @@ impl MemorySource {
             MemorySource::Manual => "manual",
         }
     }
+}
+
+/// Caller-supplied work context attached to a manually recorded memory.
+///
+/// Episode validates this structural field set but treats every value as opaque.
+/// Sparse serialization keeps absent context equivalent to an empty metadata
+/// object and gives later metadata filters stable top-level keys.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct MemoryContext {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub work_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub work_kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub origin_repo: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub origin_ref: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub severity: Option<String>,
 }
 
 /// An item ready to be embedded and upserted. Produced by ingestion parsing
