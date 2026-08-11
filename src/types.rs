@@ -2,6 +2,7 @@
 
 use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Embedding dimensionality. Fits both fastembed (BGE-large / BGE-M3) and
 /// voyage-4-lite, so the backend can switch without a schema migration.
@@ -53,6 +54,39 @@ impl MemorySource {
 /// Episode validates this structural field set but treats every value as opaque.
 /// Sparse serialization keeps absent context equivalent to an empty metadata
 /// object and gives later metadata filters stable top-level keys.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub enum ActionState {
+    /// Agent resolved the issue in the current session.
+    AdHocResolved { summary: String },
+    /// Agent linked the issue to `MemoryContext::work_id`.
+    LinkedWork {},
+    /// Issue remains unresolved and should surface to an operator.
+    OpenFollowup {},
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MemoryContextValidationError {
+    EmptyAdHocSummary,
+    LinkedWorkMissingWorkId,
+}
+
+impl fmt::Display for MemoryContextValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyAdHocSummary => {
+                write!(f, "ad_hoc_resolved action requires a non-empty summary")
+            }
+            Self::LinkedWorkMissingWorkId => {
+                write!(f, "linked_work action requires a non-empty context work_id")
+            }
+        }
+    }
+}
+
+impl std::error::Error for MemoryContextValidationError {}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 #[schemars(crate = "rmcp::schemars")]
@@ -71,6 +105,27 @@ pub struct MemoryContext {
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub severity: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<ActionState>,
+}
+
+impl MemoryContext {
+    pub fn validate(&self) -> Result<(), MemoryContextValidationError> {
+        match self.action.as_ref() {
+            Some(ActionState::AdHocResolved { summary }) if summary.trim().is_empty() => {
+                Err(MemoryContextValidationError::EmptyAdHocSummary)
+            }
+            Some(ActionState::LinkedWork {})
+                if self
+                    .work_id
+                    .as_deref()
+                    .is_none_or(|work_id| work_id.trim().is_empty()) =>
+            {
+                Err(MemoryContextValidationError::LinkedWorkMissingWorkId)
+            }
+            _ => Ok(()),
+        }
+    }
 }
 
 /// An item ready to be embedded and upserted. Produced by ingestion parsing

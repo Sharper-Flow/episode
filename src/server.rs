@@ -62,9 +62,14 @@ fn internal(e: impl std::fmt::Display) -> ErrorData {
     ErrorData::internal_error(e.to_string(), None)
 }
 
-fn context_to_metadata(context: Option<MemoryContext>) -> serde_json::Result<serde_json::Value> {
+fn context_to_metadata(context: Option<MemoryContext>) -> Result<serde_json::Value, ErrorData> {
     match context {
-        Some(context) => serde_json::to_value(context),
+        Some(context) => {
+            context
+                .validate()
+                .map_err(|error| ErrorData::invalid_params(error.to_string(), None))?;
+            serde_json::to_value(context).map_err(internal)
+        }
         None => Ok(serde_json::json!({})),
     }
 }
@@ -202,6 +207,13 @@ mod tests {
         schema
     }
 
+    fn schema_tag(schema: &Value) -> Option<&str> {
+        let kind = schema.get("properties")?.get("kind")?;
+        kind.get("const")
+            .and_then(Value::as_str)
+            .or_else(|| kind.get("enum")?.as_array()?.first()?.as_str())
+    }
+
     #[test]
     fn remember_context_maps_full_values_exactly() {
         let params: RememberParams = serde_json::from_value(json!({
@@ -262,6 +274,111 @@ mod tests {
             context_to_metadata(sparse.context).expect("sparse context must serialize"),
             json!({ "work_id": "change-7" })
         );
+
+        let explicit_null: RememberParams = serde_json::from_value(json!({
+            "content": "null action",
+            "context": { "action": null }
+        }))
+        .expect("null action must remain compatible");
+        assert_eq!(
+            context_to_metadata(explicit_null.context).expect("null action must serialize"),
+            json!({})
+        );
+    }
+
+    #[test]
+    fn remember_context_maps_each_action_variant_exactly() {
+        let cases = [
+            (
+                json!({
+                    "content": "resolved",
+                    "context": {
+                        "action": {
+                            "kind": "ad_hoc_resolved",
+                            "summary": " fixed locally "
+                        }
+                    }
+                }),
+                json!({
+                    "action": {
+                        "kind": "ad_hoc_resolved",
+                        "summary": " fixed locally "
+                    }
+                }),
+            ),
+            (
+                json!({
+                    "content": "linked",
+                    "context": {
+                        "work_id": " change-42 ",
+                        "action": { "kind": "linked_work" }
+                    }
+                }),
+                json!({
+                    "work_id": " change-42 ",
+                    "action": { "kind": "linked_work" }
+                }),
+            ),
+            (
+                json!({
+                    "content": "open",
+                    "context": { "action": { "kind": "open_followup" } }
+                }),
+                json!({ "action": { "kind": "open_followup" } }),
+            ),
+        ];
+
+        for (input, expected) in cases {
+            let params: RememberParams =
+                serde_json::from_value(input).expect("valid action must deserialize");
+            assert_eq!(
+                context_to_metadata(params.context).expect("valid action must serialize"),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn remember_context_rejects_malformed_action_shapes() {
+        let invalid_actions = [
+            json!({ "kind": "unknown" }),
+            json!({ "kind": "ad_hoc_resolved" }),
+            json!({ "kind": "ad_hoc_resolved", "summary": "fixed", "extra": true }),
+            json!({ "kind": "linked_work", "extra": true }),
+            json!({ "kind": "open_followup", "extra": true }),
+        ];
+
+        for action in invalid_actions {
+            let result = serde_json::from_value::<RememberParams>(json!({
+                "content": "invalid",
+                "context": { "action": action }
+            }));
+            assert!(result.is_err(), "malformed action must reject");
+        }
+    }
+
+    #[test]
+    fn remember_context_rejects_invalid_action_invariants() {
+        let invalid_contexts = [
+            json!({ "action": { "kind": "ad_hoc_resolved", "summary": "" } }),
+            json!({ "action": { "kind": "ad_hoc_resolved", "summary": "   " } }),
+            json!({ "action": { "kind": "linked_work" } }),
+            json!({
+                "work_id": "   ",
+                "action": { "kind": "linked_work" }
+            }),
+        ];
+
+        for context in invalid_contexts {
+            let params: RememberParams = serde_json::from_value(json!({
+                "content": "invalid",
+                "context": context
+            }))
+            .expect("structurally valid action must deserialize");
+            let error = context_to_metadata(params.context)
+                .expect_err("invalid action invariant must reject");
+            assert_eq!(error.code, rmcp::model::ErrorCode::INVALID_PARAMS);
+        }
     }
 
     #[test]
@@ -295,6 +412,7 @@ mod tests {
             .map(String::as_str)
             .collect::<BTreeSet<_>>();
         let expected = [
+            "action",
             "origin_ref",
             "origin_repo",
             "product",
@@ -306,6 +424,28 @@ mod tests {
         .into_iter()
         .collect::<BTreeSet<_>>();
         assert_eq!(actual, expected);
+
+        let action = resolve_object_schema(&root, &context["properties"]["action"]);
+        let variants = action
+            .get("oneOf")
+            .or_else(|| action.get("anyOf"))
+            .and_then(Value::as_array)
+            .expect("action schema must expose variant branches");
+        let actual_kinds = variants
+            .iter()
+            .filter_map(schema_tag)
+            .collect::<BTreeSet<_>>();
+        let expected_kinds = ["ad_hoc_resolved", "linked_work", "open_followup"]
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+        assert_eq!(actual_kinds, expected_kinds);
+        for variant in variants {
+            assert_eq!(
+                variant["additionalProperties"],
+                json!(false),
+                "each action variant must be closed"
+            );
+        }
 
         let empty = MemoryContext::default();
         assert_eq!(
