@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- `recall` supports bound product, work, tag, and kind filters backed by a JSONB GIN index, with open follow-ups excluded by default.
 - `remember` accepts optional structured work context, including validated act-then-record action state.
 - CI-gated automated releases triggered after a successful `main` branch CI run.
 - Release profile compilation step added to CI.
