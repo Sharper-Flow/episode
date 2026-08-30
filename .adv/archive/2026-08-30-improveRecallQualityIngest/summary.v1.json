@@ -1,0 +1,24 @@
+{
+  "archived_at": "2026-08-30T22:21:34.031Z",
+  "capabilities": [],
+  "change_hash": "97b3584acfd072a58f0cad84905d8fdc662e579e7652dca0999b5389813c783b",
+  "change_id": "improveRecallQualityIngest",
+  "completed_tasks": 4,
+  "created_at": "2026-08-11T00:04:21.856Z",
+  "current_gate": "release",
+  "epic_membership": {
+    "entry_id": "change-1786406885247-f3o2dm",
+    "epic_id": "shapeEpisodeStructuredMemory",
+    "epic_project_id": "098dab10ebf50e5c885fb94eef48afda85032788",
+    "linked_at": "2026-08-11T00:08:05.247Z",
+    "order": 6,
+    "source": "link_existing",
+    "title": "Improve recall quality and ingest abstraction"
+  },
+  "last_activity_at": "2026-08-30T22:17:34.900Z",
+  "status": "archived",
+  "summary_hash": "3c7b1a4c294fe6b1d199394c96f79d2eb8761b516832b99e45509136664e55ab",
+  "task_count": 4,
+  "title": "Improve recall quality and ingest abstraction",
+  "version": "1"
+}

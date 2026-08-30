@@ -1,0 +1,1051 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Sharper-Flow/Advance/trunk/plugin/schemas/change.schema.json",
+  "id": "improveRecallQualityIngest",
+  "title": "Improve recall quality and ingest abstraction",
+  "status": "archived",
+  "created_at": "2026-08-11T00:04:21.856Z",
+  "tasks": [
+    {
+      "id": "tk-cbe3aa6788ef",
+      "title": "Recall filters: sources + max_age_days (RED then GREEN)",
+      "type": "code",
+      "section": "Implementation",
+      "status": "done",
+      "priority": 0,
+      "deps": [],
+      "created_at": "2026-08-30T21:46:45.161Z",
+      "started_at": "2026-08-30T21:49:16.850Z",
+      "completed_at": "2026-08-30T21:53:58.151Z",
+      "verification": "RED tr_mtgci7yb_48cae455 exit 101: sources_and_max_age_filter_recall returned all 5 rows (manual/wisdom/reflection, fresh+old) where the sources filter expected only the two wisdom rows — fields existed and validated but no SQL arm filtered. GREEN tr_mtgcjkh2_a0f65fb8 exit 0: new test passes alongside both existing recall_filters tests; 63 of 63 lib tests (validation coverage extended in recall_filters_validate_closed_optional_input: sources accepts the closed set, rejects empty list, rejects unknown value \"concord\" at deserialization; max_age_days accepts 90, rejects 0); clippy --all-targets -D warnings clean; fmt applied.\n\nWork done:\n1. src/types.rs: RecallFilters gains sources: Option<Vec<MemorySource>> (closed set, doc comment) and max_age_days: Option<u32> (created_at basis, positive-only, filter-not-rank doc). MemorySource gains JsonSchema (rmcp::schemars). Validation: empty sources rejects, max_age_days 0 rejects.\n2. src/store.rs build_recall_query: source = ANY($n) binding Vec<String> via as_str (mirrors kinds); created_at >= now() - make_interval(days => $n) binding i32::try_from(max_age_days) per the validator's blocking correction (sqlx 0.9 has no u32 Encode; i64 fails make_interval's int4 arg under function-arg coercion rules).\n3. tests/recall_filters_it.rs: sources_and_max_age_filter_recall seeds all three sources fresh plus wisdom/manual rows backdated 100 days via direct SQL (upsert stamps now()), asserts source filtering, source union, and 30-day cutoff; cleanup runs before assertions (the leak-proof structure the harden review established).\n4. Struct-literal sites updated (tests:178, store.rs:500) with explicit None fields.\n\nOne authoring defect caught by the compiler before any test ran: a malformed draft block in the heredoc (unbalanced parens) — removed; then a lifetime issue with a closure-based helper — replaced with a plain async fn; then a &str-vs-&String slice mismatch — fixed with an owned namespaces array. All three were compile-time, no behavioral evidence affected.",
+      "summary": "RED tr_mtgci7yb_48cae455 exit 101: sources_and_max_age_filter_recall returned all 5 rows (manual/wisdom/reflection, fresh+old) where the sources filter expected only the two wisdom rows — fields existed and validated but no SQL arm filtered. GREEN tr_mtgcjkh2_a0f65fb8 exit 0: new test passes alongside both existing recall_filters tests; 63 of 63 lib tests (validation coverage extended in recall_filters_validate_closed_optional_input: sources accepts the closed set, rejects empty list, rejects unknown value \"concord\" at deserialization; max_age_days accepts 90, rejects 0); clippy --all-targets -D warnings clean; fmt applied.\n\nWork done:\n1. src/types.rs: RecallFilters gains sources: Option<Vec<MemorySource>> (closed set, doc comment) and max_age_days: Option<u32> (created_at basis, positive-only, filter-not-rank doc). MemorySource gains JsonSchema (rmcp::schemars). Validation: empty sources rejects, max_age_days 0 rejects.\n2. src/store.rs build_recall_query: source = ANY($n) binding Vec<String> via as_str (mirrors kinds); created_at >= now() - make_interval(days => $n) binding i32::try_from(max_age_days) per the validator's blocking correction (sqlx 0.9 has no u32 Encode; i64 fails make_interval's int4 arg under function-arg coercion rules).\n3. tests/recall_filters_it.rs: sources_and_max_age_filter_recall seeds all three sources fresh plus wisdom/manual rows backdated 100 days via direct SQL (upsert stamps now()), asserts source filtering, source union, and 30-day cutoff; cleanup runs before assertions (the leak-proof structure the harden review established).\n4. Struct-literal sites updated (tests:178, store.rs:500) with explicit None fields.\n\nOne authoring defect caught by the compiler before any test ran: a malformed draft block in the heredoc (unbalanced parens) — removed; then a lifetime issue with a closure-based helper — replaced with a plain async fn; then a &str-vs-&String slice mismatch — fixed with an owned namespaces array. All three were compile-time, no behavioral evidence affected.",
+      "filesTouched": [
+        "src/server.rs",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "33f98d13e715966e0db63bfd0013c4ca8e9e63f8",
+      "completedAt": "2026-08-30T21:53:58.151Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC1",
+          "AC2",
+          "AC3"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-179d497d766e",
+      "title": "IngestSource trait + ADV impls; reconcile loop",
+      "type": "code",
+      "section": "Implementation",
+      "status": "done",
+      "priority": 1,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-cbe3aa6788ef"
+        }
+      ],
+      "created_at": "2026-08-30T21:46:54.312Z",
+      "started_at": "2026-08-30T21:54:02.470Z",
+      "completed_at": "2026-08-30T22:00:34.334Z",
+      "verification": "AC5 proof tr_mtgcqlcp_564de02d exit 0: every existing DB suite passes unchanged through the refactor — reconcile_state_it 7/7, promotion_state_it 6/6, all suites 22/22 (up from 21 only by task 1's new filter test). 64 of 64 lib tests. Clippy --all-targets -D warnings clean after fixing two doc-lint errors, fmt clean.\n\nLoad-bearing RED for the new behavior, recorded honestly as a revert-check because the refactor's own RED phase was compile-phase authoring noise: sabotaged aggregate to abort remaining sources on a failure (Err(_) => break) — tr_mtgcrslj_249d92e0 exit 101, left [\"a1\"] vs right [\"a1\",\"b1\"], the failing source's successors lost. Restored: 64/64 green. A first sabotage attempt (propagating ?) did not compile and was discarded rather than counted as evidence.\n\nWork done:\n1. src/ingest.rs: SourceParse replaces WisdomParse (fold, old type gone). pub trait IngestSource { name(), parse(namespace, project_root) } — parser-shaped, sync, documented for the CD-0026 future consumer. AdvWisdomSource and AdvReflectionSource wrap the existing parser bodies, each resolving its own .adv/<file> path from project_root; reflections report empty invalidated/promoted by construction. pub const SOURCES: &[&dyn IngestSource]. pub(crate) fn aggregate() carries the per-source warn-and-continue isolation with source names in log lines (previously hardcoded per-match messages).\n2. src/lib.rs reconcile_root: the two match blocks replaced by one destructured aggregate call; all downstream steps (retraction before dedup, bulk lookup, batched upsert, mark after) untouched. The unused adv_dir binding removed.\n3. Unit tests adapted to the project-root shape (TmpDir now creates .adv inside itself) and extended with aggregate_combines_sources_in_order_and_isolates_failures using stub sources.\n\nAuthoring friction recorded: three brace-balance mistakes across the python batch edits (impl blocks initially unclosed, one stray test brace, one glued doc line) — all caught by the compiler before any behavioral run; no test ever passed against broken code.",
+      "summary": "AC5 proof tr_mtgcqlcp_564de02d exit 0: every existing DB suite passes unchanged through the refactor — reconcile_state_it 7/7, promotion_state_it 6/6, all suites 22/22 (up from 21 only by task 1's new filter test). 64 of 64 lib tests. Clippy --all-targets -D warnings clean after fixing two doc-lint errors, fmt clean.\n\nLoad-bearing RED for the new behavior, recorded honestly as a revert-check because the refactor's own RED phase was compile-phase authoring noise: sabotaged aggregate to abort remaining sources on a failure (Err(_) => break) — tr_mtgcrslj_249d92e0 exit 101, left [\"a1\"] vs right [\"a1\",\"b1\"], the failing source's successors lost. Restored: 64/64 green. A first sabotage attempt (propagating ?) did not compile and was discarded rather than counted as evidence.\n\nWork done:\n1. src/ingest.rs: SourceParse replaces WisdomParse (fold, old type gone). pub trait IngestSource { name(), parse(namespace, project_root) } — parser-shaped, sync, documented for the CD-0026 future consumer. AdvWisdomSource and AdvReflectionSource wrap the existing parser bodies, each resolving its own .adv/<file> path from project_root; reflections report empty invalidated/promoted by construction. pub const SOURCES: &[&dyn IngestSource]. pub(crate) fn aggregate() carries the per-source warn-and-continue isolation with source names in log lines (previously hardcoded per-match messages).\n2. src/lib.rs reconcile_root: the two match blocks replaced by one destructured aggregate call; all downstream steps (retraction before dedup, bulk lookup, batched upsert, mark after) untouched. The unused adv_dir binding removed.\n3. Unit tests adapted to the project-root shape (TmpDir now creates .adv inside itself) and extended with aggregate_combines_sources_in_order_and_isolates_failures using stub sources.\n\nAuthoring friction recorded: three brace-balance mistakes across the python batch edits (impl blocks initially unclosed, one stray test brace, one glued doc line) — all caught by the compiler before any behavioral run; no test ever passed against broken code.",
+      "filesTouched": [
+        "src/ingest.rs",
+        "src/lib.rs"
+      ],
+      "checkpointSha": "edd87bac41ef80118f45851153c019b7239d0dbb",
+      "completedAt": "2026-08-30T22:00:34.334Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC4",
+          "AC5"
+        ],
+        "verifies": [
+          "AC5"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-6628add3ae58",
+      "title": "Specs: extend 0010, add 0012 (both copies byte-identical)",
+      "type": "docs",
+      "section": "Documentation",
+      "status": "done",
+      "priority": 2,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-179d497d766e"
+        }
+      ],
+      "created_at": "2026-08-30T21:47:01.926Z",
+      "started_at": "2026-08-30T22:00:38.619Z",
+      "completed_at": "2026-08-30T22:01:21.356Z",
+      "verification": "Both spec pairs cmp byte-identical and staged together: 0010 modified in place (Filter Contract extended, Verification extended), 0012 new (both copies untracked -> committed by this checkpoint).\n\nSpec 0010 additions: source filter (closed set manual/adv_wisdom/adv_reflection, unknown values reject at deserialization, empty list rejects validation); max_age_days (created_at basis with the rationale — write-once ingest never moves it, promotions touch only updated_at; the retract-then-reinstate reset documented as correct semantics; filter never a ranking input); composition extended to source and age; reject list extended with zero day counts.\n\nSpec 0012 (new): the IngestSource trait and SourceParse with the ownership rule (sources report, reconcile owns store effects), error isolation, the two store-level facts the validator surfaced (retraction/promotion SQL restricts to ADV sources so new sources are items-only by construction; dedup keys on (namespace, source_id) regardless of source so every source owns a disjoint id space), write-once cross-reference to 0011, the CD-0026 parser-shaped rationale, the fixed SOURCES list with no config surface until an external source needs one, and the boundary excluding the Concord parser itself.",
+      "summary": "Both spec pairs cmp byte-identical and staged together: 0010 modified in place (Filter Contract extended, Verification extended), 0012 new (both copies untracked -> committed by this checkpoint).\n\nSpec 0010 additions: source filter (closed set manual/adv_wisdom/adv_reflection, unknown values reject at deserialization, empty list rejects validation); max_age_days (created_at basis with the rationale — write-once ingest never moves it, promotions touch only updated_at; the retract-then-reinstate reset documented as correct semantics; filter never a ranking input); composition extended to source and age; reject list extended with zero day counts.\n\nSpec 0012 (new): the IngestSource trait and SourceParse with the ownership rule (sources report, reconcile owns store effects), error isolation, the two store-level facts the validator surfaced (retraction/promotion SQL restricts to ADV sources so new sources are items-only by construction; dedup keys on (namespace, source_id) regardless of source so every source owns a disjoint id space), write-once cross-reference to 0011, the CD-0026 parser-shaped rationale, the fixed SOURCES list with no config surface until an external source needs one, and the boundary excluding the Concord parser itself.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        ".adv/specs/0012-ingest-source-contract.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "docs/specs/0012-ingest-source-contract.md"
+      ],
+      "checkpointSha": "8ba6336e6d081fde4fdb97f0ac1ba7c5fd930106",
+      "completedAt": "2026-08-30T22:01:21.356Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC6"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "not_applicable"
+      }
+    },
+    {
+      "id": "tk-29d451120d65",
+      "title": "Full verification gate + AC3 static check",
+      "type": "verification",
+      "section": "Verification",
+      "status": "done",
+      "priority": 3,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-6628add3ae58"
+        }
+      ],
+      "created_at": "2026-08-30T21:47:08.246Z",
+      "started_at": "2026-08-30T22:01:26.451Z",
+      "completed_at": "2026-08-30T22:17:34.900Z",
+      "verification": "Harden pass verdict NEEDS_WORK -> resolved, independently re-verified (tr_mtgddvpe_12c0eca7 exit 0): 64 of 64 lib, 22 DB-backed, clippy -D warnings zero, fmt clean, both spec pairs byte-identical.\n\nHARDEN FINDING (real, second overflow defect in the same predicate): at the maximum valid day count (i32::MAX = 2147483647 days, about 5.9 million years), the predicate now() - make_interval(days => N) materializes a timestamp beyond timestamptz's range (about 294k years) and Postgres errors at query time — the acceptance-review range validation fixed the Rust-side panic but left the database-side overflow reachable. The reviewer's fix inverts the arithmetic: now() - created_at <= make_interval(days => N). The interval is only compared against a real row age, never materialized as an absolute timestamp, so no valid input can overflow by construction. Semantics are equivalent for all rows including future-dated created_at. Regression added: the test queries at i32::MAX days and asserts all rows return without error.\n\nClean areas confirmed by the reviewer: no schema change, no coordinated restart required, binary-only rollback safe; const SOURCES initialization sound; validation placement correct (recall is the only production filters entry point); rollback behavior unchanged.\n\nAdvisory accepted and recorded, not actionable in scope: a persistently failing ingest source warns once per reconcile pass per source per root — at the scheduler's 60-second cadence that is 1,440 warnings daily per source per root with no escalation path. Surfacing it needs a metrics/alerting surface this change does not add; noted for whoever builds observability.",
+      "summary": "Harden pass verdict NEEDS_WORK -> resolved, independently re-verified (tr_mtgddvpe_12c0eca7 exit 0): 64 of 64 lib, 22 DB-backed, clippy -D warnings zero, fmt clean, both spec pairs byte-identical.\n\nHARDEN FINDING (real, second overflow defect in the same predicate): at the maximum valid day count (i32::MAX = 2147483647 days, about 5.9 million years), the predicate now() - make_interval(days => N) materializes a timestamp beyond timestamptz's range (about 294k years) and Postgres errors at query time — the acceptance-review range validation fixed the Rust-side panic but left the database-side overflow reachable. The reviewer's fix inverts the arithmetic: now() - created_at <= make_interval(days => N). The interval is only compared against a real row age, never materialized as an absolute timestamp, so no valid input can overflow by construction. Semantics are equivalent for all rows including future-dated created_at. Regression added: the test queries at i32::MAX days and asserts all rows return without error.\n\nClean areas confirmed by the reviewer: no schema change, no coordinated restart required, binary-only rollback safe; const SOURCES initialization sound; validation placement correct (recall is the only production filters entry point); rollback behavior unchanged.\n\nAdvisory accepted and recorded, not actionable in scope: a persistently failing ingest source warns once per reconcile pass per source per root — at the scheduler's 60-second cadence that is 1,440 warnings daily per source per root with no escalation path. Surfacing it needs a metrics/alerting surface this change does not add; noted for whoever builds observability.",
+      "filesTouched": [
+        "src/store.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "6c91eb5e11b3bd3744c8d5978545433ee292e484",
+      "completedAt": "2026-08-30T22:17:34.900Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC3",
+          "AC6"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "separate_verification"
+      }
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "improveRecallQualityIngest",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveRecallQualityIngest",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-gate-independent-validation"
+      },
+      "agent": "adv-researcher",
+      "topic": "Design-gate independent validation: sources/max_age filters + IngestSource trait",
+      "sources": [
+        {
+          "label": "store.rs (worktree)",
+          "locator": "src/store.rs:24-108,116-136,207-309,369-414",
+          "summary": "kinds=ANY arm template; upsert_batch insert list excludes created_at, conflict path sets updated_at only; PROMOTE_SQL/MARK_CANDIDATES_SQL touch metadata+updated_at, both restrict source IN ('adv_wisdom','adv_reflection'); forget_ingested same restriction; existing_source_ids matches namespace+source_id without source scoping."
+        },
+        {
+          "label": "lib.rs (worktree)",
+          "locator": "src/lib.rs:98-131,159-306",
+          "summary": "reconcile_root aggregation wisdom-then-reflections with per-source warn-and-continue; retraction before dedup; mark-after-batch; partition/filter order-preserving."
+        },
+        {
+          "label": "types.rs (worktree)",
+          "locator": "src/types.rs:30-50,236-300",
+          "summary": "MemorySource 3 variants, snake_case serde, as_str(); RecallFilters serde(default,deny_unknown_fields)+JsonSchema; tags/kinds reject blank+empty lists."
+        },
+        {
+          "label": "server.rs (worktree)",
+          "locator": "src/server.rs:110-134,385-401,445-471,517-530",
+          "summary": "recall tool deserializes Parameters<RecallParams>; ActionState unknown-kind serde rejection precedent; schemars renders serde rename_all variants snake_case (in-tree test)."
+        },
+        {
+          "label": "rmcp 2.2.0 source",
+          "locator": "rmcp-2.2.0/src/handler/server/wrapper/parameters.rs:43-46; router/tool.rs:181-190",
+          "summary": "Parameters<P> serde-transparent; FromContextPart maps deserialization failure to ErrorData::invalid_params — unknown enum variants reject at MCP wire with -32602."
+        },
+        {
+          "label": "sqlx-postgres 0.9.0 source",
+          "locator": "sqlx-postgres-0.9.0/src/types/int.rs:35-158",
+          "summary": "Type/Encode implemented for i8/i16/i32/i64 only. No u32 impl (u32 appears only wrapped as Oid in types/oid.rs). push_bind(u32) does not compile."
+        },
+        {
+          "label": "PostgreSQL 18 docs: function resolution",
+          "locator": "https://www.postgresql.org/docs/18/typeconv-func.html",
+          "summary": "Function-call resolution discards candidates whose arg types cannot be converted by IMPLICIT conversion; non-matching types yield 'function ... does not exist'."
+        },
+        {
+          "label": "PostgreSQL docs: CREATE CAST",
+          "locator": "https://www.postgresql.org/docs/current/sql-createcast.html",
+          "summary": "Implicit casts reserved for information-preserving widening (int2->int4 example); narrowing casts (int8->int4, float8->int4) are assignment-only — not applied in function args."
+        },
+        {
+          "label": "PostgreSQL docs: datetime functions",
+          "locator": "https://www.postgresql.org/docs/current/functions-datetime.html",
+          "summary": "make_interval([years int[,months int[,weeks int[,days int[,hours int[,mins int[,secs double precision]]]]]]]) — days is int4. Only interval*double-precision operator exists (no interval*int)."
+        },
+        {
+          "label": "Concord CD-0026",
+          "locator": "/home/jon/dev/concord/docs/decisions/CD-0026-learning-capture.md",
+          "summary": "D1: lessons = markdown under docs/lessons/ + manifest docs/concord-knowledge-index.v1.json, published through git authority on the write path; read path is plain files. D2: promotion is scope, not a step. D1 idempotent publish, conflicts refused — no retraction concept. Future consumer is filesystem-only parse."
+        },
+        {
+          "label": "migration 0001 (worktree)",
+          "locator": "migrations/0001_init.sql:16-19,39-41",
+          "summary": "source TEXT documented closed set; created_at TIMESTAMPTZ NOT NULL DEFAULT now()."
+        }
+      ],
+      "architecture_assessment": "1) TRAIT CUT: right-sized for the evidenced consumer. CD-0026 lessons are working-tree markdown + a JSON manifest read by path; git authority is publish-side only, so a sync parse(namespace, project_root) needs no repo state or network. async fn in traits is not dyn-compatible, so &[&dyn IngestSource] with sync methods is the boring choice that avoids async_trait boxing; a future git-heavy impl runs under spawn_blocking at the call site without a trait change. CD-0026 D1/D2 (idempotent publish, scope-based promotion, no retraction) means a Concord impl reports items-only — same effective contract as reflections today (empty invalidated/promoted), so SourceParse generalizes. 2) WISDOMPARSE FOLD: safe. Type name appears only in ingest.rs (def:51, sig:78, ctor:151) and archived .adv history records (not compiled); lib.rs consumes parse_wisdom by field appends only (lib.rs:169-184); ingest tests access .items/.invalidated/.promoted — field-identical to SourceParse. 3) CREATED_AT: verified stable. Insert list excludes it (store.rs:225-227, default now()); conflict path (242-261), PROMOTE_SQL (116-123), MARK_CANDIDATES_SQL (131-136) touch updated_at/metadata only; forget_ingested is DELETE. Nuance: retract-then-reinstate (documented self-healing, store.rs:364-366) recreates the row with a NEW created_at — it is 'first capture of the current stored copy', not 'first capture ever'; spec 0010 wording should say so. 4) MAKE_INTERVAL: design flaw — sqlx-postgres 0.9 has NO u32 Encode impl (int.rs: i8/i16/i32/i64 only), so push_bind(u32) does not compile; and an i64 bind into make_interval(days=>$n) risks 'function does not exist' because int8->int4 is assignment-only, not implicit (PG typeconv-func + CREATE CAST). Bind i32: exact INT4 signature match; convert u32 wire value via i32::try_from with a validation error. interval-multiplication and text||' days' alternatives both add a coercion or text round-trip — reject. 5) SOURCES FILTER: mechanism verified. MemorySource needs JsonSchema + schemars(crate) derive (pattern at types.rs:57-59); schemars honors serde rename_all (in-tree proof server.rs:517-530); rmcp Parameters is serde-transparent and maps deserialization failure to invalid_params (rmcp tool.rs:181-190) — unknown variants reject at the wire like ActionState shapes today. SQL arm must bind Vec<String> via as_str() (MemorySource has no sqlx impl), mirroring kinds=ANY (store.rs:72-78). 6) AC5: item order affects only batch partition boundaries — dedup is HashSet-based, ids and scores are order-free — so correctness never depends on wisdom-before-reflections; bit-for-bit AC5 does. Loop over SOURCES=[wisdom, reflections] in that order with per-source warn-and-continue reproduces today's semantics exactly. Two scoping facts for spec 0012: forget_ingested and MARK_CANDIDATES_SQL hard-restrict source IN ('adv_wisdom','adv_reflection') (store.rs:376,135) — a future non-ADV source's items would ingest (upsert_batch writes input.source) but its invalidated/promoted reports would be silently ignored; and existing_source_ids matches namespace+source_id WITHOUT source (store.rs:300-301), so cross-source source_id collisions in a namespace false-positive dedup — spec 0012 should state the disjoint-id-space expectation for new sources.",
+      "validation": {
+        "status": "caution",
+        "blockers": [],
+        "notes": "BLOCKING (small, design-text only): the design's make_interval binding 'push_bind of i32/u32' is half-impossible — sqlx-postgres 0.9.0 implements Encode/Type for i8/i16/i32/i64 only (src/types/int.rs:35-158), so the u32 arm does not compile. Fix the design to: keep Option<u32> on the wire (serde rejects negatives; JsonSchema minimum 0), bind i32 via i32::try_from mapped to a validation error, keep SQL 'created_at >= now() - make_interval(days => $n)' — i32 is the exact INT4 match for make_interval's days parameter. Do NOT bind i64 without an explicit ::int cast: int8->int4 is assignment-only (narrowing), and function-argument resolution applies implicit conversions only, so make_interval(days => $int8bind) fails with 'function does not exist'. ADVISORY (non-blocking): (a) reject sources:[] in RecallFilters::validate for symmetry with tags/kinds empty-list rejection (types.rs:280-297) — AC1/design do not state it; (b) spec 0010 should document that created_at resets on retract-then-reinstate (first capture of the current stored copy); (c) spec 0012 must record that retraction/promotion effects are source-scoped to adv_wisdom/adv_reflection today (store.rs:135,376) and that new sources get items-only semantics until the store methods generalize, plus the disjoint-source-id-space expectation vs existing_source_ids; (d) 'spec 0010 both copies byte-identical' — only one repo copy exists (docs/specs/0010-recall-metadata-filters.md); the second copy's location is outside this worktree's readable surface, confirm the cmp target at planning; (e) trait impls must join .adv themselves — current fns take adv_dir (ingest.rs:78,173), design signature passes project_root; (f) optional: when a source's IO grows, wrap the parse phase in spawn_blocking — not required by AC5."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "low",
+        "tradeoffs": [
+          "Typed MemorySource in RecallFilters gives wire-level closed-set rejection (rmcp invalid_params) but a serde-shaped error message, unlike curated RecallFilterValidationError strings for other filter faults.",
+          "Sync &dyn trait keeps a heterogeneous const source list without async_trait boxing, at the cost of doing any future heavy IO as blocking work that reconcile must dispatch via spawn_blocking.",
+          "Preserving wisdom-before-reflections aggregation order buys bit-for-bit AC5 at zero flexibility cost; order is not load-bearing for correctness.",
+          "Binding i32 for max_age_days matches make_interval exactly but forces a u32->i32 conversion at the SQL boundary (unreachable-in-practice >2^31 branch handled as a validation error)."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "async trait (async_trait crate or RPITIT)",
+            "disposition": "rejected",
+            "rationale": "async fn in trait is not dyn-compatible; &[&dyn] would need boxed futures and a new dependency. Evidenced CD-0026 consumer is filesystem-only; spawn_blocking at the call site covers heavy IO without a trait change."
+          },
+          {
+            "option": "make_interval with i64 bind, or ($1 * interval '1 day'), or ($1 || ' days')::interval",
+            "disposition": "rejected",
+            "rationale": "i64 needs explicit ::int cast (int8->int4 assignment-only; implicit-only coercion in function args per PG docs 10.3); interval* needs implicit int->float8 hop (only interval*float8 operator exists); text concat is a string round-trip. i32 bind is the exact-signature boring choice."
+          },
+          {
+            "option": "Keep WisdomParse and add SourceParse alongside",
+            "disposition": "rejected",
+            "rationale": "Two shapes for one concept; only ingest.rs names WisdomParse and lib.rs consumes fields — folding is safe and removes the divergent-shape debt."
+          },
+          {
+            "option": "Generalize forget_ingested/mark_candidates source scoping now",
+            "disposition": "deferred",
+            "rationale": "No second consumer exists (YAGNI/AC 'do not build the Concord parser'); changing the source-restriction predicates now would alter ADV-scoped safety semantics with no caller. Record in spec 0012; generalize with the first non-ADV source."
+          }
+        ],
+        "recommendation": "Proceed to planning after amending design.md: specify the i32 bind + i32::try_from conversion for max_age_days (u32 push_bind cannot compile under sqlx-postgres 0.9), and carry the advisory spec notes into the spec edits."
+      },
+      "recommendation": "APPROVE WITH FINDINGS. Architecture (trait cut, fold, filter shapes, AC5 strategy) is sound and verified against code and external sources. One blocking design-text correction: the max_age_days SQL binding must be i32 (sqlx-postgres 0.9 has no u32 Encode impl; i64 into make_interval(days=>...) fails implicit-only coercion). Advisory items: reject empty sources list; document created_at reset-on-reinstate; spec 0012 records ADV-scoped retraction/promotion and the disjoint source-id expectation; confirm the second byte-identical spec-0010 copy location at planning.",
+      "follow_ups": [
+        "Design edit: i32 bind for make_interval days parameter with i32::try_from conversion.",
+        "Planning check: locate the byte-identical counterpart of docs/specs/0010 for the cmp gate.",
+        "Spec 0012: document items-only semantics for non-ADV sources (source-scoped retraction/promotion) and the namespace-scoped source_id dedup expectation."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveRecallQualityIngest",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveRecallQualityIngest",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [],
+      "changes_made": [
+        {
+          "file": "src/types.rs",
+          "summary": "Rejected max_age_days values above i32::MAX so every accepted value fits PostgreSQL make_interval's int4 argument.",
+          "verification": "RED then GREEN server validation test; full unit suite passed."
+        },
+        {
+          "file": "src/store.rs",
+          "summary": "Validated filters at the public store boundary and extended bound-SQL coverage through sources and max_age_days.",
+          "verification": "Bound-query unit test passed; all Postgres suites passed."
+        },
+        {
+          "file": "src/server.rs",
+          "summary": "Added validation coverage for u32::MAX max_age_days input.",
+          "verification": "Test failed before the validator fix and passed after it."
+        },
+        {
+          "file": "tests/recall_filters_it.rs",
+          "summary": "Exercised all recall filters in one query and proved the store rejects an unbindable day count without panic.",
+          "verification": "All three recall filter Postgres tests passed."
+        },
+        {
+          "file": "src/ingest.rs",
+          "summary": "Removed stale main.rs and Vec-return documentation and removed an invalid spawn_blocking claim from the synchronous trait contract.",
+          "verification": "Full unit suite and clippy passed."
+        },
+        {
+          "file": "src/lib.rs",
+          "summary": "Changed the reconcile documentation from two ADV sources to configured ingest sources.",
+          "verification": "Full unit suite and clippy passed."
+        },
+        {
+          "file": "docs/specs/0010-recall-metadata-filters.md",
+          "summary": "Documented the int4 day range and corrected the stale boundary that said this capability added no recency behavior.",
+          "verification": "Byte comparison with the .adv copy passed."
+        },
+        {
+          "file": ".adv/specs/0010-recall-metadata-filters.md",
+          "summary": "Kept the tracked spec copy identical after the recency contract corrections.",
+          "verification": "Byte comparison with the docs copy passed."
+        },
+        {
+          "file": "docs/specs/0012-ingest-source-contract.md",
+          "summary": "Removed the unsupported claim that a synchronous parser can dispatch and await spawn_blocking internally.",
+          "verification": "Byte comparison with the .adv copy passed."
+        },
+        {
+          "file": ".adv/specs/0012-ingest-source-contract.md",
+          "summary": "Kept the tracked spec copy identical after the trait contract correction.",
+          "verification": "Byte comparison with the docs copy passed."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "A u32 request field does not imply that PostgreSQL can bind its full range. Validate against the target SQL argument type at the public store boundary before QueryBuilder conversion."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "cargo test --lib",
+          "EPISODE_TEST_DATABASE_URL='postgres://episode:episode@localhost:5434/episode' cargo test --tests -- --ignored",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo fmt --check",
+          "cmp '.adv/specs/0010-recall-metadata-filters.md' 'docs/specs/0010-recall-metadata-filters.md'",
+          "cmp '.adv/specs/0012-ingest-source-contract.md' 'docs/specs/0012-ingest-source-contract.md'",
+          "git diff --check"
+        ],
+        "results": "pass",
+        "evidence": "64 unit tests and 22 ignored Postgres tests passed. Clippy, rustfmt, both spec-pair comparisons, and diff checks passed. The SQL integration query activated namespace, product, work_id, tags, kinds, sources, max_age_days, open-followup, and promoted predicates together. QueryBuilder preserves bind order by construction. now() is statement/transaction stable, TIMESTAMPTZ arithmetic has no session-timezone cutoff shift, and the 100-day fixture margin avoids boundary timing races. AC5 is supported by unchanged store methods, unchanged parser bodies, aggregation isolation coverage, and passing reconcile/promotion/ingest suites. Changed warning text is a log surface, not store-boundary behavior."
+      },
+      "scope_drift": null,
+      "risks": [],
+      "required_main_agent_actions": [
+        "Checkpoint the scoped review fixes before acceptance.",
+        "Use this report as the contract-correctness acceptance evidence."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "improveRecallQualityIngest",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/improveRecallQualityIngest",
+      "scope": {
+        "kind": "change",
+        "scope_key": "harden:release"
+      },
+      "agent": "adv-reviewer",
+      "phase": "harden",
+      "verdict": "NEEDS_WORK",
+      "blocking_findings": [],
+      "nonblocking_findings": [
+        {
+          "id": "operational-1",
+          "label": "suggestion",
+          "file": "src/ingest.rs",
+          "line": 102,
+          "what": "Persistent source read failures emit one warning per source, root, and reconcile pass with no rate limit or escalation signal.",
+          "why": "The default 60-second cadence produces 1,440 warnings per day for each failing source and root. The warning reaches stderr, but the service exposes no failure counter or health escalation. Malformed JSON lines do not cause this path because the parser skips them."
+        },
+        {
+          "id": "operational-2",
+          "label": "praise",
+          "file": "src/ingest.rs",
+          "line": 84,
+          "what": "The const source list compiles to static fat-pointer data and static vtables.",
+          "why": "LLVM IR shows one constant four-pointer slice payload and two private constant vtables. Unit structs need no runtime construction, initialization order, or destructor. Shared trait references are static and sound for the read-only parse methods."
+        },
+        {
+          "id": "operational-3",
+          "label": "praise",
+          "file": "src/store.rs",
+          "line": 331,
+          "what": "Store::recall is the only production Store entry point that accepts RecallFilters.",
+          "why": "The private build_recall_query caller set contains Store::recall and module tests only. Store::recall validates before SQL construction. The server also validates before embedding, so invalid public input cannot reach SQL."
+        },
+        {
+          "id": "operational-4",
+          "label": "praise",
+          "file": "migrations/0003_namespace_id_pk.sql",
+          "line": 1,
+          "what": "The change adds no migration, schema change, dependency, or stored-data format change.",
+          "why": "main...HEAD has no migration diff. A binary-only rollback reads the same memories table and ignores the new request fields. Deployment needs a normal process restart to load the binary, but no database coordination."
+        }
+      ],
+      "changes_made": [
+        {
+          "file": "src/store.rs",
+          "summary": "Rewrote max-age comparison as interval-to-interval arithmetic. PostgreSQL accepted make_interval(i32::MAX) but the former timestamp subtraction failed with 'timestamp out of range'. The new expression preserves filter semantics without producing an out-of-range timestamp.",
+          "verification": "A direct PostgreSQL probe reproduced the former overflow. The focused ignored integration test failed before the fix and passed after it. All ignored database tests passed."
+        },
+        {
+          "file": "tests/recall_filters_it.rs",
+          "summary": "Added coverage that recalls all seeded rows with max_age_days = i32::MAX, which is the largest contract-valid value.",
+          "verification": "cargo test --test recall_filters_it sources_and_max_age_filter_recall -- --ignored --exact passed after the fix."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "PostgreSQL make_interval(days => 2147483647) succeeds, but subtracting that interval from now() raises 'timestamp out of range'. Compare now() - created_at to the interval when the accepted day range can exceed the timestamptz calendar range."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "docker exec episode-db psql -U episode -d episode -v ON_ERROR_STOP=1 -c \"SELECT make_interval(days => 2147483647) AS max_interval;\" -c \"SELECT now() - make_interval(days => 2147483647) AS cutoff;\"",
+          "cargo test --test recall_filters_it sources_and_max_age_filter_recall -- --ignored --exact",
+          "cargo test --lib",
+          "cargo test --tests -- --ignored",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo fmt --check",
+          "cmp .adv/specs/0010-recall-metadata-filters.md docs/specs/0010-recall-metadata-filters.md",
+          "cmp .adv/specs/0012-ingest-source-contract.md docs/specs/0012-ingest-source-contract.md",
+          "cargo rustc --lib -- --emit=llvm-ir=target/episode-review.ll"
+        ],
+        "results": "pass",
+        "evidence": "The PostgreSQL probe reproduced 'timestamp out of range' for the former expression. The focused test then passed with the interval comparison. Unit tests passed: 64. Ignored database suites passed: 22 tests across six suites. Clippy, rustfmt, both spec comparisons, and git diff checks passed. LLVM IR lines 2341-2343 show two constant vtables and one constant trait-object slice payload."
+      },
+      "scope_drift": null,
+      "risks": [
+        "Persistent source read failures can create 1,440 stderr warnings per day for each failing source and root at the default cadence.",
+        "Operational detection depends on collection and alerting for stderr logs. The change adds no metric or health signal."
+      ],
+      "required_main_agent_actions": [
+        "Checkpoint the scoped fixes in src/store.rs and tests/recall_filters_it.rs.",
+        "Treat repeated ingest-source warning control or failure metrics as an operational follow-up if stderr volume or alert coverage is insufficient.",
+        "Deploy with a normal service restart, then inspect the first reconcile pass. No migration or coordinated database action is required. A binary-only rollback is safe."
+      ]
+    }
+  ],
+  "test_runs": {
+    "tk-cbe3aa6788ef": [
+      {
+        "runId": "tr_mtgci7yb_48cae455",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo fmt && cargo build --tests 2>&1 | tail -1 && cargo test --test recall_filters_it -- --ignored sources_and_max_age 2>&1 | grep -E 'left:|right:|panicked|test result' | head -8",
+        "durationMs": 4231.802078008652,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T21:52:42.198Z"
+      },
+      {
+        "runId": "tr_mtgcjkh2_a0f65fb8",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --test recall_filters_it -- --ignored 2>&1 | grep -E '^test [a-z]|^test result' && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1",
+        "durationMs": 47496.18553300202,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T21:53:45.076Z"
+      }
+    ],
+    "tk-179d497d766e": [
+      {
+        "runId": "tr_mtgcpc73_74bfeb1b",
+        "phase": "verify",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== per-suite names ===\" && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -cE '^test .* ok$' && cargo test --test promotion_state_it -- --ignored 2>&1 | grep -cE '^test .* ok$' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1",
+        "durationMs": 33633.365213006735,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T21:58:14.281Z"
+      },
+      {
+        "runId": "tr_mtgcqlcp_564de02d",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== clippy/fmt ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\"",
+        "durationMs": 16753.485770002007,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T21:59:12.808Z"
+      },
+      {
+        "runId": "tr_mtgcrslj_249d92e0",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --lib aggregate 2>&1 | grep -E 'left:|right:|test result' | head -4",
+        "durationMs": 4509.9746170043945,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T22:00:08.851Z"
+      }
+    ],
+    "tk-29d451120d65": [
+      {
+        "runId": "tr_mtgctt2f_cef24b62",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== clippy/fmt/specs ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && cmp docs/specs/0012-ingest-source-contract.md .adv/specs/0012-ingest-source-contract.md && echo \"spec pairs byte-identical\" && echo \"=== AC3 static: no blending/ranking surface in diff ===\" && git diff main...HEAD | grep -ciE 'score|rank|tsvector|pg_trgm|cosine.*weight|blend' || echo \"0 matches\"",
+        "durationMs": 14138.714222997427,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T22:01:42.771Z"
+      },
+      {
+        "runId": "tr_mtgd3sig_f35a2732",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && cmp docs/specs/0012-ingest-source-contract.md .adv/specs/0012-ingest-source-contract.md && echo \"spec pairs byte-identical\"",
+        "durationMs": 15428.555554002523,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T22:09:28.614Z"
+      },
+      {
+        "runId": "tr_mtgddvpe_12c0eca7",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && cmp docs/specs/0012-ingest-source-contract.md .adv/specs/0012-ingest-source-contract.md && echo \"spec pairs byte-identical\"",
+        "durationMs": 7117.559930995107,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T22:17:19.315Z"
+      }
+    ]
+  },
+  "deltas": {},
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-08-30T21:36:23.543Z",
+      "completed_by": "user",
+      "approval_evidence": "User instructed \"complete that last change\", directly after my report named improveRecallQualityIngest (order 6, at proposal) with its three sub-parts: source filter, max_age_days, source-agnostic ingest trait. That instruction approves the proposal direction as presented.\n\nThe proposal is current and carries its own prior scope corrections: 3a re-scoped to source alone (kinds already shipped in RecallFilters), 3b leans pure filter with AC3 forbidding uncalibrated score-blending, 3c is parser-shaped (not format-shaped) with the CD-0026 Concord lesson surface as evidenced second consumer, and the magic-context hybrid-retrieval candidate (3d) is recorded as a bound candidate that AC3 excludes from this change.\n\nRecon at proposal time confirms the premise still holds: MemorySource has exactly three variants (AdvWisdom, AdvReflection, Manual); created_at TIMESTAMPTZ NOT NULL exists for recency filtering; ingest is two free functions (parse_wisdom returning WisdomParse with invalidated+promoted, parse_reflections returning bare items) called from reconcile_root at lib.rs:169/179; RecallFilters has grown product/work_id/tags/kinds/include_open_followups/include_promoted with no source or recency field."
+    },
+    "discovery": {
+      "status": "done",
+      "completed_at": "2026-08-30T21:37:40.126Z",
+      "completed_by": "agent",
+      "approval_evidence": "Recon complete, all inline:\n\n1. MemorySource (types.rs:33-40): exactly three variants, snake_case serde, as_str() exists — the sources filter needs only a JsonSchema derive to ride RecallFilters' closed-set validation.\n2. created_at TIMESTAMPTZ NOT NULL DEFAULT now() exists (0001_init.sql:39); upsert_batch never writes it on conflict (only updated_at = now()), so first-capture time is stable — the correct recency basis. Promotions touch only updated_at.\n3. reconcile_root (lib.rs:160-235): two sequential match blocks append into shared items/invalidated/promoted vectors, then retraction-before-dedup, bulk source-id lookup, filter_eligible, batched embed+upsert, mark-after. The trait refactor is a loop over the same aggregation with per-source error isolation — no store-method changes.\n4. parse_wisdom returns WisdomParse {items, invalidated, promoted}; parse_reflections returns bare Vec<MemoryInput>. Divergent shapes for the same concept — folds into one SourceParse.\n5. kinds = ANY arm (store.rs) is the exact template for sources = ANY; both are typed-column unindexed predicates, same accepted scan shape as spec 0010 records.\n6. Spec surfaces mapped: 0010 Filter Contract extends (sources, max_age_days); new small 0012 for the ingest source contract; 0011 untouched (behavior preserved, proven by existing suites under AC5)."
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-08-30T21:46:36.080Z",
+      "completed_by": "agent",
+      "approval_evidence": "Independent validator (adv-researcher, attempt 1) returned APPROVE WITH FINDINGS: caution, high confidence, low risk.\n\nOne blocking correction, adopted: the design specified a u32 SQL bind, which cannot compile — sqlx-postgres 0.9 implements Encode for i8/i16/i32/i64 only — and an i64 fallback would fail make_interval's int4 parameter because Postgres function arguments accept implicit coercions only. The design now binds i32 via i32::try_from at the SQL boundary while the wire field stays u32 (rejecting negatives at deserialization).\n\nAdvisories adopted: empty sources list rejects (spec 0010 pattern); created_at reset-on-reinstate documented in spec 0010; spec 0012 records the store-level facts that retraction/promotion SQL hard-restricts to ADV sources (future sources are items-only) and that dedup is source-agnostic (disjoint id spaces required); Vec<String> bind via as_str mirroring kinds; aggregation order preserved though verified not load-bearing.\n\nVerified sound without change: the sync parser-shaped trait cut (CD-0026 consumer reads working-tree files; async fn in traits is not dyn-compatible), the WisdomParse fold (type named only inside ingest.rs), the created_at basis (insert excludes it; conflict path and promotions touch only updated_at), and closed-set wire rejection through rmcp (deserialization failure maps to invalid_params).\n\nNo CONFLICT, no user-value tradeoff, no contract compromise — no design-approval pause required."
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-08-30T21:49:12.789Z",
+      "completed_by": "user",
+      "approval_evidence": "User approved the prep contract with \"approve\" at the planning checkpoint.\n\nTask graph: 4 tasks — tk-cbe3aa6788ef (sources + max_age_days filters, RED then GREEN, implements AC1/AC2/AC3), tk-179d497d766e (IngestSource trait + ADV impls + reconcile loop, implements AC4/AC5), tk-6628add3ae58 (spec 0010 extension + new spec 0012, both copies byte-identical), tk-29d451120d65 (full gate + AC3 static check + AC6 coverage map). Design validated independently: APPROVE WITH FINDINGS with the i32-bind blocking correction adopted. Worktree change/improveRecallQualityIngest at 6e2f5cd."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-08-30T22:02:06.098Z",
+      "completed_by": "agent",
+      "approval_evidence": "All 4 tasks done with checkpoints: tk-cbe3aa6788ef (33f98d1, filters RED tr_mtgci7yb -> GREEN tr_mtgcjkh2), tk-179d497d766e (edd87ba, trait refactor with AC5 proof tr_mtgcqlcp and load-bearing isolation RED tr_mtgcrslj via revert-check), tk-6628add3ae58 (8ba6336, spec 0010 extended + spec 0012 created, both pairs byte-identical), tk-29d451120d65 (clean checkpoint, full gate tr_mtgctt2f + AC3 static check + AC6 coverage map).\n\nFull gate: 64 lib + 22 DB-backed tests, clippy -D warnings zero, fmt clean. TDD sequences recorded per task; the trait task's red evidence is an honest sabotage-based revert-check (abort-on-failure vs isolate-failure) after its authoring-phase compile noise. Authoring friction (several brace-balance errors in batch edits) was all compiler-caught before any behavioral run."
+    },
+    "acceptance": {
+      "status": "done",
+      "completed_at": "2026-08-30T22:10:17.682Z",
+      "completed_by": "user",
+      "approval_evidence": "User accepted at the acceptance checkpoint, replying \"continue\" against the anchor phrase \"Reply `continue` to accept and proceed to harden, or reply with what to adjust.\"\n\nReview verdict APPROVED after READY with in-scope fixes: the day-range panic (real defect — u32 above i32::MAX is a valid MCP input that would have crashed the request; bound now rejects in validation and Store::recall validates itself), strengthened bound-SQL coverage, stale-comment corrections, and spec accuracy fixes. All independently re-verified (tr_mtgd3sig): 64 lib + 22 DB-backed tests, clippy -D warnings zero, fmt clean, both spec pairs byte-identical. Executive summary persisted. Review fixes committed at c1a7e09.\n\nAC1 sources closed-set filter proven (unit + DB). AC2 max_age_days on created_at with boundary coverage. AC3 static-checked: zero ranking/blending surface; hybrid retrieval stays a recorded candidate. AC4 trait with stub-proven aggregation and isolation (sabotage-checked load-bearing). AC5 every existing suite passes unmodified through the refactor. AC6 coverage map recorded per sub-part."
+    },
+    "release": {
+      "status": "pending"
+    }
+  },
+  "documents": {
+    "proposal": "## Cross-Project Origin\n\nThis change was created as a follow-up from **concord**.\n\n| Field | Value |\n|-------|-------|\n| Source project | concord |\n| Source path | `/home/jon/dev/concord` |\n\n> **Note:** The originating project should be consulted for context on why this change is needed.\n\n\n# Improve recall quality and ingest source abstraction\n\n## Problem\n\nThree quality/recency gaps remain after Tiers 1–2, plus one future-proofing gap. These are individually deferrable but worth scoping so they are not lost.\n\n1. **No kind/source filtering at recall beyond the metadata filter.** Once Tier 1b lands, kind/source filtering falls out — but \"only manual corrections, not ingested reflections\" and \"exclude success stories when looking for gotchas\" are real recurring queries worth a first-class ergonomics path.\n2. **No recency awareness.** A gotcha about a since-removed module ranks the same as a fresh one. There is no `max_age` filter and no score-blending.\n3. **Ingest is hard-coupled to ADV.** `parse_wisdom`/`parse_reflections` read `.adv/wisdom.jsonl` + `reflections.jsonl` directly (ingest.rs). Concord now has its own learning-capture surface, so episode needs a source-agnostic ingest contract rather than deeper ADV coupling.\n\n## Proposed change (three sub-parts, independently shippable)\n\n### 3a. Kind/source filter ergonomics\n- Promote `kind` and `source` to first-class recall filter params (alongside the metadata filter), so common queries are one field, not a metadata filter object.\n\n> **Scope correction — half of 3a has shipped.** Tier 1b landed, and `RecallFilters` (`src/types.rs:134-140`) already carries `kinds: Option<Vec<String>>` as a first-class field, alongside `product`, `work_id`, `tags`, and `include_open_followups`. The `kind` half of 3a is delivered; building it again would duplicate shipped behavior.\n>\n> `source` is **not** present in `RecallFilters` and remains genuinely open. 3a should be re-scoped to `source` alone before any work starts, and AC1 narrowed accordingly. `source` also gains weight once 3c lands, since a second ingest source makes provenance filtering meaningful rather than decorative.\n\n### 3b. Recency\n- Add optional `max_age_days` to recall.\n- Investigate score-blending (cosine x recency weight) vs pure filter. **Lean: pure filter first** — blending introduces tunable weights with no clear calibration, violating structural-correctness over heuristic. Filter is deterministic.\n\n### 3c. Ingest source abstraction\n- Introduce a source-agnostic ingest trait: a directory + a parser, not an ADV path.\n- ADV becomes one parser implementation; Concord's lesson surface becomes another.\n- Decouples episode from ADV's file layout without breaking current ingestion.\n\n## Scope\n\n- `src/ingest.rs`: trait + ADV parser impl (3c).\n- `src/server.rs` / `src/store.rs`: `source` filter param (3a, re-scoped), max_age (3b).\n- Tests per sub-part.\n\n## Out of scope\n\n- Auto-decay of memory quality scores (heuristic; defer).\n- A Concord lesson parser implementation. The surface now exists (see below), but building the parser is separate work from establishing the trait that would host it.\n- Re-implementing the `kind` filter, which has shipped.\n\n## Concord's learning-capture surface now exists\n\nAn earlier draft deferred 3c partly on the grounds that Concord had no wisdom or reflection surface to abstract for. That is no longer true, and the correction matters because it converts 3c from speculative future-proofing into work with a second real consumer.\n\nCD-0026 (Accepted) defines `concord_work_compact.lesson_publish`: a mutation on the compaction tool, gated by the `work_compact` capability and a separate operator approval. Publishing writes lesson markdown under `docs/lessons/`, appends its manifest record, and commits both through the repository's git authority in one commit. Reflections are not a separate stream — a reflection is a lesson carrying a `reflection` tag (CD-0026 D3), dispatched through `internal/agent/mutations.go`.\n\nTwo consequences for this change:\n\n1. **The shape differs from ADV's.** ADV ingest reads JSONL streams; Concord's lessons are git-backed markdown plus manifest records. A trait that assumes \"a directory of JSONL\" would not host the second source. The abstraction must be parser-shaped, not format-shaped, which is what 3c already proposes — but the requirement is now concrete rather than anticipated.\n2. **Episode has no parser for it today**, and this change does not add one. What changes is that 3c's motivation is now evidenced rather than hypothetical.\n\n## Dependencies\n\n- Depends on: `addRecallMetadataFilters` (3a builds on the filter mechanism). **This prerequisite has shipped** — `RecallParams.filters: Option<RecallFilters>` exists in `src/server.rs`, with spec `0010` and `tests/recall_filters_it.rs` on disk. The dependency is satisfied, and it partly satisfies 3a as noted above.\n- 3c is independent of Tier 2.\n\n## Language and storage assumption\n\nThis change is implemented in **Rust + Postgres + pgvector**, per the decision recorded in change `decideStorageLanguageDirection`.\n\nThat decision matters more here than for any other change in the epic, because this one depends directly on the capabilities it preserves. The decision considered and rejected Rust + SQLite — keeping the language while dropping the Postgres server — and one of the deciding grounds was retrieval and filtering:\n\n- SQLite has no JSONB + GIN equivalent. sqlite-vec's `vec0` metadata columns are documented as slower on scans and inefficient past 12-character strings, which would directly weaken the recall filters spec `0010` already ships and that 3a extends.\n- `vec0`'s stable KNN is exhaustive where pgvector offers HNSW.\n- The candidate 3d hybrid-retrieval work below assumes Postgres-native `tsvector`/`tsquery` and `pg_trgm`. Under SQLite that becomes FTS5, with a different tokenizer trap, as the evidence section describes.\n\nSo the assumption is not incidental. If the storage decision is ever reopened at its option-decay checkpoint, this change's filter, recency, and hybrid-retrieval surface is the one that must be re-costed first.\n\n## Acceptance criteria\n\n- AC1 (3a): `recall` accepts `source` as a top-level filter param. *(Narrowed: `kinds` already ships in `RecallFilters`.)*\n- AC2 (3b): `recall` accepts `max_age_days` and excludes older memories.\n- AC3 (3b): No score-blending weights introduced without calibration evidence.\n- AC4 (3c): Ingest is source-agnostic via a parser trait; ADV is one impl.\n- AC5 (3c): Current ADV ingestion behavior is preserved by the refactored parser.\n- AC6: Tests cover each sub-part.\n\n## Epic context\n\nMember of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\n\n## External evidence — magic-context\n\n> Routed from change `studyMagicContextMemoryDesign`. Source: [`cortexkit/magic-context`](https://github.com/cortexkit/magic-context) (MIT), read at HEAD `a54f9c0`. This records a **candidate sub-part 3d**, not an adoption. AC1–AC6 are unchanged, and AC3's calibration bar governs this candidate.\n\n### The gap this addresses\n\nThis change has no retrieval-mechanism sub-part. 3a and 3b filter results; neither changes how candidates are found and ranked in the first place.\n\nmagic-context pairs dense cosine with an FTS5 side table `memories_fts`, kept in sync by triggers. Scores are hybrid-combined, and FTS also serves as a standalone fallback when embeddings are unavailable.\n\nTheir stated motivation is a documented weakness of their embedding model: **weaker on exact symbols, file paths, and config keys than on prose.** `MEMORY-DESIGN.md` recommends benchmarking `bge-small-en-v1.5` if symbol and path lookups stay weak.\n\nThat weakness class matters here more than it does for them. episode's memories are ADV wisdom and reflection entries — text saturated with file paths, config keys, and symbol names. The weakness is inherent to dense retrieval, and episode's larger BGE-large model reduces it rather than removing it.\n\n### A gap between their prose and their schema — this changes what actually transfers\n\nmagic-context's documentation describes its lexical index as tuned for technical tokens, preserving `.`, `_`, `/`, and `-`. Their actual DDL in `storage-db.ts` does not do that:\n\n```sql\nCREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(\n  content,\n  category,\n  content='memories',\n  content_rowid='id',\n  tokenize='porter unicode61'\n);\n```\n\n`unicode61` is the FTS5 default tokenizer, and by default it treats every non-alphanumeric character as a separator. Preserving `.`, `_`, `/`, or `-` requires an explicit `tokenchars` argument, which appears nowhere in their schema. See the [SQLite FTS5 unicode61 documentation](https://www.sqlite.org/fts5.html#unicode61_tokenizer).\n\nSo `src/store.rs`-style path tokens are split on ingestion into their index, exactly as they would be by default. Two consequences:\n\n1. **Their implementation is weaker evidence than their documentation.** Their hybrid retrieval is not tuned for technical tokens, so it does not demonstrate that the technique solves the symbol/path problem. The *idea* transfers; their *validation* of it does not.\n2. **Postgres has the same trap.** Default `tsvector` parsers split path and symbol tokens similarly. A naive `tsvector` addition in episode would reproduce the identical gap while appearing to address it. This makes `pg_trgm` trigram matching the **load-bearing** half of any transfer here, not the optional half it first appears to be.\n\nTransfer cost stays low — `tsvector`/`tsquery` and `pg_trgm` are native to Postgres, so no new dependency is required. But tokenizer configuration is the part that must be got right, and the source cannot be copied for it.\n\n### Why this is a candidate and not a proposal\n\nAC3 forbids introducing score-blending weights without calibration evidence. **A hybrid ranker is a blended score** and falls squarely under that bar.\n\nHybrid retrieval reduces the calibration problem — one mixing weight between lexical and dense scores, rather than the open-ended cosine-times-recency weighting 3b contemplates — but it does not eliminate it. Recording it as a bound candidate respects AC3. Adopting it here would violate AC3.\n\nOne calibration tool is worth naming if this is ever taken up: their `embedding-baseline.ts` and `embedding-baseline-diff.ts` snapshot top-K rankings per model and diff them by Kendall tau, with no gold labels. It is cheap and available to episode for the same question. It is also honest about its limit — it measures ranking *drift* between models, not ranking *correctness*, so it can tell you a change moved results without telling you it improved them.\n",
+    "agreement": "# Agreement — improve recall quality and ingest source abstraction\n\n## Objectives\n\n1. Recall can narrow by provenance: `sources` filters on the typed source column with the same ergonomics as `kinds` (one field, not a metadata object).\n2. Recall can exclude stale memories: `max_age_days` drops rows first captured longer ago than the cutoff. Pure filter — ranking and scores untouched.\n3. Ingest is source-agnostic: a parser-shaped trait hosts ingest sources; ADV wisdom and ADV reflections become two implementations of it; reconcile aggregates over a source list.\n4. A future Concord lesson parser (CD-0026: git-backed markdown + manifest, a different shape than JSONL) can be added as a new implementation without touching reconcile.\n\n## Acceptance criteria\n\n- AC1: `recall` accepts `sources` as a top-level filter param over the closed set `manual` / `adv_wisdom` / `adv_reflection`; unknown values reject; composes with AND alongside every existing filter and the namespace arm. *(Narrowed from the original proposal: `kinds` already ships in `RecallFilters`.)*\n- AC2: `recall` accepts `max_age_days`; rows whose `created_at` is older than the cutoff are excluded; `0` rejects as invalid, not as no-op.\n- AC3: No score-blending weights are introduced. Recency is a filter, not a ranking input. The hybrid-retrieval candidate (proposal §External evidence) stays a recorded candidate.\n- AC4: Ingest is source-agnostic via a parser trait; ADV is impls, not the contract.\n- AC5: Current ADV ingestion behavior is preserved bit-for-bit at the store boundary: retraction before dedup, promotion marking after the batch loop, per-source error isolation (one source failing warns and does not block the others), write-once dedup, idempotent repeated reconciles.\n- AC6: Tests cover each sub-part: sources filter (validation + DB), max_age (DB with seeded timestamps), trait aggregation (unit), and every existing ingest/reconcile/promotion suite passes unchanged.\n\n## Constraints\n\n- `created_at` is the recency basis: first-capture time. Ingest is write-once so it never moves; promotions touch only `updated_at`. A re-ingested corrected lesson keeps its original capture time by design.\n- No schema change: `source` and `created_at` columns exist.\n- No new index (same accepted scan-shape reasoning as spec 0010's unindexed predicates).\n- Spec 0010 is the filter contract — both copies stay byte-identical. The ingest trait gets a small spec 0012 (durable contract for external parsers).\n\n## Avoidances\n\n- Do not re-implement the `kinds` filter or treat 3a as unfinished — half of it shipped with spec 0010.\n- Do not build the Concord lesson parser. The trait is the deliverable; the parser is separate future work.\n- Do not adopt hybrid retrieval (3d) — AC3's calibration bar governs it.",
+    "design": "# Design — source filter, recency filter, ingest source trait\n\n## Sub-part 3a — `sources` filter\n\n`RecallFilters.sources: Option<Vec<MemorySource>>`. `MemorySource` already carries `#[serde(rename_all = \"snake_case\")]` and `as_str()` (src/types.rs:32-43); it gains `JsonSchema` so the closed set renders in the MCP schema. Unknown wire values reject via serde — rmcp maps deserialization failure to `invalid_params` (validator-verified against rmcp 2.2.0 source). `sources: Some(vec![])` rejects as invalid (empty list), matching spec 0010's reject-don't-default pattern.\n\nSQL: `source = ANY($n)` binding `Vec<String>` via `as_str()` — the exact shape of the `kinds` arm (store.rs `build_recall_query`). AND-composed. Typed-column predicate, unindexed like `kinds = ANY` — same accepted scan shape.\n\n## Sub-part 3b — `max_age_days` filter\n\n`RecallFilters.max_age_days: Option<u32>`. Validation: `Some(0)` rejects before embedding (\"must be positive\"). u32 at the type boundary rejects negative wire values at deserialization.\n\nSQL: `created_at >= now() - make_interval(days => $1)` binding **i32 via `i32::try_from`** (validator blocking correction): sqlx-postgres 0.9 implements Encode for i8/i16/i32/i64 only — u32 does not compile — and an i64 bind fails `make_interval`'s int4 parameter because function arguments accept implicit coercions only (PG typeconv-func). The `interval '1 day'`-multiply and `|| ' days'` alternatives add a coercion hop or a text round-trip; rejected.\n\nBasis is `created_at` — first-capture time. Insert never includes it (store.rs:225-227); the conflict path sets only `updated_at`; promotions touch metadata + `updated_at`. One documented nuance for spec 0010: retract-then-reinstate recreates the row and resets `created_at` — correct, since reinstatement is genuinely a fresh capture of re-validated knowledge. Pure WHERE filter; scores and ranking untouched (AC3 satisfied by omission).\n\n## Sub-part 3c — ingest source trait\n\nOne shape replaces two divergent return types:\n\n```rust\npub struct SourceParse {\n    pub items: Vec<MemoryInput>,\n    pub invalidated: Vec<String>,  // retraction: source ids withdrawn upstream\n    pub promoted: Vec<String>,     // graduation recorded upstream\n}\n\npub trait IngestSource {\n    /// Parse one project root for one namespace. Implementations resolve\n    /// their own paths and file formats; reconcile owns store effects.\n    fn parse(&self, namespace: &str, project_root: &Path) -> Result<SourceParse>;\n}\n```\n\n- `AdvWisdomSource` wraps the existing `parse_wisdom` body; `WisdomParse` folds into `SourceParse` (validator-verified safe: only ingest.rs names the type; all consumers use the fields, which are identical).\n- `AdvReflectionSource` wraps `parse_reflections`; reflections report empty `invalidated`/`promoted` — already their effective contract, and the same items-only shape a CD-0026 Concord lessons impl will have (validator traced CD-0026: working-tree markdown + manifest read by path; git authority is publish-side; idempotent publish with no retraction stream).\n- `reconcile_root` replaces the two `match` blocks with a loop over `const SOURCES: &[&dyn IngestSource] = &[&AdvWisdomSource, &AdvReflectionSource]`, aggregating in that order with warn-and-continue per source — bit-for-bit today's semantics. Validator confirmed item order is not load-bearing (dedup is HashSet-based; batch boundaries only), and it is preserved regardless.\n- Sync trait with `&dyn`: async fn in traits is not dyn-compatible, and no current or evidenced consumer needs it; a future blocking-IO parser dispatches via `spawn_blocking` inside its impl without a trait change.\n- The source list is a hardcoded slice; a registration surface arrives with the first external parser that needs one.\n\n**Spec 0012 records two store-level facts the trait contract needs** (validator findings): retraction (`forget_ingested`) and promotion marking (`MARK_CANDIDATES_SQL`) hard-restrict to `source IN ('adv_wisdom','adv_reflection')` — future sources are items-only by construction until that restriction is deliberately widened; and `existing_source_ids` dedups on (namespace, source_id) regardless of source — every source must own a disjoint id space or rows collide at the dedup boundary.\n\n## Sub-part 3d — explicitly not adopted\n\nHybrid lexical retrieval stays a recorded candidate under AC3's calibration bar. Nothing here touches tsvector, pg_trgm, or ranking.\n\n## Specs\n\n1. Spec 0010 (both tracked copies, byte-identical): Filter Contract gains `sources` (closed set, typed-column ANY, empty list rejects) and `max_age_days` (created_at basis, positive-only, filter-not-rank, reset-on-reinstate note); Verification extends.\n2. New spec `0012-ingest-source-contract.md` (both copies): the trait, SourceParse, ownership rules (sources report, reconcile applies), per-source error isolation, items-only semantics for non-ADV sources with the store-restriction citation, disjoint id-space requirement, write-once semantics unchanged, and the CD-0026 future-consumer rationale for the parser shape.\n\n## What deliberately does not change\n\n- Store methods: `forget_ingested`, `mark_candidates`, `existing_source_ids`, `upsert_batch` — untouched.\n- Spec 0011's ingest contract: write-once per source_id, reserved-key stripping, retraction/promotion semantics — preserved (AC5 is the existing suite corpus passing unchanged).\n- MCP tool schemas other than RecallFilters' two new optional fields.\n\n## Verification strategy\n\n3a: unit tests (unknown source string rejects; empty list rejects; all three values accepted) + DB test seeding manual/adv_wisdom/adv_reflection rows and filtering each. 3b: DB test backdating `created_at` via SQL and asserting cutoff boundaries; `0` rejects in unit validation. 3c: unit test asserting the SOURCES loop aggregates both impls and isolates a failing source (a stub source returning Err); existing reconcile/promotion/ingest DB suites are the AC5 proof. Full gate: lib, all DB-backed, clippy `-D warnings`, fmt, spec copies cmp-identical (0010 and 0012).\n\n## Independent validation\n\nadv-researcher verdict: **APPROVE WITH FINDINGS** (caution, high confidence, low risk). One blocking correction adopted: the u32 SQL bind is impossible under sqlx-postgres 0.9 (no Encode impl) and an i64 bind fails make_interval's int4 parameter under function-arg coercion rules — the design now binds i32 via i32::try_from. Advisories adopted: reject empty sources list; document created_at reset-on-reinstate in spec 0010; record ADV-scoped retraction/promotion and the disjoint id-space requirement in spec 0012; bind Vec<String> via as_str mirroring kinds; preserve aggregation order. The trait cut, WisdomParse fold, created_at basis, and wire rejection were all verified sound against traced code, the CD-0026 decision text, and sqlx/rmcp sources.",
+    "executiveSummary": "# Recall quality filters and a source-agnostic ingest contract\n\n## What this delivers\n\nThree gaps closed in how episode serves and gathers knowledge.\n\n**Provenance filtering.** An agent could not ask \"only my own notes\" or \"only ingested wisdom\" — recall had no source filter. It does now: a closed set (manual, adv_wisdom, adv_reflection) that rejects anything else before the query runs.\n\n**Recency filtering.** A lesson about a module removed months ago ranked exactly like one learned yesterday. Recall now accepts a maximum age in days and drops rows first captured before the cutoff. The basis is deliberately the moment knowledge was first captured — promotion bookkeeping and re-upsert races touch a different timestamp, so \"how old is this knowledge\" stays stable. Recency filters; it never re-ranks. The hybrid-retrieval idea that would have blended lexical and vector scores stays a recorded candidate, blocked on calibration evidence nobody has yet.\n\n**A source-agnostic ingest contract.** Ingestion was welded to ADV's file layout — two parsers with two different shapes, called by name from the reconcile loop. Both are now implementations of one small trait: a source is anything that can parse a project root into rows-plus-retractions-plus-graduations. Adding Concord's lesson surface later (git-backed markdown with a manifest, a different shape entirely) becomes a new implementation, not a refactor. The new spec records what an implementer must know: sources report, reconcile decides; one unreadable file never blinds the loop to the others; each source owns its id space; and non-ADV sources are items-only until the store's retraction and promotion paths are deliberately widened.\n\n## A defect the review caught\n\nThe day-count conversion could panic. The wire type accepts values up to about 4.29 billion; the database's interval function accepts about 2.1 billion; my conversion bridged the gap with an assertion that the gap would never be crossed. A caller sending the larger number would have crashed the request. The bound is now a validation error with the range in the message, and the store itself validates rather than trusting the tool layer — the assertion that remained is unreachable by construction.\n\n## Confidence\n\nEach sub-part carries its own tests: closed-set and validation coverage in unit tests, source and recency behavior against a real database with backdated timestamps, and the trait's aggregation and error isolation proven with stub sources — including a sabotage check confirming the isolation test fails when isolation is removed. The strongest evidence for the refactor is what did not change: every existing reconcile, promotion, and ingestion suite passes unmodified through the trait, which was the acceptance criterion.\n\nTwo independent reviews ran: the design validator caught an impossible type binding before any code existed, and the acceptance review caught the panic plus several overstated spec claims. Both were adopted with corrections recorded where the claims had been repeated.\n\n## Current state\n\nEpisode's original epic — structured episodic memory with capture context, action states, safe recall, product scoping, promotion, and quality controls — is complete with this change. The service is live, the corpus is accruing, and the product-scoping probe on concord#46 is collecting evidence under its pre-registered rubric.\n"
+  },
+  "cross_project_origin": {
+    "source_project": "concord",
+    "source_path": "/home/jon/dev/concord",
+    "linked_at": "2026-08-11T00:04:21.624Z"
+  },
+  "same_project_dependencies": [],
+  "epic_membership": {
+    "epic_id": "shapeEpisodeStructuredMemory",
+    "entry_id": "change-1786406885247-f3o2dm",
+    "order": 6,
+    "title": "Improve recall quality and ingest abstraction",
+    "linked_at": "2026-08-11T00:08:05.247Z",
+    "epic_project_id": "098dab10ebf50e5c885fb94eef48afda85032788",
+    "source": "link_existing"
+  },
+  "projection_revision": 38,
+  "projection_commits": [
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:44c52e39-99b1-45e4-90f2-ae81d87fb651",
+      "payload_hash": "8adbaf0cbc2d274ffb32258c72849e529fe8507ebc67f02146e9226a5b1fd5d7",
+      "prior_revision": 0,
+      "new_revision": 1,
+      "committed_at": "2026-08-30T03:26:48.589Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:05ce2464-c2d9-49c4-a526-ca773e681e07",
+      "payload_hash": "61865b1db14e4b06c59cd3472b3a721c43eb4732810aeceaa4cdd727f681b9e9",
+      "prior_revision": 1,
+      "new_revision": 2,
+      "committed_at": "2026-08-30T14:05:28.248Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:eda7739f-d3e3-4f75-86a9-c81d583d46a3",
+      "payload_hash": "5a6d7eeb79dcf1eba5132a0352f0a5cbf04b2f93434d1676d9e5eb6300ad33a6",
+      "prior_revision": 2,
+      "new_revision": 3,
+      "committed_at": "2026-08-30T14:51:11.463Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:810bdd2b-6b74-4169-8e88-efa4d1de4c1b",
+      "payload_hash": "b9691af90f775f57f4722b5d12aaadb888ed5208c3f2713fd3a20a384ee656a6",
+      "prior_revision": 3,
+      "new_revision": 4,
+      "committed_at": "2026-08-30T15:02:01.187Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User instructed \"complete that last change\", directly after my report named improveRecallQualityIngest (order 6, at proposal) with its three sub-parts: source filter, max_age_days, source-agnostic ingest trait. That instruction approves the proposal direction as presented.\n\nThe proposal is current and carries its own prior scope corrections: 3a re-scoped to source alone (kinds already shipped in RecallFilters), 3b leans pure filter with AC3 forbidding uncalibrated score-blending, 3c is parser-shaped (not format-shaped) with the CD-0026 Concord lesson surface as evidenced second consumer, and the magic-context hybrid-retrieval candidate (3d) is recorded as a bound candidate that AC3 excludes from this change.\n\nRecon at proposal time confirms the premise still holds: MemorySource has exactly three variants (AdvWisdom, AdvReflection, Manual); created_at TIMESTAMPTZ NOT NULL exists for recency filtering; ingest is two free functions (parse_wisdom returning WisdomParse with invalidated+promoted, parse_reflections returning bare items) called from reconcile_root at lib.rs:169/179; RecallFilters has grown product/work_id/tags/kinds/include_open_followups/include_promoted with no source or recency field.",
+      "operation_id": "mutation:gate_completion:improveRecallQualityIngest:21c07202-b9c7-4daf-8cb8-7bf65a8e289e",
+      "payload_hash": "bcd63263bbfb73707d86b52d65637a6ab4806015cfb385023488574625084c87",
+      "prior_revision": 4,
+      "new_revision": 5,
+      "committed_at": "2026-08-30T21:36:23.567Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:12153ea3-82bc-49ef-bcee-cac035cd21d9",
+      "payload_hash": "7c37d0c4ef142893e6f84338b4a4d4f1f1e7355322a4f22590d9e9863adddb70",
+      "prior_revision": 5,
+      "new_revision": 6,
+      "committed_at": "2026-08-30T21:37:30.323Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Recon complete, all inline:\n\n1. MemorySource (types.rs:33-40): exactly three variants, snake_case serde, as_str() exists — the sources filter needs only a JsonSchema derive to ride RecallFilters' closed-set validation.\n2. created_at TIMESTAMPTZ NOT NULL DEFAULT now() exists (0001_init.sql:39); upsert_batch never writes it on conflict (only updated_at = now()), so first-capture time is stable — the correct recency basis. Promotions touch only updated_at.\n3. reconcile_root (lib.rs:160-235): two sequential match blocks append into shared items/invalidated/promoted vectors, then retraction-before-dedup, bulk source-id lookup, filter_eligible, batched embed+upsert, mark-after. The trait refactor is a loop over the same aggregation with per-source error isolation — no store-method changes.\n4. parse_wisdom returns WisdomParse {items, invalidated, promoted}; parse_reflections returns bare Vec<MemoryInput>. Divergent shapes for the same concept — folds into one SourceParse.\n5. kinds = ANY arm (store.rs) is the exact template for sources = ANY; both are typed-column unindexed predicates, same accepted scan shape as spec 0010 records.\n6. Spec surfaces mapped: 0010 Filter Contract extends (sources, max_age_days); new small 0012 for the ingest source contract; 0011 untouched (behavior preserved, proven by existing suites under AC5).",
+      "operation_id": "mutation:gate_completion:improveRecallQualityIngest:e28ec4a5-b126-4401-8102-431a9ed0056e",
+      "payload_hash": "a07982c8c6be12b30c410b314237b761f02385d6bd573693b340a8caac548d83",
+      "prior_revision": 6,
+      "new_revision": 7,
+      "committed_at": "2026-08-30T21:37:40.242Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "improveRecallQualityIngest|change:researcher:design-gate-independent-validation|adv-researcher|1",
+      "operation_id": "mutation:subagent_report_submitted:improveRecallQualityIngest:146875db-445e-4053-b02e-93995cb76849",
+      "payload_hash": "efb40feb58cf3612dc6cb8466a7207799fc35a299cfcedb45a3ed8f610a7a455",
+      "prior_revision": 7,
+      "new_revision": 8,
+      "committed_at": "2026-08-30T21:45:43.149Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:6d1967c4-dba2-41ec-a401-5127c77c3b9e",
+      "payload_hash": "173b5ffbd00abad86761a139eb23be2981fa5df89d1fd93cf0151df3cbf0c183",
+      "prior_revision": 8,
+      "new_revision": 9,
+      "committed_at": "2026-08-30T21:46:27.435Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Independent validator (adv-researcher, attempt 1) returned APPROVE WITH FINDINGS: caution, high confidence, low risk.\n\nOne blocking correction, adopted: the design specified a u32 SQL bind, which cannot compile — sqlx-postgres 0.9 implements Encode for i8/i16/i32/i64 only — and an i64 fallback would fail make_interval's int4 parameter because Postgres function arguments accept implicit coercions only. The design now binds i32 via i32::try_from at the SQL boundary while the wire field stays u32 (rejecting negatives at deserialization).\n\nAdvisories adopted: empty sources list rejects (spec 0010 pattern); created_at reset-on-reinstate documented in spec 0010; spec 0012 records the store-level facts that retraction/promotion SQL hard-restricts to ADV sources (future sources are items-only) and that dedup is source-agnostic (disjoint id spaces required); Vec<String> bind via as_str mirroring kinds; aggregation order preserved though verified not load-bearing.\n\nVerified sound without change: the sync parser-shaped trait cut (CD-0026 consumer reads working-tree files; async fn in traits is not dyn-compatible), the WisdomParse fold (type named only inside ingest.rs), the created_at basis (insert excludes it; conflict path and promotions touch only updated_at), and closed-set wire rejection through rmcp (deserialization failure maps to invalid_params).\n\nNo CONFLICT, no user-value tradeoff, no contract compromise — no design-approval pause required.",
+      "operation_id": "mutation:gate_completion:improveRecallQualityIngest:9ad4e7cf-01e5-477a-9fbf-72e7b8539b5d",
+      "payload_hash": "5150ffced75a9089587ee0d401a6cfb6214e05af51af14139f2378228cf75cae",
+      "prior_revision": 9,
+      "new_revision": 10,
+      "committed_at": "2026-08-30T21:46:36.087Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-cbe3aa6788ef",
+      "operation_id": "mutation:task_add:improveRecallQualityIngest:e13596f7-7d82-417f-add0-0bf8a0ab25a7",
+      "payload_hash": "eb622d5768ffeacf27e9297ce80516eab49b9b34c1e9ea4baf269dcc56f32ef4",
+      "prior_revision": 10,
+      "new_revision": 11,
+      "committed_at": "2026-08-30T21:46:45.172Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-179d497d766e",
+      "operation_id": "mutation:task_add:improveRecallQualityIngest:67a9ecbd-213b-462b-894e-aa7b67337ed4",
+      "payload_hash": "48c5618a5c66e66b5a57b73af10fd6c8d1e7cde693609a14391511dd1426a1e7",
+      "prior_revision": 11,
+      "new_revision": 12,
+      "committed_at": "2026-08-30T21:46:54.315Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-6628add3ae58",
+      "operation_id": "mutation:task_add:improveRecallQualityIngest:751a8c4b-a452-44b2-be71-01a0bd5e947b",
+      "payload_hash": "2acfb561589a7c9859baaf15ec4f487254f63971e6c2f8732042abb7540600fb",
+      "prior_revision": 12,
+      "new_revision": 13,
+      "committed_at": "2026-08-30T21:47:01.929Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-29d451120d65",
+      "operation_id": "mutation:task_add:improveRecallQualityIngest:aa556985-0ae4-435d-8f8f-8654d5ac7634",
+      "payload_hash": "4890d357364904efcd9b030ba6c963f588f3cd60481d4eda5afad3ef5656c652",
+      "prior_revision": 13,
+      "new_revision": 14,
+      "committed_at": "2026-08-30T21:47:08.251Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User approved the prep contract with \"approve\" at the planning checkpoint.\n\nTask graph: 4 tasks — tk-cbe3aa6788ef (sources + max_age_days filters, RED then GREEN, implements AC1/AC2/AC3), tk-179d497d766e (IngestSource trait + ADV impls + reconcile loop, implements AC4/AC5), tk-6628add3ae58 (spec 0010 extension + new spec 0012, both copies byte-identical), tk-29d451120d65 (full gate + AC3 static check + AC6 coverage map). Design validated independently: APPROVE WITH FINDINGS with the i32-bind blocking correction adopted. Worktree change/improveRecallQualityIngest at 6e2f5cd.",
+      "operation_id": "mutation:gate_completion:improveRecallQualityIngest:5c909dd9-77df-4536-8e90-e07979e40970",
+      "payload_hash": "e03756b587c648728f9f25a5f52a3a24b27773331037af17d2d27e81741b9dc2",
+      "prior_revision": 14,
+      "new_revision": 15,
+      "committed_at": "2026-08-30T21:49:12.797Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:improveRecallQualityIngest:4f9da321-a712-4604-a32f-91224cdfb51b",
+      "payload_hash": "5057c737f78ad1cc53f37ed576ed02645b77358fbd77b31e7919377f5cdcb86d",
+      "prior_revision": 15,
+      "new_revision": 16,
+      "committed_at": "2026-08-30T21:49:16.938Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo build --tests 2>&1 | tail -1 && cargo test --test recall_filters_it -- --ignored sources_and_max_age 2>&1 | grep -E 'left:|right:|panicked|test result' | head -8",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:33463d21-c8e2-4aeb-9072-d584f8202251",
+      "payload_hash": "e0119308836b0629923faff72eacd3cb903217623471b327972c0cdea0ad9b89",
+      "prior_revision": 16,
+      "new_revision": 17,
+      "committed_at": "2026-08-30T21:52:42.202Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --test recall_filters_it -- --ignored 2>&1 | grep -E '^test [a-z]|^test result' && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:60d61229-4e87-4a06-b592-57b7869ef564",
+      "payload_hash": "6082856ebcbd555e1b4f27be6be157b29043f5d563ddebc04a22f65a5c3f3c94",
+      "prior_revision": 17,
+      "new_revision": 18,
+      "committed_at": "2026-08-30T21:53:45.080Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "33f98d13e715966e0db63bfd0013c4ca8e9e63f8:RED tr_mtgci7yb_48cae455 exit 101: sources_and_max_age_filter_recall returned all 5 rows (manual/wisdom/reflection, fresh+old) where the sources filter expected only the two wisdom rows — fields existed and validated but no SQL arm filtered. GREEN tr_mtgcjkh2_a0f65fb8 exit 0: new test passes alongside both existing recall_filters tests; 63 of 63 lib tests (validation coverage extended in recall_filters_validate_closed_optional_input: sources accepts the closed set, rejects empty list, rejects unknown value \"concord\" at deserialization; max_age_days accepts 90, rejects 0); clippy --all-targets -D warnings clean; fmt applied.\n\nWork done:\n1. src/types.rs: RecallFilters gains sources: Option<Vec<MemorySource>> (closed set, doc comment) and max_age_days: Option<u32> (created_at basis, positive-only, filter-not-rank doc). MemorySource gains JsonSchema (rmcp::schemars). Validation: empty sources rejects, max_age_days 0 rejects.\n2. src/store.rs build_recall_query: source = ANY($n) binding Vec<String> via as_str (mirrors kinds); created_at >= now() - make_interval(days => $n) binding i32::try_from(max_age_days) per the validator's blocking correction (sqlx 0.9 has no u32 Encode; i64 fails make_interval's int4 arg under function-arg coercion rules).\n3. tests/recall_filters_it.rs: sources_and_max_age_filter_recall seeds all three sources fresh plus wisdom/manual rows backdated 100 days via direct SQL (upsert stamps now()), asserts source filtering, source union, and 30-day cutoff; cleanup runs before assertions (the leak-proof structure the harden review established).\n4. Struct-literal sites updated (tests:178, store.rs:500) with explicit None fields.\n\nOne authoring defect caught by the compiler before any test ran: a malformed draft block in the heredoc (unbalanced parens) — removed; then a lifetime issue with a closure-based helper — replaced with a plain async fn; then a &str-vs-&String slice mismatch — fixed with an owned namespaces array. All three were compile-time, no behavioral evidence affected.",
+      "operation_id": "mutation:task_checkpoint_completed:improveRecallQualityIngest:2e17bc08-937b-4e54-9670-25fef9721e9a",
+      "payload_hash": "a95a88dfb6356c91bb89a531723d5d4196be1b019eb37968e54b04a3c34a7c97",
+      "prior_revision": 18,
+      "new_revision": 19,
+      "committed_at": "2026-08-30T21:53:58.211Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:improveRecallQualityIngest:d6ed2363-3743-4563-8946-78e3e7f7f13b",
+      "payload_hash": "f675e31991128dccfc0858c3ebe9cc3afc6a1f45171dfb7c75d2d7043e9a5859",
+      "prior_revision": 19,
+      "new_revision": 20,
+      "committed_at": "2026-08-30T21:54:02.630Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== per-suite names ===\" && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -cE '^test .* ok$' && cargo test --test promotion_state_it -- --ignored 2>&1 | grep -cE '^test .* ok$' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:1a0c320d-2252-47ab-9ec7-8fddf21cb334",
+      "payload_hash": "9bd4e7d2c643953ba6ab41b0e0b163245d43944b8e8a861e94f49c0a2daa68c9",
+      "prior_revision": 20,
+      "new_revision": 21,
+      "committed_at": "2026-08-30T21:58:14.286Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== clippy/fmt ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\"",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:687ec729-e847-4727-aab7-79f8b10183b2",
+      "payload_hash": "aff228a319824d126e78460e7927943b08ecf32233d1d78a597758ea7bf75b7c",
+      "prior_revision": 21,
+      "new_revision": 22,
+      "committed_at": "2026-08-30T21:59:12.814Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --lib aggregate 2>&1 | grep -E 'left:|right:|test result' | head -4",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:3f8803dd-5815-4295-b28f-59b8aaf54a5a",
+      "payload_hash": "fe84bd99f874456f8655eebd28da2926f18487ca2706985f124d905ba13950a3",
+      "prior_revision": 22,
+      "new_revision": 23,
+      "committed_at": "2026-08-30T22:00:08.860Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "edd87bac41ef80118f45851153c019b7239d0dbb:AC5 proof tr_mtgcqlcp_564de02d exit 0: every existing DB suite passes unchanged through the refactor — reconcile_state_it 7/7, promotion_state_it 6/6, all suites 22/22 (up from 21 only by task 1's new filter test). 64 of 64 lib tests. Clippy --all-targets -D warnings clean after fixing two doc-lint errors, fmt clean.\n\nLoad-bearing RED for the new behavior, recorded honestly as a revert-check because the refactor's own RED phase was compile-phase authoring noise: sabotaged aggregate to abort remaining sources on a failure (Err(_) => break) — tr_mtgcrslj_249d92e0 exit 101, left [\"a1\"] vs right [\"a1\",\"b1\"], the failing source's successors lost. Restored: 64/64 green. A first sabotage attempt (propagating ?) did not compile and was discarded rather than counted as evidence.\n\nWork done:\n1. src/ingest.rs: SourceParse replaces WisdomParse (fold, old type gone). pub trait IngestSource { name(), parse(namespace, project_root) } — parser-shaped, sync, documented for the CD-0026 future consumer. AdvWisdomSource and AdvReflectionSource wrap the existing parser bodies, each resolving its own .adv/<file> path from project_root; reflections report empty invalidated/promoted by construction. pub const SOURCES: &[&dyn IngestSource]. pub(crate) fn aggregate() carries the per-source warn-and-continue isolation with source names in log lines (previously hardcoded per-match messages).\n2. src/lib.rs reconcile_root: the two match blocks replaced by one destructured aggregate call; all downstream steps (retraction before dedup, bulk lookup, batched upsert, mark after) untouched. The unused adv_dir binding removed.\n3. Unit tests adapted to the project-root shape (TmpDir now creates .adv inside itself) and extended with aggregate_combines_sources_in_order_and_isolates_failures using stub sources.\n\nAuthoring friction recorded: three brace-balance mistakes across the python batch edits (impl blocks initially unclosed, one stray test brace, one glued doc line) — all caught by the compiler before any behavioral run; no test ever passed against broken code.",
+      "operation_id": "mutation:task_checkpoint_completed:improveRecallQualityIngest:bbe496c1-cab6-4b2a-ae21-25326bcb431b",
+      "payload_hash": "f3a3a8c31cba9bad27064ee1ae3512e983afa326d87d3a232e16abf5dabbc63b",
+      "prior_revision": 23,
+      "new_revision": 24,
+      "committed_at": "2026-08-30T22:00:34.338Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:improveRecallQualityIngest:dcb2a983-ba16-40a8-9eb3-75ee71932a45",
+      "payload_hash": "8afc43f8dc35cf476485fe021275685b58b1885e73d8249ddad92d841d31f6f5",
+      "prior_revision": 24,
+      "new_revision": 25,
+      "committed_at": "2026-08-30T22:00:38.671Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "8ba6336e6d081fde4fdb97f0ac1ba7c5fd930106:Both spec pairs cmp byte-identical and staged together: 0010 modified in place (Filter Contract extended, Verification extended), 0012 new (both copies untracked -> committed by this checkpoint).\n\nSpec 0010 additions: source filter (closed set manual/adv_wisdom/adv_reflection, unknown values reject at deserialization, empty list rejects validation); max_age_days (created_at basis with the rationale — write-once ingest never moves it, promotions touch only updated_at; the retract-then-reinstate reset documented as correct semantics; filter never a ranking input); composition extended to source and age; reject list extended with zero day counts.\n\nSpec 0012 (new): the IngestSource trait and SourceParse with the ownership rule (sources report, reconcile owns store effects), error isolation, the two store-level facts the validator surfaced (retraction/promotion SQL restricts to ADV sources so new sources are items-only by construction; dedup keys on (namespace, source_id) regardless of source so every source owns a disjoint id space), write-once cross-reference to 0011, the CD-0026 parser-shaped rationale, the fixed SOURCES list with no config surface until an external source needs one, and the boundary excluding the Concord parser itself.",
+      "operation_id": "mutation:task_checkpoint_completed:improveRecallQualityIngest:ee8a894d-1fbd-4a65-b692-9ee4e8096a39",
+      "payload_hash": "44d4a6f55b48fdc0acd24eca6abd8fcbf0ceb5a5afbeb6f02d33460cdea416cb",
+      "prior_revision": 25,
+      "new_revision": 26,
+      "committed_at": "2026-08-30T22:01:21.360Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:improveRecallQualityIngest:0132a5aa-5322-4806-9d3a-845f9e33043a",
+      "payload_hash": "b4932fb0378a1c93d26ca60f07526d655548ff286e86bb3366e1de38225e860c",
+      "prior_revision": 26,
+      "new_revision": 27,
+      "committed_at": "2026-08-30T22:01:26.542Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== clippy/fmt/specs ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && cmp docs/specs/0012-ingest-source-contract.md .adv/specs/0012-ingest-source-contract.md && echo \"spec pairs byte-identical\" && echo \"=== AC3 static: no blending/ranking surface in diff ===\" && git diff main...HEAD | grep -ciE 'score|rank|tsvector|pg_trgm|cosine.*weight|blend' || echo \"0 matches\"",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:fe6efc49-4805-4535-9fe3-4ecea369ba84",
+      "payload_hash": "54ab1b4e88dcbb41eaf80166b143c80616a073519c8682bbcceea12ab8efa570",
+      "prior_revision": 27,
+      "new_revision": 28,
+      "committed_at": "2026-08-30T22:01:42.778Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "8ba6336e6d081fde4fdb97f0ac1ba7c5fd930106:Full gate tr_mtgctt2f_cef24b62 exit 0: build --locked clean, 64 of 64 lib tests, 22 DB-backed tests across all suites (reconcile 7, promotion 6, filters 3, ingest 3+1, recall 2), clippy --all-targets -D warnings clean, fmt clean, both spec pairs (0010, 0012) cmp byte-identical.\n\nAC3 static check: the diff's only matches for score/rank/blend/tsvector/pg_trgm are six prose lines — the spec bullets and field doc comments explicitly stating recency is a filter and never a ranking input, and spec 0012's boundary excluding ranking and hybrid retrieval. Zero code touches scores, ranking, or any lexical-retrieval surface.\n\nAC6 coverage map: 3a sources — unit validation in recall_filters_validate_closed_optional_input (closed set, empty rejects, unknown value rejects) + DB sources_and_max_age_filter_recall (filter per source, union of two, exclusion of third). 3b max_age — same DB test with 100-day-backdated rows against a 30-day cutoff; zero rejects in unit validation. 3c trait — aggregate_combines_sources_in_order_and_isolates_failures (order + isolation, red-proven load-bearing) + the entire existing suite corpus as the AC5 behavioral-preservation proof.",
+      "operation_id": "mutation:task_checkpoint_completed:improveRecallQualityIngest:4d95116b-d7f8-4e96-bb2d-f01c282cbcab",
+      "payload_hash": "50db9afc72afc9e5c97da28a28ff652ab6050f9dc7bda341370e32668be41465",
+      "prior_revision": 28,
+      "new_revision": 29,
+      "committed_at": "2026-08-30T22:01:59.062Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "All 4 tasks done with checkpoints: tk-cbe3aa6788ef (33f98d1, filters RED tr_mtgci7yb -> GREEN tr_mtgcjkh2), tk-179d497d766e (edd87ba, trait refactor with AC5 proof tr_mtgcqlcp and load-bearing isolation RED tr_mtgcrslj via revert-check), tk-6628add3ae58 (8ba6336, spec 0010 extended + spec 0012 created, both pairs byte-identical), tk-29d451120d65 (clean checkpoint, full gate tr_mtgctt2f + AC3 static check + AC6 coverage map).\n\nFull gate: 64 lib + 22 DB-backed tests, clippy -D warnings zero, fmt clean. TDD sequences recorded per task; the trait task's red evidence is an honest sabotage-based revert-check (abort-on-failure vs isolate-failure) after its authoring-phase compile noise. Authoring friction (several brace-balance errors in batch edits) was all compiler-caught before any behavioral run.",
+      "operation_id": "mutation:gate_completion:improveRecallQualityIngest:e56aa97d-5a8d-4d9f-befd-c2152615b3cc",
+      "payload_hash": "1760cbe38ecfb26307f1d35dc1c1c28e0dd5bef26a410bf9653b12db769c88bf",
+      "prior_revision": 29,
+      "new_revision": 30,
+      "committed_at": "2026-08-30T22:02:06.131Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "improveRecallQualityIngest|change:review:acceptance|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:improveRecallQualityIngest:61ce903a-7ba1-4f64-9767-b952dfa5b89d",
+      "payload_hash": "3e9e2c85048de1025097ccfb92c317d785fdda46ec5e0d123f994ce0ca208ef8",
+      "prior_revision": 30,
+      "new_revision": 31,
+      "committed_at": "2026-08-30T22:08:43.215Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && cmp docs/specs/0012-ingest-source-contract.md .adv/specs/0012-ingest-source-contract.md && echo \"spec pairs byte-identical\"",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:2ff5fbd9-4de1-4525-8525-2bf901058b4f",
+      "payload_hash": "e8725ae5cd60fae90adddb11eb1ca9d8113fc0685aaf1db2fa178a3459252c71",
+      "prior_revision": 31,
+      "new_revision": 32,
+      "committed_at": "2026-08-30T22:09:28.620Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "c1a7e09b3895f2c656b7a301e11fb78f7b7359d5:Acceptance-review remediation, independently re-verified (tr_mtgd3sig_f35a2732 exit 0): 64 of 64 lib, 22 DB-backed, clippy --all-targets -D warnings clean, fmt clean, both spec pairs byte-identical.\n\nReviewer verdict READY with four fixes, all accepted after line-by-line inspection:\n\n1. DAY-RANGE PANIC (real defect, mine): i32::try_from(max_age_days).expect() in the SQL arm would panic the request path for any u32 value above i32::MAX — u32::MAX (4294967295) is a perfectly deserializable MCP input. The bound now rejects in validation (1..=2147483647, with the make_interval int4 rationale in the message and spec), u32::MAX added to the invalid-input test, and Store::recall now calls filters.validate() itself so the store boundary enforces the contract instead of trusting the tool layer. The SQL-side expect remains only as an unreachable invariant.\n2. Bound-SQL structure test strengthened: exercises the sources and make_interval arms and asserts the bound source value cannot leak into SQL text; existing tests now set the new fields instead of None, making them live coverage.\n3. Stale comments fixed: ingest.rs module doc referenced main.rs (the loop lives in lib.rs) and an obsolete Ok(vec![]) shape; lib.rs doc said \"parse both ADV sources\" where it now parses configured sources.\n4. Spec corrections: 0010 records the exact valid range and its Postgres cause; 0012 and the trait doc dropped the speculative spawn_blocking dispatch advice (unimplemented forward-looking guidance); 0010 Boundaries wording corrected (recency scoring, not recency).",
+      "operation_id": "mutation:task_checkpoint_completed:improveRecallQualityIngest:e270d9b3-3564-46a1-8791-cf11b6b80ad1",
+      "payload_hash": "9ee80cdbe93ab7ca2b4b11eb64a666e7b2448627c8425407b2a042226c72f159",
+      "prior_revision": 32,
+      "new_revision": 33,
+      "committed_at": "2026-08-30T22:09:38.987Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:improveRecallQualityIngest:e23c5c01-8621-4afe-9870-1d9b8685f31a",
+      "payload_hash": "6bd61284c04274982a0fd1d73223dd5470e467e7ec554cb9116526eab389ebfe",
+      "prior_revision": 33,
+      "new_revision": 34,
+      "committed_at": "2026-08-30T22:09:55.962Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User accepted at the acceptance checkpoint, replying \"continue\" against the anchor phrase \"Reply `continue` to accept and proceed to harden, or reply with what to adjust.\"\n\nReview verdict APPROVED after READY with in-scope fixes: the day-range panic (real defect — u32 above i32::MAX is a valid MCP input that would have crashed the request; bound now rejects in validation and Store::recall validates itself), strengthened bound-SQL coverage, stale-comment corrections, and spec accuracy fixes. All independently re-verified (tr_mtgd3sig): 64 lib + 22 DB-backed tests, clippy -D warnings zero, fmt clean, both spec pairs byte-identical. Executive summary persisted. Review fixes committed at c1a7e09.\n\nAC1 sources closed-set filter proven (unit + DB). AC2 max_age_days on created_at with boundary coverage. AC3 static-checked: zero ranking/blending surface; hybrid retrieval stays a recorded candidate. AC4 trait with stub-proven aggregation and isolation (sabotage-checked load-bearing). AC5 every existing suite passes unmodified through the refactor. AC6 coverage map recorded per sub-part.",
+      "operation_id": "mutation:gate_completion:improveRecallQualityIngest:05fdc10a-ad06-461b-b45a-a4647f7da6f8",
+      "payload_hash": "15a9478ff4ff629fe4ce9771d6de5369d90ef905aa954eb0a29d01ba31319d7e",
+      "prior_revision": 34,
+      "new_revision": 35,
+      "committed_at": "2026-08-30T22:10:17.827Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "improveRecallQualityIngest|change:harden:release|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:improveRecallQualityIngest:cec5bdbe-0dea-44c8-8f13-7b94b0bda05e",
+      "payload_hash": "8126e79b4edd469adae2dd0f71fb2d41cedb80197b846d29a8205173db854790",
+      "prior_revision": 35,
+      "new_revision": 36,
+      "committed_at": "2026-08-30T22:16:47.565Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && cmp docs/specs/0012-ingest-source-contract.md .adv/specs/0012-ingest-source-contract.md && echo \"spec pairs byte-identical\"",
+      "operation_id": "mutation:test_run_recorded:improveRecallQualityIngest:83196aea-d5e5-4857-b415-10f384353750",
+      "payload_hash": "c309480b0411dbf7db37ece77002d3e937117df2c124fc8123b53199a3edf768",
+      "prior_revision": 36,
+      "new_revision": 37,
+      "committed_at": "2026-08-30T22:17:19.323Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "6c91eb5e11b3bd3744c8d5978545433ee292e484:Harden pass verdict NEEDS_WORK -> resolved, independently re-verified (tr_mtgddvpe_12c0eca7 exit 0): 64 of 64 lib, 22 DB-backed, clippy -D warnings zero, fmt clean, both spec pairs byte-identical.\n\nHARDEN FINDING (real, second overflow defect in the same predicate): at the maximum valid day count (i32::MAX = 2147483647 days, about 5.9 million years), the predicate now() - make_interval(days => N) materializes a timestamp beyond timestamptz's range (about 294k years) and Postgres errors at query time — the acceptance-review range validation fixed the Rust-side panic but left the database-side overflow reachable. The reviewer's fix inverts the arithmetic: now() - created_at <= make_interval(days => N). The interval is only compared against a real row age, never materialized as an absolute timestamp, so no valid input can overflow by construction. Semantics are equivalent for all rows including future-dated created_at. Regression added: the test queries at i32::MAX days and asserts all rows return without error.\n\nClean areas confirmed by the reviewer: no schema change, no coordinated restart required, binary-only rollback safe; const SOURCES initialization sound; validation placement correct (recall is the only production filters entry point); rollback behavior unchanged.\n\nAdvisory accepted and recorded, not actionable in scope: a persistently failing ingest source warns once per reconcile pass per source per root — at the scheduler's 60-second cadence that is 1,440 warnings daily per source per root with no escalation path. Surfacing it needs a metrics/alerting surface this change does not add; noted for whoever builds observability.",
+      "operation_id": "mutation:task_checkpoint_completed:improveRecallQualityIngest:264eeced-53bf-420e-8621-f541e2ed1fa6",
+      "payload_hash": "f94e5b795c79aab41ad754274c8d3cad3056ba8a597227a83f39948ee6281bf3",
+      "prior_revision": 37,
+      "new_revision": 38,
+      "committed_at": "2026-08-30T22:17:34.922Z"
+    }
+  ]
+}
