@@ -179,8 +179,8 @@ pub enum PromotionStateKind {
 impl PromotionStateKind {
     /// The stored `kind` tag, or `None` when the key is absent.
     ///
-    /// `None` maps to SQL `NULL`, which is what makes `IS NOT DISTINCT FROM`
-    /// express "no promotion state" without branching the statement.
+    /// `None` maps to SQL `NULL`, which selects the absent-key branch in the
+    /// compare-and-set statement.
     pub fn as_tag(&self) -> Option<&'static str> {
         match self {
             Self::Episodic => None,

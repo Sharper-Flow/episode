@@ -344,6 +344,71 @@ async fn stored_metadata_drops_the_raw_promoted_at_field() {
         .expect("cleanup");
 }
 
+/// `promotion_state` is episode's key, not the source file's.
+///
+/// `parse_wisdom` copies the raw ADV object into metadata, so every key an entry
+/// carries lands in the store verbatim. Without an explicit strip, a wisdom
+/// entry could set episode's reserved key directly — a well-formed `promoted`
+/// value would hide that memory from recall the moment it was first ingested,
+/// and a malformed value would put the row in a state no transition can address.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn source_supplied_promotion_state_cannot_hijack_the_reserved_key() {
+    let db = db_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_hijack_{}", uuid::Uuid::new_v4().simple());
+    let tmp = TempRoot::new("hijack");
+    let root = tmp.root(&ns);
+
+    tmp.write_wisdom(&[
+        r#"{"id":"pw-hijack","type":"gotcha","content":"still ours","promotion_state":{"kind":"promoted","target":"forged"},"source_change":"c1"}"#,
+        r#"{"id":"pw-garbage","type":"gotcha","content":"malformed","promotion_state":"not-an-object"}"#,
+    ]);
+    reconcile_once(&store, &root).await;
+
+    assert_eq!(
+        stored_state(&pool, "pw-hijack").await,
+        None,
+        "a source-supplied promotion state must not reach the store"
+    );
+    assert_eq!(
+        stored_state(&pool, "pw-garbage").await,
+        None,
+        "a malformed source-supplied value must not reach the store either"
+    );
+    assert_eq!(
+        stored_metadata(&pool, "pw-hijack")
+            .await
+            .get("source_change")
+            .and_then(|v| v.as_str()),
+        Some("c1"),
+        "stripping the reserved key must not disturb real provenance"
+    );
+
+    // Neither entry carries promoted_at, so both must stay visible in recall.
+    let hits = store
+        .recall(
+            &vec![0.0f32; EMBEDDING_DIM],
+            std::slice::from_ref(&ns),
+            10,
+            Some(&RecallFilters::default()),
+        )
+        .await
+        .expect("recall");
+    assert_eq!(
+        hits.len(),
+        2,
+        "a forged promotion state must not hide a memory from recall"
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
 /// Retraction is scoped to the namespace being reconciled.
 ///
 /// Ids differ per namespace because `id` is a global primary key today, so

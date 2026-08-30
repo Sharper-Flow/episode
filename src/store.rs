@@ -99,15 +99,17 @@ fn build_recall_query(
 /// Compare-and-set of a memory's promotion state.
 ///
 /// Every state value is a bound parameter, so no state literal reaches SQL
-/// syntax. The precondition uses `IS NOT DISTINCT FROM` rather than `=` so a
-/// NULL parameter — meaning "no promotion state" — matches an absent key. That
-/// is what lets one statement cover every transition, including the episodic
-/// start state, without branching on the expected kind.
+/// syntax. Stored states use `IS NOT DISTINCT FROM` for their bound tag. The episodic
+/// precondition separately requires an absent key, because JSON null and a
+/// malformed object also produce SQL NULL when their `kind` is extracted.
 const PROMOTE_SQL: &str = "UPDATE memories \
      SET metadata = jsonb_set(metadata, ARRAY[$3], $4::jsonb, true), \
          updated_at = now() \
      WHERE id = $1 AND namespace = $2 \
-       AND metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5";
+       AND CASE WHEN $5::text IS NULL \
+           THEN NOT (metadata ? $3) \
+           ELSE metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5 \
+       END";
 
 /// Flag ingested rows as promotion candidates, skipping any row that already
 /// carries a promotion state.
@@ -536,8 +538,7 @@ mod tests {
     /// Mirrors `recall_query_uses_bound_filters_and_default_open_exclusion`:
     /// promotion state literals are bound parameters, never SQL syntax.
     /// AC5: the transition statement carries no state literal and no source
-    /// restriction, and asserts its precondition with NULL-safe comparison so a
-    /// single statement covers the episodic start state.
+    /// restriction. It uses exact absent-key matching for the episodic state.
     #[test]
     fn promote_sql_binds_state_and_omits_source_restriction() {
         for value in ["promotion_candidate", "promoted", "episodic"] {
@@ -553,7 +554,11 @@ mod tests {
         );
         assert!(
             PROMOTE_SQL.contains("IS NOT DISTINCT FROM"),
-            "the precondition must be NULL-safe so an absent key is matchable:\n{PROMOTE_SQL}"
+            "stored-state tag comparison must be NULL-safe:\n{PROMOTE_SQL}"
+        );
+        assert!(
+            PROMOTE_SQL.contains("NOT (metadata ? $3)"),
+            "episodic must match only an absent key:\n{PROMOTE_SQL}"
         );
     }
 

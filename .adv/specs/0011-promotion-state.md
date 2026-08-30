@@ -39,11 +39,12 @@ Ingestion is write-once per `source_id`: already-stored items are dropped before
 - `promoted_at` non-null sets `promotion_candidate`, and only where no promotion state exists. That guard makes the operation idempotent and prevents a later reconcile from resetting a human-set `promoted` back to a candidate, since `promoted_at` remains in the source file permanently.
 - Ingested promotions become candidates, never `promoted`. ADV records graduation as a timestamp and carries no manifest path or sha256, so no Concord target exists to name.
 - The raw `promoted_at` is removed from stored metadata. Retaining it would expose a second promotion field populated only on entries that arrived already-promoted, because dedup freezes metadata at first write.
+- A source-supplied `promotion_state` is removed at the ingest boundary. Wisdom metadata is a verbatim copy of an untrusted source object, and the key belongs to episode: reconcile and the transition tool are its only writers. Left in place, an entry could forge `promoted` and hide itself from recall on first ingest, or store a malformed value that no transition can address. Reflection metadata is constructed from named fields and cannot carry the key.
 - Both operations are scoped to the reconciled namespace and to ingested sources, so reconcile can never delete or alter a manual memory.
 
 ## Query and Index Safety
 
-All state values are bound with sqlx; no state literal enters SQL syntax. The transition precondition compares with `IS NOT DISTINCT FROM` so a NULL parameter matches an absent key, letting one statement cover every transition including the episodic start state.
+All state values are bound with sqlx; no state literal enters SQL syntax. Stored-state tags use `IS NOT DISTINCT FROM`. The episodic precondition requires that the key is absent, so JSON null or a malformed state cannot satisfy it. One statement covers every transition.
 
 The default exclusion is a **negative** predicate and does not use `memories_metadata_gin`, exactly as the negative open-follow-up predicate does not. See `docs/specs/0010-recall-metadata-filters.md`, which records that the index claim covers positive containment only. Filtered-scan cost scales with the excluded fraction, which human promotion activity bounds.
 
@@ -53,4 +54,4 @@ Automatic promotion heuristics remain separate; promotion is explicit. This capa
 
 ## Verification
 
-DB-free tests prove variant tags, schema closedness, target validation, bound SQL structure, and the absence of a source restriction on transitions. Model-free Postgres integration proves default exclusion, opt-in inclusion, candidate visibility, every transition including demotion and mismatch, promotion of ingested rows, removal of retracted rows and its namespace scoping, mapping of graduation recorded after first ingest, idempotency across repeated reconciles, and removal of the raw `promoted_at` field.
+DB-free tests prove variant tags, schema closedness, target validation, bound SQL structure, the absence of a source restriction on transitions, and the stripping of source-supplied reserved keys. Model-free Postgres integration proves default exclusion, opt-in inclusion, candidate visibility, every transition including demotion, mismatch, and a present-but-malformed state rejected as non-episodic, promotion of ingested rows, removal of retracted rows and its namespace scoping, mapping of graduation recorded after first ingest, idempotency across repeated reconciles, removal of the raw `promoted_at` field, and rejection of a forged source-supplied promotion state.

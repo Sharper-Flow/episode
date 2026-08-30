@@ -12,7 +12,7 @@ use anyhow::Result;
 use serde_json::Value;
 use std::path::Path;
 
-use crate::types::{MemoryInput, MemorySource};
+use crate::types::{MemoryInput, MemorySource, PROMOTION_STATE_KEY};
 
 /// Return non-empty string slices out of a JSON value, else `None`.
 fn nonempty_str(v: &Value) -> Option<&str> {
@@ -67,7 +67,7 @@ pub struct WisdomParse {
 /// Map each ->
 ///   `MemoryInput { id: <id>, namespace, source: MemorySource::AdvWisdom,
 ///     source_id: Some(<id>), kind: Some(<type>), content: <content>,
-///     metadata: <the raw object with `content` removed> }`.
+///     metadata: <the raw object minus the keys episode owns> }`.
 /// Rules:
 ///   - skip blank/malformed lines (do NOT fail the whole file — mirror ADV's
 ///     `parseWisdomEntries` graceful-degradation behavior).
@@ -117,16 +117,24 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<WisdomParse> {
             promoted.push(id.clone());
         }
 
-        // Metadata = full object minus the `content` key (content is the
-        // embeddable text; everything else is provenance/filter data). The raw
-        // `promoted_at` goes too, so `promotion_state` is the only promotion
-        // field agents can filter on. Keeping both would give them a second
-        // field populated only on entries that arrived already-promoted, since
-        // dedup freezes metadata at first write.
+        // Metadata = full object minus the keys episode owns. `content` is the
+        // embeddable text; everything else is provenance/filter data.
+        //
+        // `promoted_at` goes so `promotion_state` is the only promotion field
+        // agents can filter on. Keeping both would give them a second field
+        // populated only on entries that arrived already-promoted, since dedup
+        // freezes metadata at first write.
+        //
+        // `promotion_state` goes because this object is untrusted input and the
+        // key is episode's. Reconcile is its only writer. Left in place, a
+        // source entry could forge `promoted` and hide itself from recall on
+        // first ingest, or write a malformed value that no transition can
+        // address.
         let mut metadata = value.clone();
         if let Some(map) = metadata.as_object_mut() {
             map.remove("content");
             map.remove("promoted_at");
+            map.remove(PROMOTION_STATE_KEY);
         }
 
         items.push(MemoryInput {
@@ -317,6 +325,7 @@ mod tests {
                 r#"{"id":"pw-2","type":"pattern","content":"valid two","promoted_at":"2026-07-07T02:13:34.418Z"}"#,
                 r#"{"id":"pw-3","type":"gotcha","content":"superseded","invalidated_by":"pw-9"}"#,
                 r#"{"id":"pw-4","type":"gotcha","content":"null-invalidation-kept","invalidated_by":null}"#,
+                r#"{"id":"pw-5","type":"gotcha","content":"forged state","promotion_state":{"kind":"promoted","target":"forged"}}"#,
                 "",
             ]
             .join("\n"),
@@ -327,8 +336,8 @@ mod tests {
         let got = &parsed.items;
 
         // pw-3 dropped (invalidated_by non-null); malformed line dropped;
-        // blank dropped; pw-4 kept (invalidated_by is null) => 3 kept.
-        assert_eq!(got.len(), 3);
+        // blank dropped; pw-4 and pw-5 kept (pw-4's invalidated_by is null) => 4 kept.
+        assert_eq!(got.len(), 4);
 
         // Skipping keeps an invalidated entry out; the collected id is what lets
         // reconcile remove one that was already stored before the retraction.
@@ -342,6 +351,19 @@ mod tests {
         assert!(
             got[1].metadata.get("promoted_at").is_none(),
             "promoted_at must not persist alongside promotion_state"
+        );
+
+        // pw-5 forges episode's reserved key. Reconcile is its only writer, so
+        // the source-supplied value must be dropped rather than stored.
+        assert_eq!(got[3].id, "pw-5");
+        assert!(
+            got[3].metadata.get(PROMOTION_STATE_KEY).is_none(),
+            "a source-supplied promotion_state must never reach the store"
+        );
+        assert_eq!(
+            got[3].metadata.get("type").and_then(|v| v.as_str()),
+            Some("gotcha"),
+            "stripping the reserved key must not disturb real provenance"
         );
 
         let first = &got[0];
@@ -370,7 +392,6 @@ mod tests {
             Some(2)
         );
 
-        assert_eq!(got[1].id, "pw-2");
         assert_eq!(got[2].id, "pw-4");
     }
 

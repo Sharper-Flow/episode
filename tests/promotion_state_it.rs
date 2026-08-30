@@ -319,6 +319,59 @@ async fn promote_rejects_from_state_mismatch() {
         .expect("cleanup");
 }
 
+/// AC1 / AC5: episodic means that the key is absent. A present but malformed
+/// value must not satisfy the episodic compare-and-set precondition.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn promote_rejects_present_state_when_from_is_episodic() {
+    let db = database_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_present_{}", uuid::Uuid::new_v4().simple());
+
+    for (suffix, malformed) in [
+        ("null", serde_json::Value::Null),
+        ("object", serde_json::json!({})),
+    ] {
+        let id = format!("{ns}-{suffix}");
+        store
+            .upsert(
+                &MemoryInput {
+                    id: id.clone(),
+                    namespace: ns.clone(),
+                    source: MemorySource::Manual,
+                    source_id: None,
+                    kind: Some("gotcha".into()),
+                    content: suffix.into(),
+                    metadata: serde_json::json!({ PROMOTION_STATE_KEY: malformed }),
+                },
+                &vector(),
+            )
+            .await
+            .expect("seed malformed state");
+
+        assert_eq!(
+            store
+                .promote(
+                    &id,
+                    &ns,
+                    &PromotionState::PromotionCandidate {},
+                    PromotionStateKind::Episodic,
+                )
+                .await
+                .expect("present state is a mismatch"),
+            0,
+            "a present promotion_state key is not episodic: {malformed}"
+        );
+    }
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
 /// AC5: `promote` borrows `forget_manual`'s shape but NOT its `source = 'manual'`
 /// restriction. The row a human most needs to promote is an ingested wisdom
 /// entry, so a manual-only predicate would forbid the primary use case.
