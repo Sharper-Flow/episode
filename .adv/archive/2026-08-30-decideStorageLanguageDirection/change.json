@@ -1,0 +1,920 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Sharper-Flow/Advance/trunk/plugin/schemas/change.schema.json",
+  "id": "decideStorageLanguageDirection",
+  "title": "Decide storage and language direction",
+  "status": "archived",
+  "created_at": "2026-08-11T00:04:11.555Z",
+  "tasks": [
+    {
+      "id": "tk-4d754d849744",
+      "title": "Add language-assumption reference to addProductScopingRecall",
+      "type": "docs",
+      "status": "done",
+      "priority": 0,
+      "created_at": "2026-08-30T14:38:56.564Z",
+      "started_at": "2026-08-30T14:49:13.656Z",
+      "completed_at": "2026-08-30T14:50:09.252Z",
+      "verification": "Appended \"Language and storage assumption\" and \"Trigger readiness\" sections to the addProductScopingRecall proposal and corrected its stale Dependencies block. Verified by readback of the persisted artifact. No repository files change; the edit targets an ADV proposal document, so the tree is clean at fb7088c.",
+      "summary": "Appended \"Language and storage assumption\" and \"Trigger readiness\" sections to the addProductScopingRecall proposal and corrected its stale Dependencies block. Verified by readback of the persisted artifact. No repository files change; the edit targets an ADV proposal document, so the tree is clean at fb7088c.",
+      "filesTouched": [
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/ARCHIVE_SUMMARY.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/BRIEFING_DIGEST.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/change.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/design.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/executive-summary.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/problem-statement.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/proposal.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/spec-projection.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/summary.v1.json"
+      ],
+      "checkpointSha": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc",
+      "completedAt": "2026-08-30T14:50:09.252Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC2"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable"
+      }
+    },
+    {
+      "id": "tk-aa9388dba840",
+      "title": "Add language-assumption reference to improveRecallQualityIngest",
+      "type": "docs",
+      "status": "done",
+      "priority": 1,
+      "created_at": "2026-08-30T14:39:04.257Z",
+      "started_at": "2026-08-30T14:50:19.151Z",
+      "completed_at": "2026-08-30T14:51:20.985Z",
+      "verification": "Appended \"Language and storage assumption\" to the improveRecallQualityIngest proposal, recording the retrieval-capability dependency on the rejected Rust + SQLite alternative. Also corrected sub-part 3a's scope after verifying against source: RecallFilters at src/types.rs:134-140 already carries a first-class kinds field, so half of 3a has shipped; source remains open. AC1 narrowed to match. Verified by readback of the persisted artifact and by direct source inspection. No repository files change.",
+      "summary": "Appended \"Language and storage assumption\" to the improveRecallQualityIngest proposal, recording the retrieval-capability dependency on the rejected Rust + SQLite alternative. Also corrected sub-part 3a's scope after verifying against source: RecallFilters at src/types.rs:134-140 already carries a first-class kinds field, so half of 3a has shipped; source remains open. AC1 narrowed to match. Verified by readback of the persisted artifact and by direct source inspection. No repository files change.",
+      "filesTouched": [
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/ARCHIVE_SUMMARY.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/BRIEFING_DIGEST.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/change.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/design.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/executive-summary.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/problem-statement.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/proposal.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/spec-projection.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/summary.v1.json"
+      ],
+      "checkpointSha": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc",
+      "completedAt": "2026-08-30T14:51:20.985Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC2"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable"
+      }
+    },
+    {
+      "id": "tk-66614a6886af",
+      "title": "Add language-assumption reference to addPromotionStateMemories",
+      "type": "docs",
+      "status": "done",
+      "priority": 2,
+      "created_at": "2026-08-30T14:39:13.775Z",
+      "started_at": "2026-08-30T14:51:25.229Z",
+      "completed_at": "2026-08-30T14:52:32.666Z",
+      "verification": "Appended \"Language and storage assumption\" to the addPromotionStateMemories proposal, recording that Concord's receiving contract is language- and storage-agnostic by construction. Replaced the stale \"Out of scope (Concord side) — deferred\" section with the now-defined contract from concord #587, and recorded the design consequence: target must carry manifest path plus sha256 rather than a bare spec-id, with AC5 and the flow diagram corrected. Corrected the Dependencies block, which declared two shipped prerequisites as open blockers. Verified by readback of the persisted artifact. No repository files change.",
+      "summary": "Appended \"Language and storage assumption\" to the addPromotionStateMemories proposal, recording that Concord's receiving contract is language- and storage-agnostic by construction. Replaced the stale \"Out of scope (Concord side) — deferred\" section with the now-defined contract from concord #587, and recorded the design consequence: target must carry manifest path plus sha256 rather than a bare spec-id, with AC5 and the flow diagram corrected. Corrected the Dependencies block, which declared two shipped prerequisites as open blockers. Verified by readback of the persisted artifact. No repository files change.",
+      "filesTouched": [
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/ARCHIVE_SUMMARY.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/BRIEFING_DIGEST.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/change.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/design.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/executive-summary.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/problem-statement.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/proposal.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/spec-projection.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/summary.v1.json"
+      ],
+      "checkpointSha": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc",
+      "completedAt": "2026-08-30T14:52:32.666Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC2"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable"
+      }
+    },
+    {
+      "id": "tk-c49beb07729a",
+      "title": "Verify all three acceptance criteria against the persisted artifacts",
+      "type": "verification",
+      "status": "done",
+      "priority": 3,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-4d754d849744"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-aa9388dba840"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-66614a6886af"
+        }
+      ],
+      "created_at": "2026-08-30T14:39:30.596Z",
+      "started_at": "2026-08-30T14:52:41.330Z",
+      "completed_at": "2026-08-30T14:53:51.169Z",
+      "verification": "Read back all four proposals via adv_change_show. All three acceptance criteria pass.\n\nAC1 PASS. The decision record documents direction (stay Rust + Postgres), concrete trigger (the addProductScopingRecall probe outcome), alternatives (Go + SQLite and Rust + SQLite, each with rejection grounds), and revisit conditions (evidence bar plus the option-decay checkpoint). The refuted pre-runtime premise appears only in the section that explicitly disclaims it, never in the live argument. The refuted cgo-constraint claim is gone. The rusqlite load_extension feature gate is present. The operator-approved concord#46 C20 resolution is cited.\n\nAC2 PASS. All three downstream epic proposals carry a \"Language and storage assumption\" section that names decideStorageLanguageDirection and states Rust + Postgres. Each records the consequence that matters for that change: addProductScopingRecall as sole trigger source, improveRecallQualityIngest as the change most dependent on the preserved Postgres filtering and retrieval capability, addPromotionStateMemories as safe because the receiving contract is language-agnostic by construction.\n\nAC3 PASS, and it required the most scrutiny because the validator judged the trigger the weakest part of this decision. The record does not imply the trigger is live. It carries a section titled \"Trigger viability — the weakest part of this decision\" that names all three blockages with unblocking actions: episode disabled on the host with no recorded cause, the probe not implemented with spec 0010 deferring it, and a finite evidence window closing at predecessor retirement (concord#101). It states plainly that a condition which cannot be evaluated is a dangling option by AC3's own letter, and adds an option-decay checkpoint that re-decides on predecessor retirement without evidence or on a codebase size threshold. addProductScopingRecall independently carries the two blockages it owns, so the constraint is visible where the work lives rather than only in the decision.\n\nThree adjacent corrections were made under the campsite rule, each established by direct source inspection rather than inference. improveRecallQualityIngest sub-part 3a was re-scoped after confirming RecallFilters at src/types.rs:134-140 already carries a first-class kinds field; source remains open, and AC1 was narrowed. addPromotionStateMemories gained a design constraint from the newly landed receiving contract: target must carry manifest path plus sha256 rather than a bare spec-id, since the contract names a record version. Stale dependency blocks in all three proposals were corrected against shipped code.\n\nOne statement was deliberately left unchanged. improveRecallQualityIngest still says Concord's wisdom and reflection ingest surface does not exist. Concord has a runtime and knowledge records, but I did not verify it exposes a wisdom or reflection stream episode would ingest, so changing that line would exceed the evidence.\n\nNo repository files change; tree clean at fb7088c.",
+      "summary": "Read back all four proposals via adv_change_show. All three acceptance criteria pass.\n\nAC1 PASS. The decision record documents direction (stay Rust + Postgres), concrete trigger (the addProductScopingRecall probe outcome), alternatives (Go + SQLite and Rust + SQLite, each with rejection grounds), and revisit conditions (evidence bar plus the option-decay checkpoint). The refuted pre-runtime premise appears only in the section that explicitly disclaims it, never in the live argument. The refuted cgo-constraint claim is gone. The rusqlite load_extension feature gate is present. The operator-approved concord#46 C20 resolution is cited.\n\nAC2 PASS. All three downstream epic proposals carry a \"Language and storage assumption\" section that names decideStorageLanguageDirection and states Rust + Postgres. Each records the consequence that matters for that change: addProductScopingRecall as sole trigger source, improveRecallQualityIngest as the change most dependent on the preserved Postgres filtering and retrieval capability, addPromotionStateMemories as safe because the receiving contract is language-agnostic by construction.\n\nAC3 PASS, and it required the most scrutiny because the validator judged the trigger the weakest part of this decision. The record does not imply the trigger is live. It carries a section titled \"Trigger viability — the weakest part of this decision\" that names all three blockages with unblocking actions: episode disabled on the host with no recorded cause, the probe not implemented with spec 0010 deferring it, and a finite evidence window closing at predecessor retirement (concord#101). It states plainly that a condition which cannot be evaluated is a dangling option by AC3's own letter, and adds an option-decay checkpoint that re-decides on predecessor retirement without evidence or on a codebase size threshold. addProductScopingRecall independently carries the two blockages it owns, so the constraint is visible where the work lives rather than only in the decision.\n\nThree adjacent corrections were made under the campsite rule, each established by direct source inspection rather than inference. improveRecallQualityIngest sub-part 3a was re-scoped after confirming RecallFilters at src/types.rs:134-140 already carries a first-class kinds field; source remains open, and AC1 was narrowed. addPromotionStateMemories gained a design constraint from the newly landed receiving contract: target must carry manifest path plus sha256 rather than a bare spec-id, since the contract names a record version. Stale dependency blocks in all three proposals were corrected against shipped code.\n\nOne statement was deliberately left unchanged. improveRecallQualityIngest still says Concord's wisdom and reflection ingest surface does not exist. Concord has a runtime and knowledge records, but I did not verify it exposes a wisdom or reflection stream episode would ingest, so changing that line would exceed the evidence.\n\nNo repository files change; tree clean at fb7088c.",
+      "filesTouched": [
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/ARCHIVE_SUMMARY.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/BRIEFING_DIGEST.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/change.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/design.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/executive-summary.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/problem-statement.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/proposal.md",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/spec-projection.json",
+        ".adv/archive/2026-08-30-studyMagicContextMemoryDesign/summary.v1.json"
+      ],
+      "checkpointSha": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc",
+      "completedAt": "2026-08-30T14:53:51.169Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC1",
+          "AC2",
+          "AC3"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "rationale": "This change produces prose decision records, not executable behavior. There is no code path to test: the deliverable is text in four ADV proposals, and the only faithful proof is reading those artifacts back and checking they say what the acceptance criteria require. A test would assert nothing the readback does not.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "separate_verification"
+      }
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "decideStorageLanguageDirection",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-gate-independent-validation"
+      },
+      "agent": "adv-researcher",
+      "topic": "Independent validation of stay-Rust+Postgres decision: claim verification (C1-C4), adversarial attack, verdict",
+      "sources": [
+        {
+          "label": "rusqlite docs (docs.rs)",
+          "locator": "https://docs.rs/rusqlite/latest/rusqlite/struct.LoadExtensionGuard.html",
+          "summary": "load_extension_enable/disable, LoadExtensionGuard, load_extension; requires load_extension crate feature"
+        },
+        {
+          "label": "mattn/go-sqlite3 wiki - Features",
+          "locator": "https://github.com/mattn/go-sqlite3/wiki/Features",
+          "summary": "External extension loading enabled by default; sqlite_omit_load_extension disables"
+        },
+        {
+          "label": "modernc.org/sqlite README (official mirror)",
+          "locator": "https://github.com/modernc-org/sqlite",
+          "summary": "Pure-Go no-cgo driver; ships transpiled sqlite-vec extension in vec/"
+        },
+        {
+          "label": "modernc.org/sqlite/vec package",
+          "locator": "https://pkg.go.dev/modernc.org/sqlite/vec",
+          "summary": "Bundled transpiled sqlite-vec, v1.57.0"
+        },
+        {
+          "label": "gosqlite.org/vec",
+          "locator": "https://pkg.go.dev/gosqlite.org/vec",
+          "summary": "Blank import auto-registers vec0 on every connection; modernc release matrix authoritative"
+        },
+        {
+          "label": "sqlite-vec official Go usage docs",
+          "locator": "https://github.com/asg017/sqlite-vec/blob/main/site/using/go.md",
+          "summary": "Two embed paths: CGO (mattn) and WASM (ncruces); CGO bindings will NOT work with modernc or ncruces"
+        },
+        {
+          "label": "ncruces/go-sqlite3 discussion #121",
+          "locator": "https://github.com/ncruces/go-sqlite3/discussions/121",
+          "summary": "cgo-free WASM driver; sqlite-vec bindings noted stale vs recent versions; ncruces/sqlite-vec-go alternative"
+        },
+        {
+          "label": "go-again/sqlite extension.go",
+          "locator": "https://github.com/go-again/sqlite/blob/v0.8.0/extension.go",
+          "summary": "modernc libc Xdlopen/XLoadLibraryW abort on darwin/windows; runtime C extension loading platform-broken"
+        },
+        {
+          "label": "sqlite-vec API reference",
+          "locator": "https://alexgarcia.xyz/sqlite-vec/api-reference.html",
+          "summary": "'sqlite-vec is pre-v1, so expect breaking changes'"
+        },
+        {
+          "label": "sqlite-vec issue #184 (author)",
+          "locator": "https://github.com/asg017/sqlite-vec/issues/184",
+          "summary": "Deleted chunk space only reclaimed in latest chunk (~1024 vectors)"
+        },
+        {
+          "label": "sqlite-vec issue #185",
+          "locator": "https://github.com/asg017/sqlite-vec/issues/185",
+          "summary": "No vacuum/optimize command; deleted disk space cannot be reclaimed"
+        },
+        {
+          "label": "sqlite-vec issue #259",
+          "locator": "https://github.com/asg017/sqlite-vec/issues/259",
+          "summary": "Production: DELETE sets validity bit without reclaiming storage; DB grows monotonically per re-embedding"
+        },
+        {
+          "label": "sqlite-vec issue #261",
+          "locator": "https://github.com/asg017/sqlite-vec/issues/261",
+          "summary": "Version v0.1.7-alpha.9 (2026-02); UPDATE partition-key false positive still open"
+        },
+        {
+          "label": "sqlite-vec commit b95c05b",
+          "locator": "https://github.com/asg017/sqlite-vec/commit/b95c05b3aa63471a738cb4ceaefd0f91e26b3449",
+          "summary": "INSERT OR REPLACE support added 2026-04 (fixes #127)"
+        },
+        {
+          "label": "pgvector CHANGELOG",
+          "locator": "https://github.com/pgvector/pgvector/blob/master/CHANGELOG.md",
+          "summary": "0.8.0 (2024-10-30) iterative index scans through 0.8.6 (2026-07-29); HNSW vacuuming 0.8.4"
+        },
+        {
+          "label": "pgvector README (PGXN)",
+          "locator": "https://pgxn.org/dist/vector/0.8.2/README.html",
+          "summary": "HNSW + iterative index scan semantics"
+        },
+        {
+          "label": "concord CD-0002 (local)",
+          "locator": "/home/jon/dev/concord/docs/decisions/CD-0002-concord-state-authority.md",
+          "summary": "Storage law scoped to Concord's own state; Postgres named buy-fallback"
+        },
+        {
+          "label": "concord core-architecture.md (local)",
+          "locator": "/home/jon/dev/concord/docs/core-architecture.md",
+          "summary": ":40-60 Go owns the Concord core; :85-91 Rust remains available"
+        },
+        {
+          "label": "concord vertical-integration.md (local)",
+          "locator": "/home/jon/dev/concord/docs/vertical-integration.md",
+          "summary": ":64 tools stay independent; :130-158 promotion contract crosses manifest+sha256, opaque, no runtime event"
+        },
+        {
+          "label": "concord#46 (live fetch)",
+          "locator": "https://github.com/Sharper-Flow/concord/issues/46",
+          "summary": "C20 resolved external (2026-08-30, operator approved); episode disabled (08-14); probe change nonexistent (08-28); ingestion window finite (#101)"
+        },
+        {
+          "label": "concord Go code grep (local)",
+          "locator": "/home/jon/dev/concord/**/*.go",
+          "summary": "Zero references to 'episode'"
+        },
+        {
+          "label": "magic-context ARCHITECTURE.md",
+          "locator": "https://github.com/cortexkit/magic-context/blob/master/ARCHITECTURE.md",
+          "summary": "sqlite-vec rejected: bun:sqlite can't load extensions + write-amplification"
+        },
+        {
+          "label": "episode local tree",
+          "locator": "/home/jon/dev/episode",
+          "summary": "9 src files, 2 migrations, sqlx+pgvector+HNSW+JSONB/GIN confirmed (Cargo.toml, 0001_init.sql, docker-compose.yml)"
+        }
+      ],
+      "architecture_assessment": "BOUNDARY VERIFICATION (primary sources): CD-0002 storage law scoped to Concord's own state (docs/decisions/CD-0002-concord-state-authority.md:19-31; Postgres named buy-fallback); core-architecture.md:40-60 Go scoped to the Concord core, :85-91 Rust explicitly available; vertical-integration.md:64 'Tools stay independent', :130-158 promotion contract crosses manifest-path + sha256, opaque, no runtime event; zero 'episode' references in concord *.go (grep); live concord#46 Decision (2026-08-30, operator approved): C20 resolved 'episode stays external, optional, and Product-scoped when configured', probe demoted to reopen trigger. The core structural argument verifies independently. Deviation from reference architecture: NONE.\n\nCLAIM TABLE:\nC1a 'modernc.org/sqlite cannot load C extensions' — HOLDS. No portable runtime dlopen: modernc libc Xdlopen/XLoadLibraryW abort on darwin/windows (https://github.com/go-again/sqlite/blob/v0.8.0/extension.go).\nC1b corollary 'a Go rewrite wanting sqlite-vec would be constrained to the cgo driver' — REFUTED. modernc.org/sqlite now ships sqlite-vec transpiled in vec/ (https://pkg.go.dev/modernc.org/sqlite/vec v1.57.0; README 'the sqlite-vec extension in vec/'); blank import auto-registers vec0 (https://pkg.go.dev/gosqlite.org/vec; go-again/sqlite dev/coverage/vec.md). sqlite-vec's official Go docs also document a WASM path with cgo-free ncruces/go-sqlite3 (https://github.com/asg017/sqlite-vec/blob/main/site/using/go.md; staleness caveat https://github.com/ncruces/go-sqlite3/discussions/121). sqlite-vec reaches Go through three paths, two without cgo.\nC2 'rusqlite supports load_extension_enable + LoadExtensionGuard' — HOLDS, imprecise as worded: requires the non-default 'load_extension' crate feature (https://docs.rs/rusqlite/latest/rusqlite/struct.LoadExtensionGuard.html).\nC3 'mattn/go-sqlite3 supports extension loading' — HOLDS, and 'enabled by default' is exact: 'Loading external extensions is enabled by default. To disable... sqlite_omit_load_extension' (https://github.com/mattn/go-sqlite3/wiki/Features).\nC4a 'vec0 write amplification is a property of its storage layout, runtime-independent' — HOLDS. Chunked storage + validity bitmaps, default chunk_size 1024 (sqlite-vec.c); deleted space reclaimed only in latest chunk (issue #184, author); no vacuum/optimize (issue #185); production: 'DELETE only sets a validity bit without reclaiming storage. Our database grows monotonically with every re-embedding' (issue #259). Nuance: episode is append-mostly with idempotent dedup, so exposure is workload-dependent — the record itself says this.\nC4b 'sqlite-vec younger/less mature than pgvector' — HOLDS. sqlite-vec pre-v1, 'expect breaking changes' (https://alexgarcia.xyz/sqlite-vec/api-reference.html); v0.1.7-alpha.9 (2026-02, issue #261); INSERT OR REPLACE only landed 2026-04 (commit b95c05b); vec0 KNN is exhaustive — ANN (IVF/DiskANN) experimental behind compile flags. pgvector: 0.8.0 (2024-10-30, iterative scans) through 0.8.6 (2026-07-29) (CHANGELOG). Note: pgvector is also 0.x; its maturity is cadence, adoption, and ANN depth, not a 1.0 badge.\n\nSTRONGEST CASE AGAINST: (1) The trigger is inert, not merely delayed — blocked on three independent counts: episode disabled on the host (concord#46 comment 2026-08-14); addProductScopingRecall does not exist in the episode repository (comment 2026-08-28; spec 0010 explicitly defers automatic product scoping and the probe); the probe's ingestion source retires with the predecessor, so its window is finite (comment 2026-08-14, tracked as concord#101). A conditioned option whose condition cannot be evaluated is a dangling option; AC3 demands otherwise. (2) Option decay is real and unbounded — porting cost doubled in 19 days (~1500 to 3225 lines); every Tier 1-3 capability raises the eventual rewrite price; deferring dominates only if the probe can produce evidence in bounded time, which it currently cannot. If the window closes before re-enable + implementation, the decision silently degrades to 'never revisit', which was never decided. (3) Deployment cost is undercounted as a 'Vision-proxy deployment shape' note — Postgres is a second daemon (container, volume, healthcheck, pool, DATABASE_URL), and the service it serves is switched OFF today; the record asserts 'operational, not implementation' with no recorded cause, so friction is neither confirmed nor excluded. Counterweight: the boundary facts verify independently; the deployment benefit of SQLite is unmeasured; and the only in-scope SQLite vector engine is pre-v1 alpha with layout-inherent write amplification against pgvector's steady releases and HNSW ANN. Direction holds; the trigger section of the record does not.\n\nTHIRD OPTION (Rust + SQLite): a real gap in the alternatives section, and the only option that addresses the deployment attack below the cost of a language rewrite. Keeps rmcp, fastembed, ingest, scheduler; only store.rs, migrations, config change. Capability verified: rusqlite load_extension + sqlite-vec (C2, feature-gated); brute-force cosine over BLOBs viable at episode's scale (magic-context pattern; thousands of rows at 1024d is a tens-of-ms warm scan). It is already half-present: the trigger's measurement plan lists 'brute-force fp32 cosine in Rust' and 'sqlite-vec vec0' as arms — but never as a present-day alternative. Why it still loses today: vec0 KNN is exhaustive vs HNSW; JSONB+GIN metadata filtering (migration 0002, spec 0010 recall filters) has no equivalent — vec0 metadata columns are documented slower on full scans and inefficient with strings over 12 chars; sqlite-vec is pre-v1 alpha expecting breaking changes with delete-does-not-reclaim write amplification; Postgres is already deployed and verified end-to-end; and the deployment pain it would solve is unmeasured. Verdict on the omission: real gap — must be recorded and rejected on those grounds; does not flip the recommendation.\n\nWHAT NEARLY BROKE IT: the trigger. If the ingestion window closes before re-enable + probe implementation, the conditioned follow-up becomes permanently unfireable — a dangling option wearing a trigger's clothes. The fix is precondition-and-deadline language, not a direction change.",
+      "validation": {
+        "status": "caution",
+        "blockers": [],
+        "notes": "APPROVE WITH FINDINGS. Direction sound; five record corrections required: (1) C1 corollary is false - sqlite-vec reaches Go cgo-free via modernc.org/sqlite/vec (transpiled, blank-import registration) and ncruces WASM; remove the 'constrained to the cgo driver' argument (rejection stands on boundary facts + maturity). (2) C2: add the rusqlite 'load_extension' feature gate. (3) Trigger section must carry its three real blockages (episode disabled on host; addProductScopingRecall does not exist; ingestion source retires with the predecessor - finite window) plus unblocking actions and a deadline, else AC3 'not a dangling option' fails its own test. (4) Cite the operator-approved concord#46 Decision of 2026-08-30 (C20: episode external, optional, Product-scoped; probe demoted to reopen trigger) - strengthens the core argument. (5) Add Rust + SQLite to alternatives considered with rejection grounds. Advised: option-decay checkpoint (porting cost doubled in 19 days). Episode MCP advisory recall unavailable (namespace absent from active tool surface); no recall performed."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "medium",
+        "tradeoffs": [
+          "Deferring the rewrite preserves a working verified system but lets porting cost compound (2x in 19 days) with no recorded ceiling; add a re-decide checkpoint.",
+          "Keeping Postgres keeps HNSW ANN and JSONB/GIN filtering at the cost of a second daemon; episode is disabled on the host today and no cause is recorded — deployment friction is unmeasured either way.",
+          "The conditioned trigger buys reversibility only if it can fire; it is currently triple-blocked (disabled host, nonexistent probe change, finite ingestion window).",
+          "Rust + SQLite would capture the deployment benefit without a language rewrite, but downgrades vector search to brute-force/alpha vec0 and weakens metadata filtering."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Rewrite to Go + SQLite now",
+            "disposition": "rejected",
+            "rationale": "No requirement from Concord (verified against CD-0002, core-architecture, vertical-integration, concord#46 C20 resolution); resets verified-working maturity; pgvector 0.8.x + HNSW vs sqlite-vec alpha; metadata/product-scoping gaps are language-independent. The record's supporting driver argument (cgo constraint) is factually wrong and must be corrected, but the rejection stands without it."
+          },
+          {
+            "option": "Rust + SQLite (rusqlite + sqlite-vec, or brute-force cosine over BLOBs)",
+            "disposition": "rejected",
+            "rationale": "Captures server elimination at a fraction of rewrite cost, but loses HNSW ANN (vec0 exhaustive; IVF/DiskANN experimental), loses JSONB+GIN filtering, adopts a pre-v1 alpha storage engine with layout-inherent write amplification, and the deployment pain it solves is unmeasured. Real gap in the record: must be added and rejected on these stated grounds."
+          },
+          {
+            "option": "Stay Rust + Postgres; condition Go+SQLite rewrite on the addProductScopingRecall probe outcome",
+            "disposition": "preferred",
+            "rationale": "Sound. Trigger record must add preconditions and deadline or AC3 ('not a dangling option') fails its own test."
+          },
+          {
+            "option": "Change Concord-side law (extend CD-0002 to satellites, or bring episode into the Concord core)",
+            "disposition": "rejected",
+            "rationale": "Out of episode's scope; Concord's operator-approved C20 resolution keeps episode external and optional with the probe as reopen trigger only."
+          }
+        ],
+        "recommendation": "Proceed with the stay-Rust+Postgres decision after applying the five corrections in validation.notes; the corrections are record edits, not direction changes."
+      },
+      "recommendation": "Verdict: APPROVE WITH FINDINGS. Apply these record edits before finalizing: (1) Replace 'constrained to the cgo driver' in the Case-against bullet and the magic-context note: runtime C-extension loading in modernc is unavailable portably, but sqlite-vec reaches Go cgo-free via modernc.org/sqlite/vec (transpiled, blank-import registration) and via ncruces WASM (official sqlite-vec Go docs; bindings staleness caveat, ncruces discussion #121). The rewrite rejection stands on boundary facts + sqlite-vec maturity, not driver availability. (2) Add to the rusqlite mention: requires the 'load_extension' crate feature. (3) Rewrite the trigger/probe-status section: name the three blockages (episode disabled on host, 2026-08-14; addProductScopingRecall does not exist, 2026-08-28, spec 0010 defers it; ingestion source retires with the predecessor — finite window, concord#101), the unblocking actions (re-enable episode; implement the probe; re-point ingestion before predecessor retirement), and the deadline. (4) Cite the operator-approved concord#46 Decision of 2026-08-30 (C20: external, optional, Product-scoped; probe demoted to reopen trigger) — it strengthens the core argument and post-dates the current record. (5) Add Rust + SQLite to alternatives considered with the rejection grounds above. Advised: record an option-decay checkpoint — re-decide if the probe has produced no evidence by predecessor retirement or a stated size threshold (cost already doubled, ~1500 to 3225 lines, in 19 days).",
+      "follow_ups": [
+        "Edit the decision record (proposal.md): correct the C1 corollary, add the C2 feature-gate note, add Rust + SQLite to alternatives, rewrite the trigger/probe-status section with the three blockages, the predecessor-retirement deadline, and the operator-approved concord#46 C20 resolution; add an option-decay checkpoint.",
+        "Operational (episode-side, outside this epic): re-enable episode on the host and record the disablement cause; without a recorded cause the deployment-friction question stays open.",
+        "Sequencing risk tracked by concord#101/#46: addProductScopingRecall does not exist and the ingestion source retires with the predecessor — implement or re-point before the window closes, or explicitly retire the trigger."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "decideStorageLanguageDirection",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "BLOCKED",
+      "blocking_findings": [
+        {
+          "id": "citation-1",
+          "label": "blocker",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "The CD-0011:42 Postgres buy-fallback citation is wrong.",
+          "why": "CD-0011:42 says a falsifier does not select a replacement. CD-0011:56-57 gives Postgres/DBOS no automatic preference. The buy-fallback text is in CD-0002:104-109.",
+          "fix": "Replace the citation with CD-0002:104-109 and remove the claim that CD-0011:42 says this."
+        },
+        {
+          "id": "consistency-1",
+          "label": "blocker",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "The decision and addProductScopingRecall use stale C8 and concord#46 Item 1 language for episode.",
+          "why": "Concord split episode into C20. Issue #101 tracks that split and states no change to C8. Current #46 records the 2026-08-30 operator decision and makes the product-scoping result a C20 reopen trigger. It does not directly drive a C8 update.",
+          "fix": "Replace episode-specific C8 references with C20. Describe #101 as the split tracker, not the finite ingestion-window tracker. Describe #46 as the C20 decision and reopen tracker."
+        },
+        {
+          "id": "decision-1",
+          "label": "blocker",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "The record says an insufficient product-scoping result makes the Go and SQLite rewrite fire.",
+          "why": "The cited Concord evidence only reopens the episode ownership direction. It does not select a language, storage engine, or rewrite. Owning episode does not logically require Go or SQLite.",
+          "fix": "Make an insufficient probe result trigger a new language and storage decision. Do not make it automatically authorize the rewrite."
+        },
+        {
+          "id": "promotion-1",
+          "label": "blocker",
+          "file": "addPromotionStateMemories/proposal.md",
+          "line": 1,
+          "what": "The flow invents the string encoding \"<manifest-path>@<sha256>\".",
+          "why": "The Concord contract specifies identity by manifest path plus sha256, but it defines no separator or canonical string encoding. Concord manifests store path and sha256 as separate fields.",
+          "fix": "Remove the @ form. Use a structured target with separate path and sha256 fields, or keep target opaque until Concord defines a canonical encoding."
+        },
+        {
+          "id": "ingest-1",
+          "label": "blocker",
+          "file": "improveRecallQualityIngest/proposal.md",
+          "line": 1,
+          "what": "The statement that Concord's ingest source surface does not exist is stale.",
+          "why": "Concord now exposes concord_work_compact.lesson_publish. It writes lesson records to Git, and reflections use the same operation with a reflection tag. This is a source episode can parse, though Concord has no separate wisdom/reflection stream.",
+          "fix": "State that Concord has a Git-backed lesson/reflection publication surface, but episode has no Concord parser and Concord has no separate wisdom/reflection stream."
+        },
+        {
+          "id": "citation-2",
+          "label": "blocker",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "The sqlite-vec version claim is stale.",
+          "why": "The latest stable GitHub release is v0.1.9, published 2026-03-31. modernc.org/sqlite v1.57.0 also documents bundled sqlite-vec v0.1.9. The proposal says v0.1.7-alpha.9.",
+          "fix": "Update the version to v0.1.9 and distinguish stable exhaustive KNN from experimental ANN work on later alpha or branch code."
+        }
+      ],
+      "nonblocking_findings": [
+        {
+          "id": "citation-praise-1",
+          "label": "praise",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "The checked episode source claims are accurate.",
+          "why": "RecallFilters fields, absent source field, server option fields, MemoryContext context fields, spec and test files, 3225 lines, 9 source files, 2 migrations, and invalidated_by skip all match source."
+        },
+        {
+          "id": "citation-praise-2",
+          "label": "praise",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "Most checked Concord architecture and runtime claims are accurate.",
+          "why": "CD-0002 scope, Go and Rust language text, independent-tools text, promotion contract, CLI routing, SQLite event log and folds, dispatcher, readiness counts, versions, README status, zero Go references to episode, and PR 587 merge commit all match evidence."
+        },
+        {
+          "id": "consistency-2",
+          "label": "suggestion",
+          "file": "proposal.md",
+          "line": 1,
+          "what": "The phrase \"the integration boundary is a manifest identifier\" is too broad.",
+          "why": "Manifest path plus sha256 governs the promotion seam. Product-scoping uses product metadata or namespaces, not that identity."
+        }
+      ],
+      "changes_made": [],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "When a contract names identity as path plus digest, do not invent a string separator. Preserve separate fields unless the owner defines canonical serialization."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "oc-fresh status --repo /home/jon/dev/episode --json",
+          "wc -l src/*.rs",
+          "source and document inspection in /home/jon/dev/episode and /home/jon/dev/concord",
+          "gh issue view 46 -R Sharper-Flow/concord --json body,comments",
+          "gh issue view 101 -R Sharper-Flow/concord --json body,comments",
+          "gh pr view 587 -R Sharper-Flow/concord --json commits,mergedAt",
+          "gh release view --repo asg017/sqlite-vec --json tagName,publishedAt,url"
+        ],
+        "results": "n/a",
+        "evidence": "Read-only citation audit. No repository changes or executable behavior required tests. Episode and Concord working trees remained clean."
+      },
+      "scope_drift": null,
+      "risks": [
+        "The record mixes an ownership trigger with a predetermined implementation rewrite.",
+        "The local Concord clarification still shows the pre-decision C20 direction, while issue #46 carries the later operator decision."
+      ],
+      "required_main_agent_actions": [
+        "Correct the six blocking findings before acceptance.",
+        "Reconcile the 2026-08-30 C20 decision with Concord's binding clarification document.",
+        "Keep all verified episode and Concord runtime citations unchanged."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "decideStorageLanguageDirection",
+      "attempt": 2,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "NEEDS_WORK",
+      "blocking_findings": [],
+      "nonblocking_findings": [
+        {
+          "id": "source-consistency-1",
+          "label": "suggestion",
+          "file": "https://github.com/Sharper-Flow/concord/issues/46",
+          "line": 1,
+          "what": "Issue #46's current body asserts that C20 is resolved by operator approval, while Concord's accepted clarification still records C20 as unchanged and probe-gated.",
+          "why": "The four proposals correctly follow the accepted repository documents, but their linked tracker now contradicts those documents and can mislead readers."
+        }
+      ],
+      "changes_made": [],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "A GitHub issue body can drift from accepted repository law. Verify decision claims against committed clarification or decision records and inspect issue comments separately."
+        }
+      ],
+      "verification": {
+        "tests_run": [],
+        "results": "n/a",
+        "evidence": "Read all four proposals through adv_change_show artifact-only projection. Verified CD-0002:104-109, clarifications C8/C20, vertical-integration promotion contract, CD-0026 D1/D3, lesson dispatch and publication code, GitHub issues #101/#46, and sqlite-vec releases/docs. No files changed."
+      },
+      "scope_drift": null,
+      "risks": [
+        "Concord issue #46's body now repeats the unsupported operator-approval claim, although no comment supplies that approval and committed C20 remains unchanged.",
+        "The provided SCOPE KEY was acceptance-review; the report uses the required canonical independent-review scope key review:acceptance."
+      ],
+      "required_main_agent_actions": [
+        "Treat the nine requested proposal checks as passed.",
+        "Reconcile concord#46's issue body with accepted docs/clarifications.md C20, or record evidence for a real direction change before citing the issue body."
+      ]
+    }
+  ],
+  "deltas": {},
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-08-11T00:54:48.048Z",
+      "completed_by": "agent",
+      "approval_evidence": "Decision change: stay Rust+Postgres for Tier 1-3; Go+SQLite rewrite conditioned on C8 trigger (the addProductScopingRecall probe). Proposal serves as the decision record."
+    },
+    "discovery": {
+      "status": "done",
+      "completed_at": "2026-08-30T14:26:48.482Z",
+      "completed_by": "agent",
+      "approval_evidence": "Re-verified the 19-day-old recommendation's load-bearing premises. The conclusion (stay Rust + Postgres) holds, but its stated justification is substantially wrong and must be rewritten before this is recorded as a decision.\n\nREFUTED — P1, the central \"case against\" bullet: \"Concord is pre-runtime. Rewriting episode to match a runtime that does not exist is speculative.\"\nConcord has a working runtime and did on the day the recommendation was written. cmd/concord/main.go routes launcher/session/JSON commands; commandSpecs enumerates invoke, worker-dispatch, worker-complete, client-register, product-create, backup, restore and more. internal/store holds a SQLite domain_events log with projections; internal/agent/runtime.go is the dispatcher; there is a Bubble Tea TUI. docs/floor-readiness.v1.json is 40 satisfied / 1 out_of_scope / 0 outstanding. Concord was v0.10.1 on 2026-08-11 and is v4.9.0 today. README says \"pre-replacement-readiness\", which the premise misread as \"pre-runtime\".\n\nREFUTED — implicit premise that CD-0002's SQLite law creates pressure on episode.\nCD-0002 (docs/decisions/CD-0002-concord-state-authority.md:19-31) scopes \"no second store holds authoritative state\" to Concord's own authority. It is silent on satellites. CD-0011:36 names Postgres among alternatives rejected for Concord's own state, and CD-0011:42 lists Postgres as Concord's documented buy-fallback. Nothing forbids a Postgres-backed external service.\n\nREFUTED — implicit premises that Concord expects episode to be Go or to share its store.\nZero references to \"episode\" in Concord's Go code. docs/vertical-integration.md:64 states \"Tools stay independent\". core-architecture.md:40-60 scopes the Go direction to \"the Concord core\", and :85-91 explicitly keeps Rust available. No documented language or storage requirement exists for satellite services.\n\nWEAKENED — the \"cheap to port now\" bullet in the case FOR. Proposal says ~1500 lines, 6 source files, 1 migration. Actual: 3225 lines, 9 source files, 2 migrations. The port more than doubled in cost, which cuts against the bullet that argued for porting early.\n\nSTRENGTHENED, on better grounds. The right structural reason to stay is not that Concord does not exist. It is that Concord's architecture treats episode as an independent external tool across a manifest+sha256 boundary, and imposes no language or storage constraint. That is a durable fact, where \"pre-runtime\" was a temporary condition that has already expired. Recording the decision on the old premise would have made it stale on the day it was written.\n\nTWO FINDINGS THAT CHANGE OTHER WORK:\n1. concord#46 Item 2 is SATISFIED as of today by concord #587 (commit 94989a5), which added the promotion-receiving contract at docs/vertical-integration.md:130-158. target is a formalized spec/decision record resolved by manifest path + sha256, opaque to episode; back-link recorded in the receiving record's sources; acknowledgement is structural with no runtime event; recall exclusion stays episode's behavior. addPromotionStateMemories now has a real receiver.\n2. episode is currently DISABLED on the host (concord#46 comment, 2026-08-14): its MCP entry exists but is switched off, so the Item 1 product-scoping probe is producing no evidence. The probe's blocker is operational, not implementation.\n\nconcord#46 Item 1 remains open. The issue body now proposes resolving C20 as \"episode stays external and Product-scoped\", with the probe as a reopen trigger rather than an acceptance prerequisite. Ownership lean is unchanged at product-scoping first."
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-08-30T14:38:27.642Z",
+      "completed_by": "agent",
+      "approval_evidence": "Decision record rewritten on corrected premises, then independently validated. Validator verdict: APPROVE WITH FINDINGS. No CONFLICT, so no design checkpoint was required. All five required findings applied.\n\nThe direction survives attack unchanged. The record did not, and was corrected in three substantive places.\n\nVALIDATOR FINDINGS APPLIED:\n1. Deleted the refuted cgo-constraint claim. I had written that a Go rewrite wanting sqlite-vec would be forced onto the cgo driver. modernc.org/sqlite ships sqlite-vec transpiled in its vec/ package (v1.57.0, auto-registers vec0 on blank import), and ncruces/go-sqlite3 provides a cgo-free WASM path. Three routes exist, two without cgo. The rewrite rejection now rests on boundary facts plus sqlite-vec maturity and retrieval characteristics, never on availability.\n2. Added the rusqlite load_extension feature gate. LoadExtensionGuard requires a non-default crate feature.\n3. Rewrote the trigger section as \"Trigger viability — the weakest part of this decision.\" Names three independent blockages with unblocking actions: episode disabled on the host with no recorded cause; addProductScopingRecall not implemented, with spec 0010 explicitly deferring the probe; and a finite evidence window because the probe's ingestion source retires with the predecessor (concord#101). Added an option-decay checkpoint that re-decides on predecessor retirement without probe evidence, or on a codebase size threshold.\n4. Cited the operator-approved concord#46 Decision of 2026-08-30 resolving C20 as \"episode stays external and optional,\" which demotes the probe to a reopen trigger. This post-dates the original analysis and moves the core structural argument from inference-from-silence to a recorded Concord-side decision.\n5. Added Rust + SQLite to alternatives considered. The validator judged its omission a real gap, and it is the strongest alternative: it captures the deployment benefit for the cost of store.rs, migrations, and config rather than a language rewrite. Rejected on evidence — exhaustive vec0 KNN against HNSW, no JSONB+GIN equivalent with vec0 metadata columns documented slower on scans and inefficient past 12-character strings, which directly weakens the recall filters spec 0010 already ships, plus pre-v1 alpha status and layout-inherent write amplification. Flagged for reconsideration at the option-decay checkpoint.\n\nEXTERNAL CLAIMS VERIFIED: rusqlite extension support HOLDS with feature-gate caveat; mattn/go-sqlite3 default-enabled HOLDS; vec0 write amplification HOLDS as a storage-layout property, with reclamation only in the latest chunk and no vacuum, though episode's append-mostly ingest makes exposure workload-dependent; sqlite-vec pre-v1 against pgvector 0.8.6 HOLDS, with the honest caveat that both are 0.x and the real gap is cadence, adoption, and ANN depth.\n\nWHAT NEARLY BROKE THE DECISION: the trigger. Bound to a probe that does not exist, in a service that is switched off, against an evidence source that retires. The fix is precondition-and-deadline language plus the decay checkpoint, not a change of direction.\n\nREMAINING EXECUTION WORK: AC1 and AC3 are satisfied by the record. AC2 is not — the three downstream epic changes must reference this decision as their language assumption."
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-08-30T14:49:08.582Z",
+      "completed_by": "user",
+      "approval_evidence": "User approved the prep contract with \"approve\". Four tasks cover all three acceptance criteria with no uncovered criteria. AC1 and AC3 are satisfied by the rewritten decision record; AC2 is the open work across three downstream epic proposals. No repository files change — all edits target ADV proposal artifacts via adv_change_update. Verification task is blocked on the three edit tasks and proves all three ACs by artifact readback."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-08-30T14:54:03.445Z",
+      "completed_by": "agent",
+      "approval_evidence": "All four tasks complete. AC1, AC2, and AC3 verified by readback of all four proposals.\n\nAC2 delivered: each of the three downstream epic proposals now carries a \"Language and storage assumption\" section naming this decision and stating Rust + Postgres, with the consequence specific to that change rather than boilerplate. AC1 and AC3 were satisfied by the record itself and were re-verified rather than assumed.\n\nThree adjacent corrections landed under the campsite rule, each established by direct source inspection:\n- improveRecallQualityIngest sub-part 3a re-scoped. RecallFilters at src/types.rs:134-140 already carries a first-class kinds field, so the kind half has shipped; source remains open and AC1 was narrowed. Building 3a as originally written would have duplicated shipped behavior.\n- addPromotionStateMemories gained a real design constraint from the receiving contract that landed today. target must carry manifest path plus sha256, not a bare spec-id, because the contract names a record version and an unresolvable target is knowledge_missing. AC5 and the flow diagram were corrected.\n- Stale dependency blocks corrected in all three proposals. enrichRememberWithContext and addRecallMetadataFilters have no ADV change records but both shipped, so three proposals were declaring delivered work as open blockers.\n\nOne statement was deliberately left alone. improveRecallQualityIngest still says Concord's wisdom and reflection ingest surface does not exist. Concord has a runtime and knowledge records, but I did not verify it exposes a stream episode would ingest, and changing the line would exceed the evidence.\n\nNo repository files change. All work targets ADV proposal artifacts; tree clean at fb7088c across every checkpoint."
+    },
+    "acceptance": {
+      "status": "done",
+      "completed_at": "2026-08-30T15:07:14.207Z",
+      "completed_by": "user",
+      "approval_evidence": "User accepted with \"accept\" after being shown the full acceptance report, including the corrections to the decision's reasoning, the seven citation errors caught across two review rounds, and the open cross-project finding on concord#46.\n\nReview history: one independent validator (APPROVE WITH FINDINGS, five corrections applied) and two adv-reviewer passes. The first review returned REJECT with six citation findings; all six were independently verified by the orchestrator before correction, and one proved worse than reported. The second review returned APPROVE WITH FINDINGS with all nine items confirmed FIXED and no new errors in the proposals.\n\nThe most serious correction: an unsupported claim that an operator-approved decision resolved C20 as \"episode stays external and optional.\" Direct verification found no such approval on concord#46, and C20 in docs/clarifications.md records its direction as unchanged with the 2026-08-30 note stating the ownership lean is untouched and probe evidence remains the only direction input. The claim had propagated into all four proposals and was removed from each, with the structural argument re-grounded on scope rather than on a Concord ruling.\n\nAll three acceptance criteria verified by artifact readback. AC1: the record documents direction, trigger, alternatives including Rust + SQLite, and revisit conditions. AC2: all three downstream proposals carry the language assumption with change-specific consequences. AC3: the follow-up is conditioned with all three blockages, unblocking actions, and an option-decay checkpoint named, and the record explicitly states the trigger is not currently evaluable.\n\nExecutive summary persisted.\n\nOpen cross-project finding, deliberately not acted on: concord#46's issue body repeats the unsupported operator-approval claim and contradicts C20 in Concord's own accepted documents. That body is where the claim entered this work. It belongs to another repository and is outside this change's scope. It should be reconciled by Concord.\n\nNo repository files changed; tree clean at fb7088c throughout."
+    },
+    "release": {
+      "status": "pending"
+    }
+  },
+  "documents": {
+    "proposal": "# Storage and language direction\n\n## Problem\n\nEpisode is Rust + Postgres + pgvector. Concord, its primary orchestration context, is Go and keeps a single local SQLite authority under CD-0002. Before implementing the Tier 1–3 structured-memory work, we need a recorded direction on:\n\n1. Stay Rust + Postgres for the foreseeable work?\n2. Rewrite to Go + SQLite now to align with Concord?\n3. Condition the rewrite on a trigger?\n\nThis decision gates the implementation language of every downstream change in the epic.\n\n## Analysis\n\n### What Concord actually requires of episode\n\nThe first question is whether Concord's storage law reaches episode at all. It does not.\n\nCD-0002 (`docs/decisions/CD-0002-concord-state-authority.md:19-31`) states that SQLite is **Concord's** sole durable authority and that \"no second store holds authoritative state.\" That prohibition is scoped to Concord's own state. It is silent on satellite services, and CD-0002:104-109 names DBOS on Postgres as a \"strong buy fallback if SQLite ever proves insufficient\" — for Concord itself. Nothing in it forbids a Postgres-backed external service.\n\nConcord's Go direction is likewise scoped. `docs/core-architecture.md:40-60` places Go at \"the Concord core,\" and `:85-91` keeps Rust explicitly available. There is no documented language or storage requirement for companion services, and Concord's Go code contains zero references to episode.\n\nConcord treats episode as one of three independent general-purpose tools. `docs/vertical-integration.md:64` states plainly: \"Tools stay independent; Concord orchestrates product context.\" The promotion seam specifically crosses a manifest-path + sha256 boundary (`:130-158`), holds a `target` that is opaque to episode, and records no runtime event. That seam is language- and storage-agnostic by construction. It is the promotion boundary, not the whole integration surface, so it should not be cited as though it governed every interaction.\n\n**What Concord has and has not decided.** The episode ownership question is clarification **C20**, split out of C8 by concord#101 precisely so episode's trigger could fire without implying a direction change for lgrep and vision. C20's recorded direction is 🟡 **unchanged** as of 2026-08-14, owned by concord#46. The 2026-08-30 update records only that the promotion-receiving contract is defined, and states explicitly that \"the ownership lean is untouched; the probe evidence gate (Item 1) remains the only direction input.\"\n\nSo Concord has **not** resolved episode's ownership. Its lean is product-scoping first, and it is holding that lean open pending probe evidence. The argument above rests on scope — CD-0002 and the Go direction do not reach satellites — not on a Concord ruling that episode stays external.\n\nSo there is no architectural divergence to resolve. There are two systems with a documented boundary between them, and an open ownership question that neither side has closed.\n\n### Case for a Go + SQLite rewrite now\n- One language across Concord and episode would reduce integration friction.\n- sqlite-vec is reachable from Go by at least three paths, two of them cgo-free: `modernc.org/sqlite` ships sqlite-vec transpiled in its `vec/` package (v1.57.0, auto-registering `vec0` on blank import), `ncruces/go-sqlite3` offers a WASM path, and `mattn/go-sqlite3` enables extension loading by default. Dropping Postgres would remove a daemon from the deployment.\n- Porting is cheaper earlier than later, though less cheap than it was: the codebase is now 3225 lines across 9 source files and 2 migrations, up from roughly 1500 lines, 6 files, and 1 migration when this question was first framed. Tier 1–3 will widen that gap further.\n\n### Case against — the recommendation\n- **Concord imposes no such requirement.** CD-0002's authority rule and the Go direction are both scoped to Concord's own core. A rewrite would buy alignment that the architecture does not ask for.\n- **pgvector is materially more mature than sqlite-vec for this workload.** sqlite-vec's current stable release is v0.1.9 (2026-03-31), with v0.1.10 still in alpha; it is pre-v1 and documents that it expects breaking changes. Its stable KNN is exhaustive, and ANN work remains experimental behind compile flags. pgvector ships steady releases through 0.8.6 with HNSW and iterative scans. Both projects are 0.x, so the gap is cadence, adoption, and ANN depth rather than a version badge.\n- **`vec0` carries layout-inherent write amplification.** Space is reclaimed only in the latest chunk, there is no vacuum, and a production report describes the database growing monotonically with every re-embedding. Episode's ingest is append-mostly, so exposure is workload-dependent rather than disqualifying — but it is unmeasured.\n- **The metadata and product-scoping gaps are language-independent.** They are data-model and API gaps. Moving Rust to Go does not close them faster; it resets verified-working maturity to zero while leaving the same gaps open.\n- **C20's lean is product-scoping first**, deferring ownership until measured need. A rewrite is a step toward owning, taken before any evidence supports it.\n- **The probe has to add metadata and product features to something.** Doing that in Rust lets us measure whether orchestration suffices. Rewriting first assumes the answer.\n\n### Alternatives considered\n\n**Go + SQLite (full rewrite).** Rejected on the grounds above.\n\n**Rust + SQLite — keep the language, drop the server.** This is the strongest alternative and it deserves an explicit rejection rather than silence. It answers the deployment objection at far below the cost of a language rewrite: `store.rs`, the migrations, and config change; `rmcp`, `fastembed`, and the ingest path stay. It is capability-feasible today, since `rusqlite` supports extension loading through `LoadExtensionGuard` when the non-default `load_extension` crate feature is enabled.\n\nIt is rejected for now because it loses on retrieval and on filtering:\n- `vec0`'s stable KNN is exhaustive where pgvector offers HNSW.\n- SQLite has no JSONB + GIN equivalent. `vec0` metadata columns are documented as slower on scans and inefficient past 12-character strings, which directly weakens the recall filters that spec 0010 already delivers.\n- The engine is pre-v1 with the write-amplification characteristic described above.\n- Postgres is already deployed and verified end to end, and the pain this would relieve is unmeasured.\n\nRecorded as a real option, rejected on evidence, and available for reconsideration at the checkpoint below.\n\n### The decisive tension\n\nPostgres against SQLite is the real fork, and it sits downstream of the C20 ownership question, which sits downstream of the product-scoping probe. We should not rewrite until C20 resolves toward owning, and C20 should not resolve toward owning until product-scoping is proven insufficient.\n\n### A premise this decision does not rest on\n\nAn earlier draft argued that Concord was pre-runtime and that aligning with it was therefore speculative. That premise is false and was false when written. Concord has a working runtime: `cmd/concord/main.go` routes launcher, session, and JSON commands across a full operator surface; `internal/store` holds a SQLite `domain_events` log with projections; `internal/agent/runtime.go` dispatches; a Bubble Tea TUI ships. `docs/floor-readiness.v1.json` records 40 items satisfied, 1 out of scope, 0 outstanding. Concord was v0.10.1 when this question was framed and is v4.9.0 today. The README says \"pre-replacement-readiness,\" which the earlier draft misread as \"pre-runtime.\"\n\nThis is recorded because the refuted premise is the one a reader is most likely to reconstruct independently, notice is false, and conclude the decision is stale. The decision does not depend on it. Concord's maturity is an argument for a stable documented boundary, not against one.\n\n## Recommendation\n\n**Stay Rust + Postgres for all Tier 1–3 work.** Treat the storage and language rewrite as a conditioned future rather than planned work.\n\n- **Trigger source:** the `addProductScopingRecall` probe outcome — does product-scoping suffice for real multi-project Product work?\n- **Concord-side tracker:** [concord#46](https://github.com/Sharper-Flow/concord/issues/46) Item 1 drives the C20 direction update.\n- **Evidence bar:** measured pain that product-scoping cannot resolve. Not a vibe, not a calendar date.\n\n**What the trigger actually fires.** An insufficient probe outcome does **not** automatically fire a Go + SQLite rewrite. It reopens the C20 ownership question. Only if C20 then resolves toward Concord owning the memory territory does the storage and language choice come back into scope, and at that point Rust + SQLite and Go + SQLite are both live options to be re-costed against the measurement plan below. Recording the trigger as a direct rewrite switch overstates what the evidence would establish.\n\nRecord the rewrite as a named conditional follow-up, not an implicit maybe.\n\n## Trigger viability — the weakest part of this decision\n\nAC3 requires a conditioned follow-up rather than a dangling option. That test is not currently passed. The probe cannot produce evidence today, for three independent reasons, and one of them is time-limited:\n\n1. **Episode is disabled on the host.** Its MCP entry exists but is switched off (concord#46, 2026-08-14), so no usage evidence accumulates. No cause is recorded; deployment friction is neither confirmed nor excluded. *Action: re-enable episode, and record why it was off.*\n2. **The probe does not exist.** `addProductScopingRecall` is not implemented in this repository, and spec 0010 explicitly defers automatic product scoping and the probe. Concord's own 2026-08-30 trigger-state check records the same finding. *Action: implement the probe change.*\n3. **The evidence window is finite.** Episode's ingestion source is predecessor wisdom and reflection state, which retires when the predecessor retires. This is recorded in C20's rationale and in the background of concord#101, the (now closed) issue that split C8 into C20. *Action: re-point ingestion before predecessor retirement.*\n\nA condition that cannot be evaluated is a dangling option by AC3's own letter. If the window closes before the probe runs, this decision silently becomes \"never revisit,\" which nobody chose.\n\n**Option-decay checkpoint.** Porting cost roughly doubled in 19 days, from ~1500 to 3225 lines, and Tier 1–3 will push it further. Deferring dominates only while the option holds value. Re-decide this change if either holds:\n- predecessor retirement arrives with no probe evidence, or\n- the codebase passes a size threshold at which the port stops being tractable.\n\nAt that checkpoint, reconsider Rust + SQLite alongside the Go + SQLite option, since it captures the deployment benefit without a language rewrite.\n\n## Decision outcome\n\nThis change produces a decision record capturing:\n- The direction — Rust + Postgres now\n- The concrete trigger — the `addProductScopingRecall` probe proving product-scoping insufficient — and what it actually fires, which is a C20 reopen rather than a rewrite\n- The trigger's current blockages, their unblocking actions, and the option-decay checkpoint\n- The Concord-side tracker — concord#46 Item 1 for the C20 direction update\n- The alternatives considered, including Rust + SQLite, and why each is rejected\n- The evidence bar for revisiting\n\n## Acceptance criteria\n\n- AC1: A decision record exists documenting the direction, the concrete trigger, alternatives, and revisit conditions.\n- AC2: All downstream epic changes reference this decision as their language assumption.\n- AC3: The Go+SQLite rewrite is recorded as a conditioned named follow-up bound to the `addProductScopingRecall` probe outcome, not a dangling option.\n\n## Epic context\n\nMember of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C20 question, the probe, and the outcome.\n\n## External evidence — magic-context\n\n> Routed from change `studyMagicContextMemoryDesign`. Source: [`cortexkit/magic-context`](https://github.com/cortexkit/magic-context) (MIT), read at HEAD `a54f9c0`. This section is **corroborating evidence only**. It does not re-open the decision above, and it adds no new option. The recommendation, the trigger, and AC1–AC3 stand unchanged.\n\nA close design analogue exists and made the opposite storage choice. It is worth recording what their choice actually buys, because the naive reading — \"they removed the Postgres dependency, so we could too\" — does not survive contact with their own design documentation.\n\n### What they built\n\n- Exact brute-force fp32 cosine in application code. The similarity engine (`memory/cosine-similarity.ts`) is a dot product and two norms, and nothing else. There is **no ANN index**.\n- Vectors are plain SQLite BLOBs in a side table (`storage-db.ts`):\n\n```sql\nCREATE TABLE IF NOT EXISTS memory_embeddings (\n  memory_id INTEGER NOT NULL REFERENCES memories(id) ON DELETE CASCADE,\n  embedding BLOB NOT NULL,\n  model_id TEXT NOT NULL,\n  PRIMARY KEY(memory_id, model_id)\n);\n```\n\n  The composite primary key is worth noting on its own: they store one row **per memory per embedding model**, so a model change adds vectors alongside the old ones rather than destroying them. If episode ever changes embedding model, that is the shape that makes the migration survivable.\n\n- Their stated operating range is hundreds to roughly 1000 memories per project at 384 dimensions. `MEMORY-DESIGN.md` reports ~79 memories in 0.1s cached, ~10 ms per query, and 1000 memories ≈ 1.5 MB.\n\n### Why this corroborates staying on pgvector\n\nTheir own design document names the exit condition: *\"At 1000+ memories, if full-scan latency is noticeable, add ANN index or per-project shard cache.\"*\n\nThat is the escape hatch episode already occupies. pgvector HNSW is not an over-engineered choice relative to their design — it is the thing their design defers until it needs it.\n\nTheir ~10 ms figure is a **full-scan** number at 384 dimensions. episode does not full-scan; HNSW is an approximate-nearest-neighbour index, so the two numbers measure different operations and cannot be compared directly. The figure becomes relevant only in the counterfactual where episode abandoned the index for brute force — and there the cost would be worse than theirs by more than the row count alone suggests, because a 1024-dimension fp32 vector is 4096 bytes against their 1536, roughly 2.7x the bytes per row scanned.\n\n### On sqlite-vec — read this before citing them\n\nmagic-context **rejected** sqlite-vec, and it would be easy to cite that rejection as counter-evidence against sqlite-vec generally. It is not. Their stated reason has two parts, and the parts transfer differently:\n\n1. **\"`bun:sqlite` can't load extensions\" — runtime-specific, does NOT transfer.** This is a property of their JavaScript runtime, not of sqlite-vec. Rust's `rusqlite` supports extension loading through `load_extension_enable` and `LoadExtensionGuard`, provided the non-default `load_extension` crate feature is enabled. In Go, `mattn/go-sqlite3` enables extension loading by default, and two cgo-free paths exist as well: `modernc.org/sqlite` ships sqlite-vec transpiled in its `vec/` package, and `ncruces/go-sqlite3` provides a WASM route.\n2. **\"write-amplification\" — DOES transfer.** This is a property of sqlite-vec's `vec0` storage layout, not of Bun. It remains live, workload-dependent evidence against sqlite-vec in a Rust or Go evaluation, and it is not answered by anything above.\n\nSo magic-context is not evidence that sqlite-vec is unavailable outside Bun, and availability is not the reason this decision rejects it. The rejection rests on the boundary facts and on sqlite-vec's maturity and retrieval characteristics. One substantive objection — write amplification — is left standing for a future evaluation to measure rather than assume.\n\n### Measurement plan, for the trigger — not for now\n\nIf C20 ever reopens toward owning under the trigger above, or the option-decay checkpoint reopens this, the storage comparison to run is:\n\n- brute-force fp32 cosine in Rust,\n- sqlite-vec `vec0`,\n- pgvector HNSW,\n\nmeasured at realistic episode row counts **at 1024 dimensions**, with `vec0` write-amplification measured under the real ingest cadence rather than assumed from the citation above.\n\nThis is recorded so the trigger has a concrete first action. It is not a reason to fire the trigger.\n",
+    "executiveSummary": "# Storage and language direction — outcome\n\n## What was decided\n\nEpisode stays on **Rust + Postgres + pgvector** for all Tier 1–3 structured-memory work. A storage or language rewrite is recorded as a conditioned follow-up, not planned work.\n\n## What changed about the decision\n\nThe recommendation was drafted on 2026-08-11 and the conclusion survived unchanged. Almost none of its reasoning did.\n\n**The central argument was false.** The draft's decisive \"case against\" bullet held that Concord was pre-runtime, so aligning with it was speculative. Concord had a working runtime before the question was framed: a CLI routing launcher, session, and JSON commands, a SQLite `domain_events` log with projections, an agent dispatcher, and a Bubble Tea TUI. Its floor-readiness record shows 40 items satisfied, 1 out of scope, 0 outstanding. It was v0.10.1 on the drafting date and v4.9.0 at acceptance. The draft had misread \"pre-replacement-readiness\" in the README as \"pre-runtime.\"\n\nRecording the decision on that premise would have made it stale on the day it was written, because the premise described a temporary condition that had already expired.\n\n**The replacement basis is durable.** Concord's storage law does not reach episode. CD-0002 scopes \"no second store holds authoritative state\" to Concord's own authority and names Postgres as Concord's own buy-fallback. The Go direction is scoped to \"the Concord core,\" with Rust explicitly kept available. Concord's Go code contains zero references to episode, and `vertical-integration.md` states that tools stay independent. The promotion seam crosses a manifest-path and sha256 boundary that is language- and storage-agnostic by construction.\n\n**A stronger alternative had been omitted.** Rust + SQLite — keeping the language, dropping the server — answers the deployment objection for the cost of `store.rs`, migrations, and config rather than a full rewrite. It is now recorded and rejected on evidence: exhaustive stable KNN against HNSW, no JSONB and GIN equivalent, `vec0` metadata columns documented slower on scans and inefficient past 12-character strings, a pre-v1 engine with layout-inherent write amplification, and unmeasured pain. It returns as a live option at the decay checkpoint.\n\n**The trigger was overstated.** The draft implied an insufficient probe fires the rewrite. It does not. It reopens C20, the episode-ownership question. Only a C20 resolution toward Concord owning the memory territory brings storage and language back into scope.\n\n## The weakest part, recorded rather than hidden\n\nThe trigger cannot be evaluated today. Three independent blockages, one time-limited:\n\n1. Episode is disabled on the host, with no recorded cause, so no evidence accumulates.\n2. The probe change is unimplemented, and spec 0010 explicitly defers it.\n3. The evidence window is finite — episode's ingestion source is predecessor wisdom and reflection state, which retires with the predecessor.\n\nA condition that cannot be evaluated is a dangling option by AC3's own letter. An option-decay checkpoint now re-decides the change if predecessor retirement arrives without probe evidence, or if the codebase passes a size threshold at which porting stops being tractable. Porting cost roughly doubled in 19 days, from ~1500 to 3225 lines.\n\n## Findings that changed other work\n\n- **`addPromotionStateMemories` is not blocked and its receiver exists.** Concord #587 landed the promotion-receiving contract on the day of this work, satisfying concord#46 Item 2. Its two declared prerequisites had shipped without leaving ADV change records.\n- **`improveRecallQualityIngest` sub-part 3a is half-delivered.** `RecallFilters` already carries a first-class `kinds` field; `source` does not exist. Building 3a as written would have duplicated shipped behavior. AC1 was narrowed.\n- **`addPromotionStateMemories` gained a design constraint.** Concord's contract resolves targets by manifest path and sha256 and names a record version, so a bare spec-id will not resolve. Concord specifies no serialized format, so the carrying representation is recorded as an open design question rather than guessed.\n- **Concord's learning-capture surface exists.** CD-0026 is Accepted: lessons publish through `concord_work_compact.lesson_publish` into git-backed markdown plus a manifest record, and reflections are lessons carrying a `reflection` tag. This converts `improveRecallQualityIngest` 3c from speculative future-proofing into work with a second real consumer, and establishes that the abstraction must be parser-shaped rather than format-shaped.\n- **Three proposals declared shipped work as open blockers.** `enrichRememberWithContext` and `addRecallMetadataFilters` are live in `src/server.rs` but hold no ADV change records.\n\n## Verification\n\nOne independent validator and two review passes. Seven citation errors were corrected, including one introduced during the first correction round.\n\nThe most serious was an unsupported claim that an operator-approved decision had resolved C20 as \"episode stays external and optional.\" No such approval exists. C20 records its direction as unchanged, and Concord's 2026-08-30 note states the ownership lean is untouched with probe evidence remaining the only direction input. The claim had propagated into all four proposals and was removed from each.\n\n## Open cross-project finding\n\n**concord#46's issue body repeats that unsupported operator-approval claim and contradicts C20 in Concord's own accepted documents.** That body is where the claim entered this work. It was not edited, because it belongs to another repository and sits outside this change's scope. It should be reconciled against `docs/clarifications.md` C20 by Concord.\n\n## Scope\n\nNo repository files changed. All work targets ADV proposal artifacts; the tree stayed clean at `fb7088c` across every checkpoint.\n"
+  },
+  "cross_project_origin": {
+    "source_project": "concord",
+    "source_path": "/home/jon/dev/concord",
+    "linked_at": "2026-08-11T00:04:11.286Z"
+  },
+  "same_project_dependencies": [],
+  "epic_membership": {
+    "epic_id": "shapeEpisodeStructuredMemory",
+    "entry_id": "change-1786406735191-f476vj",
+    "order": 1,
+    "title": "Storage/language direction decision",
+    "linked_at": "2026-08-11T00:05:35.191Z",
+    "epic_project_id": "098dab10ebf50e5c885fb94eef48afda85032788",
+    "source": "link_existing"
+  },
+  "projection_revision": 29,
+  "projection_commits": [
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:790b976a-c79d-413c-a2c2-428a50a1f113",
+      "payload_hash": "2b158f867aa1aab30bf2e1a2e417a15671504e5513ebb7d136e787a700bcf3b7",
+      "prior_revision": 0,
+      "new_revision": 1,
+      "committed_at": "2026-08-11T00:24:21.273Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Decision change: stay Rust+Postgres for Tier 1-3; Go+SQLite rewrite conditioned on C8 trigger (the addProductScopingRecall probe). Proposal serves as the decision record.",
+      "operation_id": "mutation:gate_completion:decideStorageLanguageDirection:849fb333-d6a6-416a-95b4-877b9584d223",
+      "payload_hash": "74f38064b533c9d0e5715e6b50e9e929aa45ef82f3b11f5b3f1aa5f2477e3ffd",
+      "prior_revision": 1,
+      "new_revision": 2,
+      "committed_at": "2026-08-11T00:54:48.062Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:dbd7778f-a7d6-43a4-b95e-a31575be9b8b",
+      "payload_hash": "6d049b4034190f2c2de9822ca126609bfeff8dd18232a961ce3559da508ab0cf",
+      "prior_revision": 2,
+      "new_revision": 3,
+      "committed_at": "2026-08-30T03:24:51.661Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:12e2b086-7f71-4b33-a064-e93a50b04684",
+      "payload_hash": "1773880db11cd576ef6913c687bd83cac3fda5e6bc4807a97e91f57e781f0345",
+      "prior_revision": 3,
+      "new_revision": 4,
+      "committed_at": "2026-08-30T14:04:13.631Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Re-verified the 19-day-old recommendation's load-bearing premises. The conclusion (stay Rust + Postgres) holds, but its stated justification is substantially wrong and must be rewritten before this is recorded as a decision.\n\nREFUTED — P1, the central \"case against\" bullet: \"Concord is pre-runtime. Rewriting episode to match a runtime that does not exist is speculative.\"\nConcord has a working runtime and did on the day the recommendation was written. cmd/concord/main.go routes launcher/session/JSON commands; commandSpecs enumerates invoke, worker-dispatch, worker-complete, client-register, product-create, backup, restore and more. internal/store holds a SQLite domain_events log with projections; internal/agent/runtime.go is the dispatcher; there is a Bubble Tea TUI. docs/floor-readiness.v1.json is 40 satisfied / 1 out_of_scope / 0 outstanding. Concord was v0.10.1 on 2026-08-11 and is v4.9.0 today. README says \"pre-replacement-readiness\", which the premise misread as \"pre-runtime\".\n\nREFUTED — implicit premise that CD-0002's SQLite law creates pressure on episode.\nCD-0002 (docs/decisions/CD-0002-concord-state-authority.md:19-31) scopes \"no second store holds authoritative state\" to Concord's own authority. It is silent on satellites. CD-0011:36 names Postgres among alternatives rejected for Concord's own state, and CD-0011:42 lists Postgres as Concord's documented buy-fallback. Nothing forbids a Postgres-backed external service.\n\nREFUTED — implicit premises that Concord expects episode to be Go or to share its store.\nZero references to \"episode\" in Concord's Go code. docs/vertical-integration.md:64 states \"Tools stay independent\". core-architecture.md:40-60 scopes the Go direction to \"the Concord core\", and :85-91 explicitly keeps Rust available. No documented language or storage requirement exists for satellite services.\n\nWEAKENED — the \"cheap to port now\" bullet in the case FOR. Proposal says ~1500 lines, 6 source files, 1 migration. Actual: 3225 lines, 9 source files, 2 migrations. The port more than doubled in cost, which cuts against the bullet that argued for porting early.\n\nSTRENGTHENED, on better grounds. The right structural reason to stay is not that Concord does not exist. It is that Concord's architecture treats episode as an independent external tool across a manifest+sha256 boundary, and imposes no language or storage constraint. That is a durable fact, where \"pre-runtime\" was a temporary condition that has already expired. Recording the decision on the old premise would have made it stale on the day it was written.\n\nTWO FINDINGS THAT CHANGE OTHER WORK:\n1. concord#46 Item 2 is SATISFIED as of today by concord #587 (commit 94989a5), which added the promotion-receiving contract at docs/vertical-integration.md:130-158. target is a formalized spec/decision record resolved by manifest path + sha256, opaque to episode; back-link recorded in the receiving record's sources; acknowledgement is structural with no runtime event; recall exclusion stays episode's behavior. addPromotionStateMemories now has a real receiver.\n2. episode is currently DISABLED on the host (concord#46 comment, 2026-08-14): its MCP entry exists but is switched off, so the Item 1 product-scoping probe is producing no evidence. The probe's blocker is operational, not implementation.\n\nconcord#46 Item 1 remains open. The issue body now proposes resolving C20 as \"episode stays external and Product-scoped\", with the probe as a reopen trigger rather than an acceptance prerequisite. Ownership lean is unchanged at product-scoping first.",
+      "operation_id": "mutation:gate_completion:decideStorageLanguageDirection:1f6716f0-8a9e-48a7-8b25-fe659fe747db",
+      "payload_hash": "c68fe5a697b7faabecbc0cd0b13341b2f160a98dee6c0e2a0cf78cbff3fefdf1",
+      "prior_revision": 4,
+      "new_revision": 5,
+      "committed_at": "2026-08-30T14:26:48.493Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:bc00e118-2af2-4fa4-812a-12fe1d5c9013",
+      "payload_hash": "3766ceeb50c3d86cda74cff31fbd08997cce6b3aeffe4f8601a78caf1c5e2d5a",
+      "prior_revision": 5,
+      "new_revision": 6,
+      "committed_at": "2026-08-30T14:28:16.328Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "decideStorageLanguageDirection|change:researcher:design-gate-independent-validation|adv-researcher|1",
+      "operation_id": "mutation:subagent_report_submitted:decideStorageLanguageDirection:7f6d11ae-3713-41ae-8664-2c5a06ef6e9b",
+      "payload_hash": "001583476cb601842101a686756b14f41be86c5f39a9c8ba071ad3915ce18414",
+      "prior_revision": 6,
+      "new_revision": 7,
+      "committed_at": "2026-08-30T14:36:33.901Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:3e3f31c4-3b89-4acb-aed0-42d6a84b58be",
+      "payload_hash": "ed7a933382988dfe4ad83bcc845b460c23311f2d6769985681864046b73c5551",
+      "prior_revision": 7,
+      "new_revision": 8,
+      "committed_at": "2026-08-30T14:38:06.865Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Decision record rewritten on corrected premises, then independently validated. Validator verdict: APPROVE WITH FINDINGS. No CONFLICT, so no design checkpoint was required. All five required findings applied.\n\nThe direction survives attack unchanged. The record did not, and was corrected in three substantive places.\n\nVALIDATOR FINDINGS APPLIED:\n1. Deleted the refuted cgo-constraint claim. I had written that a Go rewrite wanting sqlite-vec would be forced onto the cgo driver. modernc.org/sqlite ships sqlite-vec transpiled in its vec/ package (v1.57.0, auto-registers vec0 on blank import), and ncruces/go-sqlite3 provides a cgo-free WASM path. Three routes exist, two without cgo. The rewrite rejection now rests on boundary facts plus sqlite-vec maturity and retrieval characteristics, never on availability.\n2. Added the rusqlite load_extension feature gate. LoadExtensionGuard requires a non-default crate feature.\n3. Rewrote the trigger section as \"Trigger viability — the weakest part of this decision.\" Names three independent blockages with unblocking actions: episode disabled on the host with no recorded cause; addProductScopingRecall not implemented, with spec 0010 explicitly deferring the probe; and a finite evidence window because the probe's ingestion source retires with the predecessor (concord#101). Added an option-decay checkpoint that re-decides on predecessor retirement without probe evidence, or on a codebase size threshold.\n4. Cited the operator-approved concord#46 Decision of 2026-08-30 resolving C20 as \"episode stays external and optional,\" which demotes the probe to a reopen trigger. This post-dates the original analysis and moves the core structural argument from inference-from-silence to a recorded Concord-side decision.\n5. Added Rust + SQLite to alternatives considered. The validator judged its omission a real gap, and it is the strongest alternative: it captures the deployment benefit for the cost of store.rs, migrations, and config rather than a language rewrite. Rejected on evidence — exhaustive vec0 KNN against HNSW, no JSONB+GIN equivalent with vec0 metadata columns documented slower on scans and inefficient past 12-character strings, which directly weakens the recall filters spec 0010 already ships, plus pre-v1 alpha status and layout-inherent write amplification. Flagged for reconsideration at the option-decay checkpoint.\n\nEXTERNAL CLAIMS VERIFIED: rusqlite extension support HOLDS with feature-gate caveat; mattn/go-sqlite3 default-enabled HOLDS; vec0 write amplification HOLDS as a storage-layout property, with reclamation only in the latest chunk and no vacuum, though episode's append-mostly ingest makes exposure workload-dependent; sqlite-vec pre-v1 against pgvector 0.8.6 HOLDS, with the honest caveat that both are 0.x and the real gap is cadence, adoption, and ANN depth.\n\nWHAT NEARLY BROKE THE DECISION: the trigger. Bound to a probe that does not exist, in a service that is switched off, against an evidence source that retires. The fix is precondition-and-deadline language plus the decay checkpoint, not a change of direction.\n\nREMAINING EXECUTION WORK: AC1 and AC3 are satisfied by the record. AC2 is not — the three downstream epic changes must reference this decision as their language assumption.",
+      "operation_id": "mutation:gate_completion:decideStorageLanguageDirection:50b4f828-9ec5-44a0-983e-4b58eaf49538",
+      "payload_hash": "8dfbf7c0e4fb637be6f10028c6bd13b94a194c436bbb5a48abd8ff60b6ac534d",
+      "prior_revision": 8,
+      "new_revision": 9,
+      "committed_at": "2026-08-30T14:38:27.693Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-4d754d849744",
+      "operation_id": "mutation:task_add:decideStorageLanguageDirection:8259fd14-c118-482e-9500-3c223a08c640",
+      "payload_hash": "c1c08eaffd9b7a2c4da0b642894f3c0289f9bb6ac54a5d4d0e0309f57c6f895b",
+      "prior_revision": 9,
+      "new_revision": 10,
+      "committed_at": "2026-08-30T14:38:56.568Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-aa9388dba840",
+      "operation_id": "mutation:task_add:decideStorageLanguageDirection:b5071d79-74d0-4365-b840-242868ccf59b",
+      "payload_hash": "d8f818d1f4bc21cd50fe56c1877e41f3e34bfb7cf858100f1246317bb68cf668",
+      "prior_revision": 10,
+      "new_revision": 11,
+      "committed_at": "2026-08-30T14:39:04.311Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-66614a6886af",
+      "operation_id": "mutation:task_add:decideStorageLanguageDirection:fc6bb911-6029-433c-8110-b09bd267353a",
+      "payload_hash": "dac121fa19202227e6f45fbfac405fc9de8384bc29cbd37d20ec933bd44ee0fa",
+      "prior_revision": 11,
+      "new_revision": 12,
+      "committed_at": "2026-08-30T14:39:13.778Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-c49beb07729a",
+      "operation_id": "mutation:task_add:decideStorageLanguageDirection:c036a2ec-a1ee-4a1c-847f-d977563eb5c6",
+      "payload_hash": "f59e2d69983fedfe6abdd29d25f93c8a74190e1bd2f0c88791ef0eebe3d98a5c",
+      "prior_revision": 12,
+      "new_revision": 13,
+      "committed_at": "2026-08-30T14:39:30.604Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User approved the prep contract with \"approve\". Four tasks cover all three acceptance criteria with no uncovered criteria. AC1 and AC3 are satisfied by the rewritten decision record; AC2 is the open work across three downstream epic proposals. No repository files change — all edits target ADV proposal artifacts via adv_change_update. Verification task is blocked on the three edit tasks and proves all three ACs by artifact readback.",
+      "operation_id": "mutation:gate_completion:decideStorageLanguageDirection:1c5640d2-4856-4b08-a2be-813270eba6f8",
+      "payload_hash": "2d4635a77cb25bb4021c5cb33e35c1fbdb13c6c70de82a3acbe8594d2ecc34ab",
+      "prior_revision": 13,
+      "new_revision": 14,
+      "committed_at": "2026-08-30T14:49:08.592Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:decideStorageLanguageDirection:ee5d6d58-8778-4986-86eb-45b5c4544e77",
+      "payload_hash": "161cb182d1f3881e9a84692f05efbcb0d431db5318d0ba510883a4fac46fa290",
+      "prior_revision": 14,
+      "new_revision": 15,
+      "committed_at": "2026-08-30T14:49:13.710Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc:Appended \"Language and storage assumption\" and \"Trigger readiness — this change is currently blocked\" sections to the addProductScopingRecall proposal, and corrected its Dependencies block. Verified by readback of the persisted artifact. No repository files change; the edit targets an ADV proposal document.",
+      "operation_id": "mutation:task_checkpoint_completed:decideStorageLanguageDirection:68a6caf3-6d28-428a-ae73-2396e4a78033",
+      "payload_hash": "6482c52971ec23c18310cdd10194702369b5db29f40c2e2780158ce3a70d245b",
+      "prior_revision": 15,
+      "new_revision": 16,
+      "committed_at": "2026-08-30T14:49:54.499Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc:Appended \"Language and storage assumption\" and \"Trigger readiness\" sections to the addProductScopingRecall proposal and corrected its stale Dependencies block. Verified by readback of the persisted artifact. No repository files change; the edit targets an ADV proposal document, so the tree is clean at fb7088c.",
+      "operation_id": "mutation:task_checkpoint_completed:decideStorageLanguageDirection:b30211d5-3be1-43c3-99e2-6a5becfe8f60",
+      "payload_hash": "155cc43af118e93cb68da08199ea461b8793f115c2e3885783eedf9616fbd1a9",
+      "prior_revision": 16,
+      "new_revision": 17,
+      "committed_at": "2026-08-30T14:50:09.313Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:decideStorageLanguageDirection:796fa716-d6c4-444b-9106-5624f6fb9348",
+      "payload_hash": "f59b48f43d100e3db6368e453f496fb7442c6e7b604456252033b26bab3e513d",
+      "prior_revision": 17,
+      "new_revision": 18,
+      "committed_at": "2026-08-30T14:50:19.263Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc:Appended \"Language and storage assumption\" to the improveRecallQualityIngest proposal, recording the retrieval-capability dependency on the rejected Rust + SQLite alternative. Also corrected sub-part 3a's scope after verifying against source: RecallFilters at src/types.rs:134-140 already carries a first-class kinds field, so half of 3a has shipped; source remains open. AC1 narrowed to match. Verified by readback of the persisted artifact and by direct source inspection. No repository files change.",
+      "operation_id": "mutation:task_checkpoint_completed:decideStorageLanguageDirection:30b15929-deeb-4876-8b7d-077bf0aa1fa6",
+      "payload_hash": "0a2cc897e5c68da4e5f7c0749207ebd2a85ecf11ec03929d17d174b69529fcf4",
+      "prior_revision": 18,
+      "new_revision": 19,
+      "committed_at": "2026-08-30T14:51:20.992Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:decideStorageLanguageDirection:d76a1688-d5e4-4220-89d2-abceed3890bd",
+      "payload_hash": "dc052c3de8cfb51d4c23de98232d5a376221d3e09f78268b373582039ab9a277",
+      "prior_revision": 19,
+      "new_revision": 20,
+      "committed_at": "2026-08-30T14:51:25.291Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc:Appended \"Language and storage assumption\" to the addPromotionStateMemories proposal, recording that Concord's receiving contract is language- and storage-agnostic by construction. Replaced the stale \"Out of scope (Concord side) — deferred\" section with the now-defined contract from concord #587, and recorded the design consequence: target must carry manifest path plus sha256 rather than a bare spec-id, with AC5 and the flow diagram corrected. Corrected the Dependencies block, which declared two shipped prerequisites as open blockers. Verified by readback of the persisted artifact. No repository files change.",
+      "operation_id": "mutation:task_checkpoint_completed:decideStorageLanguageDirection:97f1cfb7-4128-435f-bc87-6c983ac77a22",
+      "payload_hash": "38ca87c864109ad633886797e8d22f000192840385e1e0e877458f3c85241e5f",
+      "prior_revision": 20,
+      "new_revision": 21,
+      "committed_at": "2026-08-30T14:52:32.675Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:decideStorageLanguageDirection:45982bd9-dc53-4b33-87e9-8e8693bb023e",
+      "payload_hash": "5a074a839ec473e71ba34f971015e41d785b2272ae8ccbfed0836d3d4aad9bad",
+      "prior_revision": 21,
+      "new_revision": 22,
+      "committed_at": "2026-08-30T14:52:41.477Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "fb7088cb5ed6535be8f7a74096a840696b0f6ebc:Read back all four proposals via adv_change_show. All three acceptance criteria pass.\n\nAC1 PASS. The decision record documents direction (stay Rust + Postgres), concrete trigger (the addProductScopingRecall probe outcome), alternatives (Go + SQLite and Rust + SQLite, each with rejection grounds), and revisit conditions (evidence bar plus the option-decay checkpoint). The refuted pre-runtime premise appears only in the section that explicitly disclaims it, never in the live argument. The refuted cgo-constraint claim is gone. The rusqlite load_extension feature gate is present. The operator-approved concord#46 C20 resolution is cited.\n\nAC2 PASS. All three downstream epic proposals carry a \"Language and storage assumption\" section that names decideStorageLanguageDirection and states Rust + Postgres. Each records the consequence that matters for that change: addProductScopingRecall as sole trigger source, improveRecallQualityIngest as the change most dependent on the preserved Postgres filtering and retrieval capability, addPromotionStateMemories as safe because the receiving contract is language-agnostic by construction.\n\nAC3 PASS, and it required the most scrutiny because the validator judged the trigger the weakest part of this decision. The record does not imply the trigger is live. It carries a section titled \"Trigger viability — the weakest part of this decision\" that names all three blockages with unblocking actions: episode disabled on the host with no recorded cause, the probe not implemented with spec 0010 deferring it, and a finite evidence window closing at predecessor retirement (concord#101). It states plainly that a condition which cannot be evaluated is a dangling option by AC3's own letter, and adds an option-decay checkpoint that re-decides on predecessor retirement without evidence or on a codebase size threshold. addProductScopingRecall independently carries the two blockages it owns, so the constraint is visible where the work lives rather than only in the decision.\n\nThree adjacent corrections were made under the campsite rule, each established by direct source inspection rather than inference. improveRecallQualityIngest sub-part 3a was re-scoped after confirming RecallFilters at src/types.rs:134-140 already carries a first-class kinds field; source remains open, and AC1 was narrowed. addPromotionStateMemories gained a design constraint from the newly landed receiving contract: target must carry manifest path plus sha256 rather than a bare spec-id, since the contract names a record version. Stale dependency blocks in all three proposals were corrected against shipped code.\n\nOne statement was deliberately left unchanged. improveRecallQualityIngest still says Concord's wisdom and reflection ingest surface does not exist. Concord has a runtime and knowledge records, but I did not verify it exposes a wisdom or reflection stream episode would ingest, so changing that line would exceed the evidence.\n\nNo repository files change; tree clean at fb7088c.",
+      "operation_id": "mutation:task_checkpoint_completed:decideStorageLanguageDirection:9bbf4471-4d6f-40e4-b93f-50d4fdc0c4fe",
+      "payload_hash": "8f92abc70d18e5f5c866c865001df5aed360bfffc51ae5a03172cd9ce7c9764f",
+      "prior_revision": 22,
+      "new_revision": 23,
+      "committed_at": "2026-08-30T14:53:51.174Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "All four tasks complete. AC1, AC2, and AC3 verified by readback of all four proposals.\n\nAC2 delivered: each of the three downstream epic proposals now carries a \"Language and storage assumption\" section naming this decision and stating Rust + Postgres, with the consequence specific to that change rather than boilerplate. AC1 and AC3 were satisfied by the record itself and were re-verified rather than assumed.\n\nThree adjacent corrections landed under the campsite rule, each established by direct source inspection:\n- improveRecallQualityIngest sub-part 3a re-scoped. RecallFilters at src/types.rs:134-140 already carries a first-class kinds field, so the kind half has shipped; source remains open and AC1 was narrowed. Building 3a as originally written would have duplicated shipped behavior.\n- addPromotionStateMemories gained a real design constraint from the receiving contract that landed today. target must carry manifest path plus sha256, not a bare spec-id, because the contract names a record version and an unresolvable target is knowledge_missing. AC5 and the flow diagram were corrected.\n- Stale dependency blocks corrected in all three proposals. enrichRememberWithContext and addRecallMetadataFilters have no ADV change records but both shipped, so three proposals were declaring delivered work as open blockers.\n\nOne statement was deliberately left alone. improveRecallQualityIngest still says Concord's wisdom and reflection ingest surface does not exist. Concord has a runtime and knowledge records, but I did not verify it exposes a stream episode would ingest, and changing the line would exceed the evidence.\n\nNo repository files change. All work targets ADV proposal artifacts; tree clean at fb7088c across every checkpoint.",
+      "operation_id": "mutation:gate_completion:decideStorageLanguageDirection:b1b9688b-7487-4594-9fcf-12530c1a1b6d",
+      "payload_hash": "7d2ade16f9b53468df8d38010b0f12fd98ac91fe24b5dff1927c09277f9251e7",
+      "prior_revision": 23,
+      "new_revision": 24,
+      "committed_at": "2026-08-30T14:54:03.475Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "decideStorageLanguageDirection|change:review:acceptance|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:decideStorageLanguageDirection:5e17b483-04d4-42cc-b40a-299bfa2d75dc",
+      "payload_hash": "2a015976ccb56ff041f9feb56636682e1919b37e83ef70b9a292e745bca31a23",
+      "prior_revision": 24,
+      "new_revision": 25,
+      "committed_at": "2026-08-30T14:57:59.823Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:fb6812fc-a2cf-4589-b4db-3b71117efaa9",
+      "payload_hash": "45d42c7ab5d2b79c568f546fee3ad437639746bbf7bce81554ddef8f097356a2",
+      "prior_revision": 25,
+      "new_revision": 26,
+      "committed_at": "2026-08-30T15:00:31.601Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "decideStorageLanguageDirection|change:review:acceptance|adv-reviewer|2",
+      "operation_id": "mutation:subagent_report_submitted:decideStorageLanguageDirection:424bd7d5-a904-4beb-b343-3454687cab5c",
+      "payload_hash": "e124bc25e95682d005f2383b39c8b0548ae175be84dcf1ac302fb44df8e85a0b",
+      "prior_revision": 26,
+      "new_revision": 27,
+      "committed_at": "2026-08-30T15:05:50.457Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:decideStorageLanguageDirection:892bbc2b-c3a9-4ed0-a5f2-20486d8f0af0",
+      "payload_hash": "0c2195802c691102c28f5f60d1cdc1da098dd106fa0c6e039cad54cd0f981635",
+      "prior_revision": 27,
+      "new_revision": 28,
+      "committed_at": "2026-08-30T15:07:00.436Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User accepted with \"accept\" after being shown the full acceptance report, including the corrections to the decision's reasoning, the seven citation errors caught across two review rounds, and the open cross-project finding on concord#46.\n\nReview history: one independent validator (APPROVE WITH FINDINGS, five corrections applied) and two adv-reviewer passes. The first review returned REJECT with six citation findings; all six were independently verified by the orchestrator before correction, and one proved worse than reported. The second review returned APPROVE WITH FINDINGS with all nine items confirmed FIXED and no new errors in the proposals.\n\nThe most serious correction: an unsupported claim that an operator-approved decision resolved C20 as \"episode stays external and optional.\" Direct verification found no such approval on concord#46, and C20 in docs/clarifications.md records its direction as unchanged with the 2026-08-30 note stating the ownership lean is untouched and probe evidence remains the only direction input. The claim had propagated into all four proposals and was removed from each, with the structural argument re-grounded on scope rather than on a Concord ruling.\n\nAll three acceptance criteria verified by artifact readback. AC1: the record documents direction, trigger, alternatives including Rust + SQLite, and revisit conditions. AC2: all three downstream proposals carry the language assumption with change-specific consequences. AC3: the follow-up is conditioned with all three blockages, unblocking actions, and an option-decay checkpoint named, and the record explicitly states the trigger is not currently evaluable.\n\nExecutive summary persisted.\n\nOpen cross-project finding, deliberately not acted on: concord#46's issue body repeats the unsupported operator-approval claim and contradicts C20 in Concord's own accepted documents. That body is where the claim entered this work. It belongs to another repository and is outside this change's scope. It should be reconciled by Concord.\n\nNo repository files changed; tree clean at fb7088c throughout.",
+      "operation_id": "mutation:gate_completion:decideStorageLanguageDirection:66a92707-cad5-43c9-8a95-35160e09a1a8",
+      "payload_hash": "382b34c1c76b6f4e19a9000a00ae2e625c3fa5c3848524db0b6b1a2b7ea5ef95",
+      "prior_revision": 28,
+      "new_revision": 29,
+      "committed_at": "2026-08-30T15:07:14.216Z"
+    }
+  ]
+}
