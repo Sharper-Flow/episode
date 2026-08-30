@@ -8,6 +8,92 @@ fn vector() -> Vec<f32> {
     value
 }
 
+/// A Product scope means "this Product's memories plus the shared pool", not
+/// "only rows tagged with this Product". The product filter matches rows
+/// tagged with the Product OR rows carrying no product claim at all, while a
+/// different Product's tag — and an explicit `product: null` — stays excluded.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn product_scope_includes_untagged_shared_pool() {
+    let db = std::env::var("EPISODE_TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://episode:episode@localhost:5434/episode".to_string());
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_product_{}", uuid::Uuid::new_v4().simple());
+    let shared = format!("it_shared_{}", uuid::Uuid::new_v4().simple());
+
+    let seed = [
+        (
+            ns.clone(),
+            "untagged-project",
+            serde_json::json!({"work_id":"w"}),
+        ),
+        (
+            shared.clone(),
+            "untagged-shared",
+            serde_json::json!({"tags":["b"]}),
+        ),
+        (ns.clone(), "tagged-p", serde_json::json!({"product":"p"})),
+        (
+            shared.clone(),
+            "tagged-q",
+            serde_json::json!({"product":"q"}),
+        ),
+        (
+            ns.clone(),
+            "null-product",
+            serde_json::json!({"product":null}),
+        ),
+    ];
+    for (namespace, content, metadata) in seed {
+        store
+            .upsert(
+                &MemoryInput {
+                    id: format!("{namespace}-{content}"),
+                    namespace: namespace.clone(),
+                    source: MemorySource::Manual,
+                    source_id: None,
+                    kind: Some("gotcha".into()),
+                    content: content.into(),
+                    metadata,
+                },
+                &vector(),
+            )
+            .await
+            .expect("seed");
+    }
+
+    let filters = RecallFilters {
+        product: Some("p".into()),
+        ..Default::default()
+    };
+    let mut got: Vec<String> = store
+        .recall(&vector(), &[ns.clone(), shared.clone()], 20, Some(&filters))
+        .await
+        .expect("product-scoped recall")
+        .into_iter()
+        .map(|h| h.content)
+        .collect();
+    got.sort();
+    assert_eq!(
+        got,
+        vec![
+            "tagged-p".to_string(),
+            "untagged-project".to_string(),
+            "untagged-shared".to_string(),
+        ],
+        "a Product scope returns the Product's rows plus the untagged shared pool"
+    );
+
+    for namespace in [ns, shared] {
+        sqlx::query("DELETE FROM memories WHERE namespace = $1")
+            .bind(&namespace)
+            .execute(&pool)
+            .await
+            .expect("cleanup");
+    }
+}
+
 #[tokio::test]
 #[ignore = "requires Postgres"]
 async fn recall_filters_compose_and_use_metadata_gin() {

@@ -237,6 +237,10 @@ impl PromotionState {
 #[serde(default, deny_unknown_fields)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct RecallFilters {
+    /// Scope recall to one Product: rows tagged with this Product plus every
+    /// row carrying no product claim (the shared pool). Rows claiming a
+    /// different Product — including an explicit `product: null` — stay
+    /// excluded.
     pub product: Option<String>,
     pub work_id: Option<String>,
     pub tags: Option<Vec<String>>,
