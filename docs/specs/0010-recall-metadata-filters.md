@@ -10,8 +10,10 @@ Recall may constrain semantic results by structured memory context while excludi
 - `product` scopes by ownership, not membership: see Product Scope below.
 - Every requested tag must be present; tag order and additional stored tags do not matter.
 - A memory matches any requested `kind` from the typed column.
-- Product, work ID, tags, kind, and namespace compose with AND semantics.
-- Empty strings, empty lists, and blank list members reject before embedding.
+- A memory matches any requested `source` from the closed set `manual`, `adv_wisdom`, `adv_reflection`; unknown values reject at deserialization and an empty list rejects validation.
+- `max_age_days` excludes rows whose first capture (`created_at`) is older than the cutoff. Zero rejects validation. The basis is deliberately `created_at`: write-once ingest never moves it, and promotion transitions touch only `updated_at`. A retracted-then-reinstated row gets a fresh `created_at` — reinstatement is a new capture of re-validated knowledge. Recency is a filter, never a ranking input; cosine order is untouched.
+- Product, work ID, tags, kind, source, age, and namespace compose with AND semantics.
+- Empty strings, empty lists, blank list members, and zero day counts reject before embedding.
 - Omitted fields add no constraint.
 
 ## Product Scope
@@ -43,4 +45,4 @@ Automatic product scoping (deriving Product membership episode-side) remains out
 
 ## Verification
 
-DB-free tests prove validation, schema, and bound SQL structure. Model-free Postgres integration proves each dimension, composition, product-scope semantics (tagged match, untagged shared pool visible, wrong Product excluded, explicit null excluded), open-follow-up behavior, migration/index presence, and GIN planner eligibility.
+DB-free tests prove validation, schema, and bound SQL structure. Model-free Postgres integration proves each dimension, composition, product-scope semantics (tagged match, untagged shared pool visible, wrong Product excluded, explicit null excluded), source filtering over all three provenances with union semantics, recency cutoffs against seeded `created_at` values, open-follow-up behavior, migration/index presence, and GIN planner eligibility.
