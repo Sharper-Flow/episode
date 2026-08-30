@@ -1,0 +1,911 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Sharper-Flow/Advance/trunk/plugin/schemas/change.schema.json",
+  "id": "addProductScopingRecall",
+  "title": "Add product scoping to recall",
+  "status": "archived",
+  "created_at": "2026-08-11T00:04:21.812Z",
+  "tasks": [
+    {
+      "id": "tk-d6774d57519e",
+      "title": "Product-OR-unscoped predicate + coverage (RED then GREEN)",
+      "type": "code",
+      "section": "Implementation",
+      "status": "done",
+      "priority": 0,
+      "deps": [],
+      "created_at": "2026-08-30T20:28:27.171Z",
+      "started_at": "2026-08-30T20:29:28.227Z",
+      "completed_at": "2026-08-30T20:33:00.753Z",
+      "verification": "RED tr_mtg9lg9u_04a83ed0 exit 101: product_scope_includes_untagged_shared_pool returned left [\"tagged-p\"] where right expects the Product row plus untagged-project and untagged-shared — positive containment drops the shared pool, the exact defect. GREEN tr_mtg9ndrr_a5039356 exit 0: new test passes alongside the existing recall_filters_compose_and_use_metadata_gin (its combined-filter assertions hold unchanged, confirming the predicate split altered no shipped combination — the validator's single-production-caller trace confirmed empirically). 63 of 63 lib tests, clippy --all-targets -D warnings clean, cargo fmt applied.\n\nWork done:\n1. src/store.rs build_recall_query: product left the shared containment map and became its own predicate arm (NOT (metadata ? 'product') OR metadata->>'product' = $X), push_bind, never string-built. work_id/tags/kinds arms untouched. Comment states the shared-pool semantics, the JSON-null stance, and the jsonb_path_ops index limitation.\n2. src/types.rs RecallFilters.product: doc comment stating Product-OR-unscoped semantics (Product rows plus the no-claim pool; different Product and explicit null excluded).\n3. tests/recall_filters_it.rs: product_scope_includes_untagged_shared_pool seeds five rows across a project namespace and a stand-in shared namespace — untagged both, product p, product q in shared, explicit JSON null — and asserts exactly the AC1 case table: p + both untagged visible, q and null excluded. Stand-in namespace avoids polluting the real global namespace on the shared dev database.",
+      "summary": "RED tr_mtg9lg9u_04a83ed0 exit 101: product_scope_includes_untagged_shared_pool returned left [\"tagged-p\"] where right expects the Product row plus untagged-project and untagged-shared — positive containment drops the shared pool, the exact defect. GREEN tr_mtg9ndrr_a5039356 exit 0: new test passes alongside the existing recall_filters_compose_and_use_metadata_gin (its combined-filter assertions hold unchanged, confirming the predicate split altered no shipped combination — the validator's single-production-caller trace confirmed empirically). 63 of 63 lib tests, clippy --all-targets -D warnings clean, cargo fmt applied.\n\nWork done:\n1. src/store.rs build_recall_query: product left the shared containment map and became its own predicate arm (NOT (metadata ? 'product') OR metadata->>'product' = $X), push_bind, never string-built. work_id/tags/kinds arms untouched. Comment states the shared-pool semantics, the JSON-null stance, and the jsonb_path_ops index limitation.\n2. src/types.rs RecallFilters.product: doc comment stating Product-OR-unscoped semantics (Product rows plus the no-claim pool; different Product and explicit null excluded).\n3. tests/recall_filters_it.rs: product_scope_includes_untagged_shared_pool seeds five rows across a project namespace and a stand-in shared namespace — untagged both, product p, product q in shared, explicit JSON null — and asserts exactly the AC1 case table: p + both untagged visible, q and null excluded. Stand-in namespace avoids polluting the real global namespace on the shared dev database.",
+      "filesTouched": [
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "023757282c74f6a8865d95275085b84eb12d1aeb",
+      "completedAt": "2026-08-30T20:33:00.753Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC1"
+        ],
+        "verifies": [
+          "AC1",
+          "AC2"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-10f2d9efe76b",
+      "title": "Spec 0010 semantics section + pre-registered probe on concord#46",
+      "type": "docs",
+      "section": "Documentation",
+      "status": "done",
+      "priority": 1,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-d6774d57519e"
+        }
+      ],
+      "created_at": "2026-08-30T20:28:36.336Z",
+      "started_at": "2026-08-30T20:33:08.922Z",
+      "completed_at": "2026-08-30T20:35:04.396Z",
+      "verification": "Deliverables verified: spec 0010 section order confirmed single-copy-clean (Statement, Filter Contract, Product Scope, Query and Index Safety, Open Follow-ups, Boundaries, Verification — no duplicate sections); docs and .adv copies cmp byte-identical and both modified in one commit. Probe comment posted and URL captured: https://github.com/Sharper-Flow/concord/issues/46#issuecomment-5471105393\n\nSpec 0010 changes:\n1. Filter Contract: product removed from the exact-match bullet, work_id keeps exact-match, pointer to the new Product Scope section.\n2. New Product Scope section: the predicate, the four-row case table (tagged match, no-key match, wrong-Product excluded including shared namespace, explicit JSON null excluded with the ?/->> rationale), and the reserved-key stance contrasting promotion_state — a source-supplied product tag cannot cross the namespace arm and grants nothing untagged absence did not.\n3. Query and Index Safety: index claim updated — product predicate joins open-followup and promoted exclusions as unfiltered-by-GIN (jsonb_path_ops serves only containment operators); migration-abort, unchanged-behavior, and maintenance-window paragraphs preserved. Mid-work defect: my first edit duplicated the section; caught by section grep, merged correctly before commit.\n4. Boundaries: automatic product scoping stays out of scope (caller-supplied tags); probe pre-registered on concord#46 as operational follow-up.\n5. Verification: product-scope coverage enumerated.\n\nProbe comment pre-registers baseline (service restored 2026-08-30, store 0 rows, Product-OR-unscoped semantics), method (transcript capture per Product session), minimum corpus (40+ memories, 2+ projects of one Product, 10+ tagged), rubric (sufficient = filters express working context, CD-0086 stands; insufficient = documented transcript failures, C20 reopens), and judge-before-outcome ordering.\n\nOne validator claim corrected: .adv/specs/0010 was already tracked in the worktree (reported as M, not untracked) — both copies modified together regardless.",
+      "summary": "Deliverables verified: spec 0010 section order confirmed single-copy-clean (Statement, Filter Contract, Product Scope, Query and Index Safety, Open Follow-ups, Boundaries, Verification — no duplicate sections); docs and .adv copies cmp byte-identical and both modified in one commit. Probe comment posted and URL captured: https://github.com/Sharper-Flow/concord/issues/46#issuecomment-5471105393\n\nSpec 0010 changes:\n1. Filter Contract: product removed from the exact-match bullet, work_id keeps exact-match, pointer to the new Product Scope section.\n2. New Product Scope section: the predicate, the four-row case table (tagged match, no-key match, wrong-Product excluded including shared namespace, explicit JSON null excluded with the ?/->> rationale), and the reserved-key stance contrasting promotion_state — a source-supplied product tag cannot cross the namespace arm and grants nothing untagged absence did not.\n3. Query and Index Safety: index claim updated — product predicate joins open-followup and promoted exclusions as unfiltered-by-GIN (jsonb_path_ops serves only containment operators); migration-abort, unchanged-behavior, and maintenance-window paragraphs preserved. Mid-work defect: my first edit duplicated the section; caught by section grep, merged correctly before commit.\n4. Boundaries: automatic product scoping stays out of scope (caller-supplied tags); probe pre-registered on concord#46 as operational follow-up.\n5. Verification: product-scope coverage enumerated.\n\nProbe comment pre-registers baseline (service restored 2026-08-30, store 0 rows, Product-OR-unscoped semantics), method (transcript capture per Product session), minimum corpus (40+ memories, 2+ projects of one Product, 10+ tagged), rubric (sufficient = filters express working context, CD-0086 stands; insufficient = documented transcript failures, C20 reopens), and judge-before-outcome ordering.\n\nOne validator claim corrected: .adv/specs/0010 was already tracked in the worktree (reported as M, not untracked) — both copies modified together regardless.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "docs/specs/0010-recall-metadata-filters.md"
+      ],
+      "checkpointSha": "963bed3461f0f8df888e8b31e615e251ef6ee9bb",
+      "completedAt": "2026-08-30T20:35:04.396Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC4"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "rationale": "Docs-and-protocol task: the deliverable is a spec section and a pre-registered probe comment on concord#46, both reviewable artifacts; behavioral proof is already carried by the predicate task's tests.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable"
+      }
+    },
+    {
+      "id": "tk-d11c8a50720d",
+      "title": "Full verification gate + AC2 static check",
+      "type": "verification",
+      "section": "Verification",
+      "status": "done",
+      "priority": 2,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-10f2d9efe76b"
+        }
+      ],
+      "created_at": "2026-08-30T20:28:46.794Z",
+      "started_at": "2026-08-30T20:35:08.520Z",
+      "completed_at": "2026-08-30T21:29:29.122Z",
+      "verification": "Harden pass verdict READY, zero code changes to the predicate, schema, or indexes. Independently re-verified (tr_mtgabo5jg_ef9482b4 exit 0): 63 of 63 lib, 21 DB-backed, clippy -D warnings zero, fmt clean, spec copies byte-identical, zero it_% residue rows.\n\nReviewer findings, all resolved:\n1. Query-plan reality measured with EXPLAIN at synthetic scale: namespace filtering preserves the composite-PK plan; the product predicate adds about 0.105 ms per 1,000 candidates; worst-case low-selectivity all-corpus recall took 37.9 ms at 50,000 rows. Within the interactive envelope; Option B remains the named escape hatch if ever needed.\n2. Structural test-cleanup fix accepted: product_scope_includes_untagged_shared_pool restructured so seed+recall run inside a Result and cleanup executes unconditionally BEFORE assertions panic. Kills the leak-on-assertion-failure class permanently for this test — the same class that leaked rows twice this session.\n3. Probe capture solved: opencode export <sessionID> --sanitize surfaces tool calls including recall parameters and results. The pre-registered method on concord#46 is executable as written. Addendum comment pinned: issuecomment-5471369765.\n4. Corpus status verified by direct read, not assumption: the 7 rows now in the store are REAL ingested wisdom (advance 2, pokeedge 4, pokeedge-web 1; live reconcile content), not residue — the restored service has begun accruing the probe corpus. Left untouched deliberately; zero it_% rows confirm the cleanup fix.",
+      "summary": "Harden pass verdict READY, zero code changes to the predicate, schema, or indexes. Independently re-verified (tr_mtgabo5jg_ef9482b4 exit 0): 63 of 63 lib, 21 DB-backed, clippy -D warnings zero, fmt clean, spec copies byte-identical, zero it_% residue rows.\n\nReviewer findings, all resolved:\n1. Query-plan reality measured with EXPLAIN at synthetic scale: namespace filtering preserves the composite-PK plan; the product predicate adds about 0.105 ms per 1,000 candidates; worst-case low-selectivity all-corpus recall took 37.9 ms at 50,000 rows. Within the interactive envelope; Option B remains the named escape hatch if ever needed.\n2. Structural test-cleanup fix accepted: product_scope_includes_untagged_shared_pool restructured so seed+recall run inside a Result and cleanup executes unconditionally BEFORE assertions panic. Kills the leak-on-assertion-failure class permanently for this test — the same class that leaked rows twice this session.\n3. Probe capture solved: opencode export <sessionID> --sanitize surfaces tool calls including recall parameters and results. The pre-registered method on concord#46 is executable as written. Addendum comment pinned: issuecomment-5471369765.\n4. Corpus status verified by direct read, not assumption: the 7 rows now in the store are REAL ingested wisdom (advance 2, pokeedge 4, pokeedge-web 1; live reconcile content), not residue — the restored service has begun accruing the probe corpus. Left untouched deliberately; zero it_% rows confirm the cleanup fix.",
+      "filesTouched": [
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "e8607d09c08c69df2b906aeda865d0ab8a38a486",
+      "completedAt": "2026-08-30T21:29:29.122Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC2",
+          "AC1"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "separate_verification"
+      }
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "addProductScopingRecall",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/addProductScopingRecall",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-gate-independent-validation"
+      },
+      "agent": "adv-researcher",
+      "topic": "Independent design validation: Product-OR-unscoped recall predicate",
+      "sources": [
+        {
+          "label": "PostgreSQL 17 docs, 9.1 Logical Operators (three-valued truth tables)",
+          "locator": "https://www.postgresql.org/docs/17/functions-logical.html",
+          "summary": "TRUE OR NULL = TRUE; FALSE OR NULL = NULL; NOT NULL = NULL. Grounds both the untagged-visible and JSON-null-excluded rows."
+        },
+        {
+          "label": "PostgreSQL docs, jsonb operators table (Table 9.46, ? operator)",
+          "locator": "https://www.postgresql.org/docs/17/functions-json.html",
+          "summary": "jsonb ? text: does the text string exist as a top-level key or array element. Key existence, value not inspected — JSON null product still answers TRUE."
+        },
+        {
+          "label": "PostgreSQL source: jsonb_object_field_text (implementation of jsonb ->> text)",
+          "locator": "https://github.com/postgres/postgres/blob/master/src/backend/utils/adt/jsonfuncs.c (jsonb_object_field_text, ~L902)",
+          "summary": "Returns SQL NULL when the field value is jbvNull: 'if (v != NULL && v->type != jbvNull) PG_RETURN_TEXT_P(...) else PG_RETURN_NULL()' — ->>' on JSON null yields SQL NULL, not 'null'."
+        },
+        {
+          "label": "PostgreSQL docs, 8.14.4 JSON indexing + GIN operator-class table",
+          "locator": "https://www.postgresql.org/docs/current/datatype-json.html",
+          "summary": "jsonb_path_ops 'does not support the key-exists operators' — serves only @>, @?, @@. The shipped memories_metadata_gin (migrations/0002) therefore serves neither arm of the proposed OR."
+        },
+        {
+          "label": "Episode src/store.rs (worktree)",
+          "locator": "src/store.rs:24-97,105-125,309,488-512",
+          "summary": "build_recall_query containment build (44-60), open-followup (69-75) and promoted (82-90) negative exclusions with in-code unindexed note, PROMOTE_SQL/MARK_CANDIDATES_SQL '?' idiom (110,125), unit test asserting bound filters."
+        },
+        {
+          "label": "Episode src/ingest.rs (worktree)",
+          "locator": "src/ingest.rs:133-138",
+          "summary": "parse_wisdom metadata = raw object minus content/promoted_at/promotion_state — an ADV entry CAN carry product; promotion_state strip rationale documented at 128-132 and spec 0011:42."
+        },
+        {
+          "label": "Episode src/types.rs, src/server.rs, migrations, tests, specs",
+          "locator": "src/types.rs:93-110,239-251; src/server.rs:84-94,111,130; migrations/0001:33,0002:1; tests/recall_filters_it.rs:19-66; docs/specs/0010:9,22; docs/specs/0011:42,50; README.md:24",
+          "summary": "MemoryContext typed struct (deny_unknown_fields), RecallFilters validation, single MCP recall path, metadata NOT NULL, jsonb_path_ops GIN, all-tagged fixture gap, index-safety spec lines, generic README mention."
+        },
+        {
+          "label": "Spec mirror location (main checkout, untracked)",
+          "locator": "/home/jon/dev/episode/.adv/specs/0010-recall-metadata-filters.md",
+          "summary": "Byte-identical .adv spec mirror exists only in the main checkout; absent from the worktree because untracked."
+        }
+      ],
+      "architecture_assessment": "PREDICATE (Q1): correct, verified at source level. Case table under (NOT (metadata ? 'product') OR metadata->>'product' = $X): [1] no product key -> NOT(false)=TRUE, TRUE OR NULL=TRUE (PG17 9.1 truth table) -> visible. [2] product=X -> FALSE OR TRUE -> visible. [3] product=Y -> FALSE OR FALSE -> excluded. [4] product: JSON null -> ? returns TRUE (key existence, Table 9.46; value not inspected), ->> returns SQL NULL for jbvNull (jsonfuncs.c jsonb_object_field_text: 'if (v != NULL && v->type != jbvNull) ... else PG_RETURN_NULL()'), so FALSE OR NULL = NULL -> not TRUE -> excluded, exactly the design stance. [5] non-string product (number/object) -> ->>' yields text serialization, never equals validated non-blank $X (coincidence like $X='5' harmless) -> excluded. [6] SQL-NULL metadata impossible: column NOT NULL (0001:33). No NULL-propagation trap: the NULL in case 4 is what produces the intended exclusion. INGEST BOUNDARY (Q2): VERDICT ACCEPTABLE, no strip. parse_wisdom raw-copies minus content/promoted_at/promotion_state (ingest.rs:133-138), so an ADV entry CAN carry product and it persists. But product is caller-domain filter data, not episode-owned state: contrast promotion_state, stripped because a forged value hides rows from default recall and poisons the transition state machine (spec 0011:42 rationale; store.rs:105-125 compare-and-set). Product has no episode writer, no state machine, no default exclusion. A forged product tag cannot cross the namespace barrier (namespace = ANY($1) ANDs independently, store.rs:37-43); within already-visible namespaces it grants nothing (untagged rows are visible anyway via the unscoped arm) and can only self-conceal from other product-scoped queries. Different in kind from promotion_state. Trust boundary unchanged: wisdom.jsonl is operator-controlled local input either way. IMPLEMENTATION SHAPE (Q3): confirmed. product must leave the shared map (store.rs:44-60 folds product+work_id+tags into one @>; kinds separate; namespace separate; two negative exclusions append). Single production path: build_recall_query store.rs:309 <- server.rs:130 passes client filters verbatim; only tests combine filters (recall_filters_it.rs:59-66, store.rs:489-496). Deliberate widening under combination (product+work_id now returns untagged work_id matches) is the intended AC1 semantics, scoped to product only per D1. The '?' literal is safe in sqlx-pushed SQL and already shipped (PROMOTE_SQL store.rs:110, MARK_CANDIDATES_SQL store.rs:125). INDEX (Q4): confirmed and slightly stronger than the design states: memories_metadata_gin is jsonb_path_ops (0002:1), which supports only @>, @?, @@ and NOT the key-exists operators (PG 8.14.4; GIN opclass table) — so even positive metadata ? 'product' is unservable, independent of the negation; ->>'= $X is an expression, unservable under any GIN. The whole OR is filtered-scan, same accepted shape as open-followup (store.rs:69-75, spec 0010:22) and promoted exclusion (store.rs:82-90, spec 0011:50); cost scales with corpus, bounded by HNSW ANN + LIMIT k, escalation path is recorded Option B. Irrelevant at 0 rows. PROBE PROTOCOL (Q5): sufficient for the user-approved closure bar (a): pinned baseline, defined artifacts, decision venue, binary outcome shape. BLAST RADIUS (Q6): design scope covers store.rs, tests, spec 0010. Additional surfaces found: (a) the byte-identical .adv/specs/0010 mirror exists ONLY in the main checkout and is untracked — absent from the worktree, so the cmp check and mirror edit must target /home/jon/dev/episode/.adv/specs/0010-recall-metadata-filters.md; (b) RecallFilters.product (types.rs:240) has no doc comment, so MCP JsonSchema exposes no semantics — add Product-OR-unscoped text; (c) unit test store.rs:488-512 survives the split unchanged (work_id/tags still produce @>) but should assert the new product arm; (d) README.md:24 is generic, no change; (e) spec 0010 line 9 AND line 22 both need rewrite (design D3 covers). LIMITATION: no shell/db tool in my surface — the live Postgres probe was not executable; semantics verified from official docs plus PostgreSQL C source instead.",
+      "validation": {
+        "status": "pass",
+        "blockers": [],
+        "notes": "Anchor block: WORKING DIRECTORY /home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/addProductScopingRecall | CHANGE addProductScopingRecall | SCOPE KEY researcher:design-gate-independent-validation | ATTEMPT 1 | TASK_SCOPE: independent validation of Product-OR-unscoped design vs actual code and PG17 semantics | IN_SCOPE: predicate semantics (JSON null, NULL propagation), ingest-side product writes, predicate split and arm composition, index/performance precedent, probe protocol soundness, blast radius | OUT_OF_SCOPE: implementation, user-value decisions, Concord-side changes, Option B | DONE_WHEN: sourced findings answer each numbered question | STOP_WHEN: source access blocked, contract/security blocker, contradictory evidence | VERIFICATION: cite official docs/source for each material claim. -- All four sub-verdicts PASS: predicate semantics correct (Q1, source-level), no ingest problem (Q2, acceptable without strip), split shape sound with no hidden composer (Q3), index posture matches accepted precedent (Q4). Probe protocol adequate for the approved closure bar with advisory gaps for the later outcome (Q5). Blast radius: three advisory notes beyond the design's file list (untracked .adv mirror path, missing product doc comment in JsonSchema surface, unit-test assertion extension). Advisory items are not blockers; none change the predicate, the split, or D2/D3."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "low",
+        "tradeoffs": [
+          "Filtered scan for every product-scoped recall (whole OR outside the jsonb_path_ops GIN) — accepted precedent, bounded by HNSW ANN + LIMIT k, Option B is the recorded escalation.",
+          "Strict JSON-null stance: a row with product:null is excluded from all product-scoped recall — deliberate, documented, and no current writer produces it.",
+          "Combination semantics widen: product+work_id now returns untagged work_id matches — intended AC1 change, but a real behavior change for any caller combining filters.",
+          "Ingest may persist caller-domain product tags verbatim — accepted as non-escalating (namespace constraint bounds it); stance should be documented."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Keep positive containment (status quo)",
+            "disposition": "rejected",
+            "rationale": "Excludes every untagged row including global pool; directly contradicts AC1 and the proposal's + global contract."
+          },
+          {
+            "option": "Treat JSON null product as unscoped (e.g. coalesce to include)",
+            "disposition": "rejected",
+            "rationale": "A present-but-null field made a claim; design's strict exclusion is defensible and matches ? semantics. No caller produces it today."
+          },
+          {
+            "option": "Strip product at ingest boundary like promotion_state",
+            "disposition": "rejected",
+            "rationale": "Different in kind: product is caller-domain filter data with no episode writer or state machine; a forged tag cannot cross the namespace constraint and grants nothing."
+          },
+          {
+            "option": "Typed column + partial index (Option B)",
+            "disposition": "deferred",
+            "rationale": "Only justified with measured latency on a large corpus; correctly deferred, zero rows today."
+          },
+          {
+            "option": "jsonb_ops GIN to make ? indexable",
+            "disposition": "rejected",
+            "rationale": "Would still not serve NOT(?) nor ->>'= $X; larger index, no benefit for the OR."
+          }
+        ],
+        "recommendation": "Complete the design gate. Proceed to planning with the predicate as designed. Carry the three advisory notes (mirror path, product field doc comment, probe rubric) into the task list."
+      },
+      "recommendation": "Verdict: APPROVE WITH FINDINGS — no blocking corrections. (1) Proceed with the predicate exactly as designed; it is correct under Postgres 17 documented semantics and PostgreSQL source behavior for every case in the design table. (2) Keep D2 (no ingest-side tagging) and the no-strip verdict for product at the ingest boundary; document the reserved-key stance if desired. (3) In execution, target the untracked .adv/specs/0010 mirror in the main checkout for the byte-identical copy and cmp. (4) Add a doc comment on RecallFilters.product so MCP clients see the OR-unscoped semantics. (5) Before the later outcome recording on concord#46, pre-register the rubric, minimum corpus, and judge; not required for gate closure under the user-approved bar (a).",
+      "follow_ups": [
+        "Add doc comment on RecallFilters.product describing Product-OR-unscoped semantics (surfaces via schemars to MCP clients).",
+        "Execution note: update and cmp the untracked .adv/specs/0010 mirror in the main checkout; worktrees will not see it.",
+        "Probe outcome follow-up (concord#46): pre-register judging rubric, minimum evidence corpus/window, and named judge before recording sufficient/insufficient.",
+        "Document the ingest reserved-key stance in spec 0010: episode owns promotion_state (+ structural content/promoted_at); caller-domain keys persist verbatim."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "addProductScopingRecall",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/addProductScopingRecall",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "NEEDS_WORK",
+      "blocking_findings": [],
+      "nonblocking_findings": [
+        {
+          "id": "spec-accuracy-1",
+          "label": "suggestion",
+          "file": "design.md",
+          "line": 26,
+          "what": "The index note says no GIN operator class can serve key existence.",
+          "why": "PostgreSQL 17 documents that default jsonb_ops supports key-existence operators. Only the current jsonb_path_ops index lacks that support. The repository specification and code comment now use the narrower, correct claim."
+        }
+      ],
+      "changes_made": [
+        {
+          "file": "tests/recall_filters_it.rs",
+          "summary": "Added a composed Product, work_id, and kind assertion. It proves that an untagged matching row remains visible while wrong-Product and JSON-null rows remain excluded.",
+          "verification": "The targeted integration test and the full ignored test suite passed."
+        },
+        {
+          "file": "src/store.rs",
+          "summary": "Corrected the index comment to describe the current jsonb_path_ops index without making a false claim about every GIN operator class.",
+          "verification": "cargo test --lib, cargo clippy --all-targets -- -D warnings, and cargo fmt --check passed."
+        },
+        {
+          "file": "docs/specs/0010-recall-metadata-filters.md",
+          "summary": "Corrected the index statement: jsonb_path_ops lacks key existence support, and no indexed expression serves the extracted-text equality arm.",
+          "verification": "The specification mirror comparison and git diff check passed."
+        },
+        {
+          "file": ".adv/specs/0010-recall-metadata-filters.md",
+          "summary": "Applied the same index correction to keep both specification copies byte-identical.",
+          "verification": "cmp returned exit code 0."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "Do not generalize a jsonb_path_ops limitation to all PostgreSQL GIN operator classes. Default jsonb_ops supports key-existence operators such as ?, while jsonb_path_ops supports @>, @?, and @@."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "EPISODE_TEST_DATABASE_URL=\"postgres://episode:episode@localhost:5434/episode\" cargo test --test recall_filters_it -- --ignored",
+          "cargo test --lib",
+          "EPISODE_TEST_DATABASE_URL=\"postgres://episode:episode@localhost:5434/episode\" cargo test --tests -- --ignored",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo fmt --check",
+          "cmp \".adv/specs/0010-recall-metadata-filters.md\" \"docs/specs/0010-recall-metadata-filters.md\"",
+          "git diff --check"
+        ],
+        "results": "pass",
+        "evidence": "Targeted recall filters: 2 passed. Library: 63 passed. Ignored Postgres suites: 21 passed. Clippy had zero warnings. Format, mirror comparison, and diff checks passed. Product-only, Product plus work/kind, and no-filter paths executed successfully. The concord#46 protocol comment was posted at 2026-08-30T20:34:53Z after a zero-row baseline and before any outcome comment; it pins a 40-memory, two-project corpus threshold and transcript-based sufficient/insufficient cases."
+      },
+      "scope_drift": null,
+      "risks": [
+        "The real-usage probe outcome remains a later operational follow-up, as the approved AC4 completion bar permits.",
+        "adv_change_show returned the proposal and design but no agreement artifact. This review used the persisted proposal acceptance criteria, design, and supplied contract."
+      ],
+      "required_main_agent_actions": [
+        "Correct design.md's broad GIN claim to state that the current jsonb_path_ops index does not support key existence; default jsonb_ops does.",
+        "Record the four repository remediations on the change branch before acceptance.",
+        "Do not revisit the Product-OR-unscoped predicate, JSON-null exclusion, caller-owned Product membership, or the accepted AC4 protocol-only completion bar without new evidence."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "addProductScopingRecall",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/addProductScopingRecall",
+      "scope": {
+        "kind": "change",
+        "scope_key": "harden:release"
+      },
+      "agent": "adv-reviewer",
+      "phase": "harden",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [
+        {
+          "id": "operational-performance-1",
+          "label": "suggestion",
+          "file": "src/store.rs",
+          "line": 52,
+          "what": "Record 50,000 all-corpus candidates as the first measured Product-filter latency review point.",
+          "why": "At 1% Product-OR-unscoped selectivity, PostgreSQL chose an exact sequential scan plus top-N sort and took 37.9 ms. With two selected namespaces, the composite primary key limited 50,000 total rows to 1,000 candidates and warm recall took 8.31 ms. At 10,000 total rows and 200 selected candidates, it took 2.0 ms. This does not justify Option B now, but it supplies a measured trigger."
+        },
+        {
+          "id": "operational-probe-1",
+          "label": "suggestion",
+          "file": "src/server.rs",
+          "line": 113,
+          "what": "Name caller-side session export as the probe transcript capture method.",
+          "why": "Episode emits no recall request or result logs, and Vision logs only proxy lifecycle events for successful calls. The protocol remains executable without code because OpenCode provides `opencode export <sessionID> --sanitize`; the operator can retain the recall tool arguments, results, and context judgment. The issue comment should name this step and require review before publication."
+        },
+        {
+          "id": "operational-query-plan-1",
+          "label": "praise",
+          "file": "src/store.rs",
+          "line": 37,
+          "what": "Namespace-scoped Product recall keeps the composite primary-key prefilter and does not force a sequential scan.",
+          "why": "EXPLAIN at 1,000, 10,000, and 50,000 rows used a bitmap scan on `memories_pkey`, then exact distance sort over only the two selected namespaces. The Product OR arm stayed a post-prefilter row check."
+        },
+        {
+          "id": "operational-common-path-1",
+          "label": "praise",
+          "file": "src/store.rs",
+          "line": 44,
+          "what": "The common no-Product path has no new predicate or measured latency change.",
+          "why": "The Product predicate is built only inside `if let Some(product)`. A 50,000-row, 1,000-candidate warm benchmark measured 8.49 ms without Product and 8.31 ms with Product; the isolated Product check added about 0.105 ms per 1,000 candidates, while vector ranking dominated."
+        }
+      ],
+      "changes_made": [
+        {
+          "file": "tests/recall_filters_it.rs",
+          "summary": "Moved assertions after unconditional namespace cleanup so returned seed or recall errors cannot leave Product test rows in the default dev database. Removed five leaked rows from a prior failed run.",
+          "verification": "`cargo fmt --check` passed; the ignored Product test passed against a fresh scratch database; the scratch row count was 0 after the test; `cargo clippy --all-targets -- -D warnings` passed."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "Filtered pgvector recall can choose different ranking plans by candidate selectivity. Namespace-scoped recall used the composite primary key plus exact sort, while an all-corpus Product filter used HNSW at high selectivity and switched to an exact sequential scan at 1% selectivity."
+        },
+        {
+          "type": "convention",
+          "content": "Database integration tests that default to a shared dev database must perform cleanup before assertions and after any returned test-body error. End-of-test cleanup alone leaks probe-contaminating rows when an assertion or recall fails."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "EXPLAIN (ANALYZE, BUFFERS) on synthetic 1,000, 10,000, and 50,000-row scratch corpora",
+          "100-run warm SQL benchmark at 50,000 rows",
+          "cargo fmt --check",
+          "EPISODE_TEST_DATABASE_URL=postgres://episode:episode@localhost:5434/episode_harden_product cargo test --test recall_filters_it product_scope_includes_untagged_shared_pool -- --ignored",
+          "cargo clippy --all-targets -- -D warnings"
+        ],
+        "results": "pass",
+        "evidence": "Operational-robustness scope. At 50,000 total rows and 1,000 selected namespace rows, base/Product warm recall averaged 8.49/8.31 ms. Namespace count/Product count averaged 0.415/0.521 ms, so the OR arm added about 0.105 ms and did not dominate 1024-d distance ranking. All-corpus high-selectivity Product recall kept HNSW at about 0.14 ms warm. At 1% selectivity it switched to exact sequential scan plus sort at 37.9 ms and returned all 8 requested hits. Scratch database was dropped. Dev database now has 7 real rows across 3 namespaces and 0 Product-tagged rows, below the probe's 40-row and 10-tag minimum."
+      },
+      "scope_drift": null,
+      "risks": [
+        "No service-side audit trail exists for successful recall calls; probe evidence depends on deliberate caller-side export and redaction.",
+        "All-corpus low-selectivity Product recall becomes exact scan plus sort; 50,000 rows measured 37.9 ms and larger corpora need renewed measurement.",
+        "The spawn packet omitted the authoritative BRIEFING PACKET slice; this review used the explicit scope and contract text instead."
+      ],
+      "required_main_agent_actions": [
+        "Keep the cleanup change in `tests/recall_filters_it.rs`; it prevents failed Product tests from contaminating the real probe corpus.",
+        "Add `opencode export <sessionID> --sanitize` and a minimal extraction/redaction step to the concord#46 probe procedure before collecting evidence.",
+        "Do not judge the probe yet: after cleanup the dev store has 7 rows across 3 namespaces and 0 Product-tagged rows, below the preregistered minimum.",
+        "Treat 50,000 all-corpus rows with low Product selectivity, or a measured unacceptable p95, as the evidence point to reconsider deferred Option B.",
+        "Restore the BRIEFING PACKET slice in future reviewer spawn packets."
+      ]
+    }
+  ],
+  "test_runs": {
+    "tk-d6774d57519e": [
+      {
+        "runId": "tr_mtg9lg9u_04a83ed0",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --test recall_filters_it -- --ignored product_scope 2>&1 | grep -E 'left:|right:|assertion|test result' | head -5",
+        "durationMs": 81088.65331799537,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T20:31:14.095Z"
+      },
+      {
+        "runId": "tr_mtg9ndrr_a5039356",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --test recall_filters_it -- --ignored 2>&1 | grep -E '^test [a-z]|^test result' && echo \"=== lib + clippy ===\" && cargo test --lib 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1",
+        "durationMs": 64549.629433996975,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T20:32:44.175Z"
+      }
+    ],
+    "tk-d11c8a50720d": [
+      {
+        "runId": "tr_mtg9rmio_b7f6d5f8",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== clippy/fmt/spec ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && echo \"spec copies byte-identical\" && echo \"=== AC2 static check: no concord/model-import surface in diff ===\" && git diff --stat main...HEAD && git diff main...HEAD | grep -ciE 'concord|product_map|ProductMapping|EPISODE_PRODUCT' || echo \"0 — no Concord import, no Product-membership derivation, no new config surface\"",
+        "durationMs": 51522.73803999275,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T20:36:02.128Z"
+      },
+      {
+        "runId": "tr_mtga1h6f_6d1983ae",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --lib 2>&1 | grep -E '^test result' && cargo test --tests -- --ignored 2>&1 | grep -oP '^test result: ok\\. \\K[0-9]+' | paste -sd+ | bc && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && echo \"spec copies byte-identical\"",
+        "durationMs": 10048.372894003987,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T20:43:41.757Z"
+      },
+      {
+        "runId": "tr_mtgbo5jg_ef9482b4",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --lib 2>&1 | grep -E '^test result' && cargo test --tests -- --ignored 2>&1 | grep -oP '^test result: ok\\. \\K[0-9]+' | paste -sd+ | bc && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && echo \"spec copies byte-identical\" && docker exec episode-db psql -U episode -d episode -t -c \"SELECT count(*) FROM memories WHERE namespace LIKE 'it\\_%';\"",
+        "durationMs": 8384.590596988797,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T21:29:19.382Z"
+      }
+    ]
+  },
+  "deltas": {},
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-08-30T20:18:56.769Z",
+      "completed_by": "user",
+      "approval_evidence": "User confirmed with \"continue\" against the anchor \"reply `continue` with your AC4 choice (a or b)\". The bare approval adopts the recommended option (a): AC4 completes when the probe protocol and baseline are recorded against concord#46; the real-usage outcome lands later as its own follow-up. The user's pattern this session has been bare approvals meaning \"take the recommended path.\"\n\nProposal refreshed 2026-08-30 before confirmation: filter-semantics finding (positive containment excludes untagged/global rows, contradicting AC1's \"+ global\"), service-restoration blockage resolved, #596 reference corrected to #598/CD-0086, Option B migration renumbered to 0004-if-ever, caller-supplied product tags pinned (no episode-side Product-membership derivation)."
+    },
+    "discovery": {
+      "status": "done",
+      "completed_at": "2026-08-30T20:19:26.842Z",
+      "completed_by": "agent",
+      "approval_evidence": "Evidence pass complete, all inline (no external dimension for a predicate fix):\n\n1. Current predicate: src/store.rs:46-48,55-60 builds metadata @> {\"product\": X} — positive containment, excludes all untagged rows. Confirmed by reading build_recall_query, not assumed.\n2. Existing coverage gap: tests/recall_filters_it.rs seeds every fixture row with a product (p or q, lines 23-38). No untagged row exists in any test, which is why Product-only semantics never failed a test.\n3. Predicate form chosen: NOT (metadata ? 'product') OR metadata->>'product' = $X. The ? key-existence idiom is already the codebase convention (PROMOTE_SQL episodic branch, MARK_CANDIDATES_SQL idempotency guard), so the form is consistent rather than novel.\n4. Edges assessed: explicit JSON null product (key exists, value does not match X -> excluded; strict treatment, defensible: a row that says product:null made a claim, it is not unscoped); blank stored product via ingest raw-copy (filter value is validated non-blank at types.rs:266-268, stored garbage simply never matches, no defense needed); GIN index serves neither the negative arm nor the OR (accepted precedent: open-followup and promoted exclusions are equally unindexed, recorded in spec 0010:22 and spec 0011).\n5. Compose check on the three cases: untagged in a passed namespace stays visible; untagged in global stays visible (the + global); wrong-product-tagged in global is excluded (key present, wrong value). AC1 semantics hold.\n6. Probe protocol shape: baseline today is store at 0 rows with service restored; protocol = run Product-scoped sessions, capture recall transcripts, judge whether namespace+product expressed the working context; record outcome against concord#46."
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-08-30T20:28:15.356Z",
+      "completed_by": "agent",
+      "approval_evidence": "Independent validator (adv-researcher, attempt 1) returned APPROVE WITH FINDINGS: pass, high confidence, low risk, no blockers.\n\nVerified at source level: ? tests key existence not value; ->> returns SQL NULL for JSON-null values (jsonfuncs.c jsonb_object_field_text null check); the OR has no NULL-propagation trap (untagged short-circuits TRUE). Ruled the ingest-carried product key acceptable data rather than a reserved-key violation: a product tag cannot cross the namespace arm and grants nothing untagged absence did not. Traced a single production filter caller. Confirmed jsonb_path_ops serves only @>/@?/@@ so neither OR arm is GIN-servable — same accepted shape as the shipped exclusions.\n\nFour advisory findings folded into design.md: .adv/specs/0010 mirror brought under version control; RecallFilters.product doc comment; pre-registered probe rubric with minimum corpus and judge-before-outcome ordering on concord#46; explicit not-a-reserved-key stance in spec 0010 contrasting promotion_state.\n\nNo CONFLICT, no user-value tradeoff, no contract compromise — no design-approval pause required."
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-08-30T20:29:21.001Z",
+      "completed_by": "user",
+      "approval_evidence": "User approved the prep contract with \"approve\" at the planning checkpoint.\n\nTask graph: 3 tasks — tk-d6774d57519e (RED tests + predicate swap + doc comment, implements AC1), tk-10f2d9efe76b (spec 0010 semantics, .adv mirror under version control, pre-registered probe comment on concord#46, implements AC4), tk-d11c8a50720d (full gate + AC2 static check). AC3 (Option B) deferred by design. Design validated independently: APPROVE WITH FINDINGS, advisories folded. Worktree change/addProductScopingRecall at 452ffb1."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-08-30T20:36:32.558Z",
+      "completed_by": "agent",
+      "approval_evidence": "All 3 tasks done with checkpoints: tk-d6774d57519e (0237572, RED tr_mtg9lg9u containment failure -> predicate swap -> GREEN tr_mtg9ndrr), tk-10f2d9efe76b (963bed3, spec 0010 both copies byte-identical + pre-registered probe comment https://github.com/Sharper-Flow/concord/issues/46#issuecomment-5471105393), tk-d11c8a50720d (clean checkpoint, full gate + AC2 static check).\n\nFull gate: 63 lib + 21 DB-backed tests, clippy -D warnings zero, fmt clean, spec copies identical. TDD sequence enforced and satisfied. Mid-work defects caught and fixed honestly: my first spec edit duplicated the Query and Index Safety section (caught by section grep, merged before commit); one native edit failed on hyphenation (open-follow-up vs open-followup) and was redone exact after re-read."
+    },
+    "acceptance": {
+      "status": "done",
+      "completed_at": "2026-08-30T21:16:31.861Z",
+      "completed_by": "user",
+      "approval_evidence": "User accepted at the acceptance checkpoint, replying \"continue\" against the anchor phrase \"Reply `continue` to accept and proceed to harden, or reply with what to adjust.\"\n\nReview verdict APPROVED after NEEDS_WORK was resolved: two findings fixed by the reviewer in-scope (composed product+work_id+kinds coverage; over-broad jsonb_path_ops wording in spec copies and code comment) and one assigned item completed by the orchestrator (same wording corrected in design.md). Final verification tr_mtga1h6f exit 0: 63 lib + 21 DB-backed tests, clippy -D warnings zero, fmt clean, spec copies byte-identical. Executive summary persisted. Review fixes committed at 096cab9 after independent re-verification.\n\nAC1 proven case-by-case and composed. AC2 static-checked: no Concord import, no Product-membership derivation, no new config surface. AC4 closed at the user-approved completion bar: probe protocol, corpus threshold, and rubric pre-registered on concord#46 (issuecomment-5471105393) before any evidence exists. AC3 (Option B) deferred by design."
+    },
+    "release": {
+      "status": "pending"
+    }
+  },
+  "documents": {
+    "proposal": "# Add product scoping to recall\n\n## Problem\n\nCurrent namespace model is flat per-project (`pokeedge`, `advance`, `global`). Concord's model is **Product to Project to work**. An agent working within a Product context needs recall scoped to \"all projects under this Product + global\" without the caller manually unioning namespaces.\n\nThis is the probe surface for Concord's C20 reopen trigger: it measures whether external product-scoping is sufficient for real multi-project Product work.\n\n## Finding (2026-08-30): the shipped filter does not implement the required semantics\n\n`RecallFilters.product` exists and reaches SQL as a positive containment `metadata @> {\"product\": X}` (`src/store.rs:46-48,55-60`). Positive containment excludes every row without a `product` key — including global and untagged ingested rows. AC1 requires \"that Product's memories **+ global**\". The required predicate is **Product-OR-unscoped**: `(product = X) OR (product absent)`.\n\nComposition check: the namespace constraint stays independent. An advance-tagged global row still fails a pokeedge-scoped query (product present, wrong value); an untagged row in a passed namespace stays visible (ingested wisdom of in-scope projects); an untagged global row stays visible (the \"+ global\"). Semantics hold under all three cases.\n\nIndex note: one arm of the OR is negative (key absence), which the GIN index does not serve — same accepted shape as the open-followup and promoted exclusions (spec 0010 line 22, spec 0011 \"Query and Index Safety\").\n\n## Proposed change\n\n### Option A (chosen): fix the filter semantics; no schema change\n\n1. Product filter becomes Product-OR-unscoped in `build_recall_query`.\n2. Product tags arrive caller-side only: `MemoryContext.product` on `remember` (shipped, Tier 1a). Episode never owns the Product-to-namespace mapping — the caller (Concord orchestration in a Product context) supplies it, per the caller contract below.\n3. Untagged rows are global by nature: predecessor wisdom ingested from ADV carries no product and composes correctly with the namespace constraint. No ingest-side derivation, no operator config mapping — deriving membership would put Concord's Product model inside episode, which AC2 forbids.\n4. Probe protocol and baseline recorded against concord#46 (AC4).\n\n### Option B (deferred): promote product to a typed column + partial index\n\nMigration would be `0004` (0003 is taken by the composite PK). Promote only if product-scoped recall becomes a hot path with measured latency pain. Not justified now: zero rows in the store.\n\n## Caller contract\n\nEpisode never owns the Product-to-namespace mapping. The caller resolves \"this Product's projects\" and passes `namespaces` (the Product's projects + `global`) plus `filters: { product: \"...\" }`. Episode stays Concord-agnostic.\n\n## Probe design\n\nThe probe runs against real multi-project Product work after this change ships and the corpus grows. The evidence AC4 requires: concrete recall transcripts from Product-scoped sessions, what was returned vs. what was needed, and whether namespace+product filtering expressed the working context or fought it. Outcome recorded against concord#46 as sufficient/insufficient with the transcripts as evidence — not a vibe.\n\n**Completion bar (open question for the user):** AC4 can mean (a) this change delivers the probe protocol + baseline state and closes, with the outcome recorded later as a follow-up when real evidence exists; or (b) this change stays open until the real-usage outcome lands. Option (a) keeps the change shippable; option (b) holds the Epic's order-4 slot hostage to a usage window nobody controls.\n\n## Scope\n\n- `src/store.rs` — product predicate semantics in `build_recall_query`.\n- `tests/recall_filters_it.rs` — product-OR-unscoped coverage: product-tagged match, untagged-visible, wrong-product-excluded, global-namespace composition.\n- Spec update: `docs/specs/0010-recall-metadata-filters.md` product-filter semantics (+ mirrored `.adv` copy, byte-identical).\n- Probe protocol note recorded against concord#46.\n\n## Out of scope\n\n- Concord owning the Product entity.\n- Episode importing Concord's data model or deriving Product membership from namespaces.\n- Ingest-side product tagging (no source carries it).\n- Option B typed column.\n\n## Dependencies\n\n- `addRecallMetadataFilters` — **shipped** (filter mechanism, spec 0010, `tests/recall_filters_it.rs`).\n- Episode service restored — **resolved 2026-08-30**: binary rebuilt from `main` at `452ffb1`, migrations 0001-0003 applied, Vision entry re-enabled, MCP surface verified (`remember`, `recall`, `forget`, `promote`, `stats`), store at 0 rows.\n\n## Language and storage assumption\n\nRust + Postgres + pgvector, per `decideStorageLanguageDirection`. This probe is the C20 reopen trigger: an insufficient outcome reopens C20 (episode ownership); only a reopened C20 resolving toward ownership brings the storage/language question back into scope. Nothing here fires it directly.\n\n## Probe outcome flow\n\n- Concord-side status: **C20 resolved 2026-08-30** as accepted decision **CD-0086** (concord PR #598; the earlier #596 was closed superseded by it): episode stays external, optional, and Product-scoped when configured. Automatic Product derivation and its real multi-project probe are recorded as episode-side follow-up work and the ownership reopen trigger.\n- Outcome sufficient → CD-0086 stands; owning remains unjustified.\n- Outcome insufficient → C20 reopens toward ownership; only then does storage/language return to scope.\n\n## Acceptance criteria\n\n- AC1: Recall scoped to a Product returns that Product's memories **and** global/untagged memories; wrong-product rows are excluded.\n- AC2: Episode does not import or require Concord's data model (no Product-membership derivation).\n- AC3 (Option B only — deferred): product column, backfill, partial index.\n- AC4: The probe protocol and baseline are recorded against concord#46 so the eventual outcome is evidence-driven. *(Completion bar: see open question above.)*\n\n## Epic context\n\nMember of Epic `shapeEpisodeStructuredMemory` (advisory order 4 of 6). C20 reopen trigger. Named consumer: concord#46.",
+    "design": "# Design — Product-OR-unscoped recall filter\n\n## Root gap\n\n`build_recall_query` compiles `RecallFilters.product` into positive containment `metadata @> {\"product\": X}` (`src/store.rs:46-48,55-60`). Positive containment requires the key; every untagged row — global wisdom, ingested predecessor knowledge — is excluded. AC1 requires the opposite: a Product scope returns the Product's memories **and** the shared pool.\n\nNo test caught this because every fixture row in `tests/recall_filters_it.rs` carries a product tag. The untagged path has zero coverage.\n\n## Decision D1 — the predicate\n\nReplace the product arm of the containment build with:\n\n```sql\n(NOT (metadata ? 'product') OR metadata->>'product' = $X)\n```\n\nThe `?` key-existence idiom is the established convention in this codebase (`PROMOTE_SQL` episodic branch requires key absence; `MARK_CANDIDATES_SQL` guard uses `NOT (metadata ? $3)`). Implementation shape: `product` leaves the shared containment map and becomes its own pushed predicate arm, bound with `push_bind`, never string-built. `work_id`, `tags`, `kinds` keep their existing require-key semantics — only `product` carries shared-pool semantics, because only Product scope is defined as \"mine plus shared.\"\n\n**Semantics, case by case (validator-verified against Postgres 17 docs and jsonfuncs.c):**\n- Untagged row, namespace passed → visible.\n- Untagged row in `global` → visible. This is the \"+ global\".\n- Row tagged `product = X` → visible.\n- Row tagged `product = Y ≠ X`, including in `global` → excluded.\n- Row with explicit JSON `null` product → excluded. `?` treats JSON null as present; `->>` returns SQL NULL for a JSON-null value (`jsonb_object_field_text` checks `v->type != jbvNull`, jsonfuncs.c ~L902); `FALSE OR (NULL = X)` → NULL → row excluded. No NULL-propagation trap: untagged evaluates `TRUE OR …` → TRUE.\n\n**Index note (acceptance-review corrected):** the product predicate is not servable by `memories_metadata_gin` — `jsonb_path_ops` does not support bare key-existence, and the `metadata->>'product' = $X` arm is an extracted-text equality over a non-indexed expression. The negative open-followup and promoted exclusions filter without index assistance for the same class of reason; the three share the accepted scan shape. (The design validator's earlier phrasing \"serves only containment operators\" was broader than the truth — it also serves path operators `@?`/`@@` — and is corrected here and in spec 0010.)\n\n**Combinatorics (validator-traced, review-verified by test):** one production caller (server.rs:130 → store.rs:309); the acceptance review added composed coverage proving the split-out product arm ANDs correctly with the work_id containment and kinds arms.\n\n## Decision D2 — no ingest-side product tagging; product is not a reserved key\n\nEpisode never derives Product membership. Tags arrive caller-side via `MemoryContext.product` on `remember` (validated non-blank, `src/types.rs:266-268`). Ingested ADV wisdom stays untagged and lands in the shared pool — correct: predecessor wisdom is per-project with no Product claim, and the namespace arm already separates projects.\n\nA source-supplied `product` key in wisdom metadata is **acceptable data, not a forgery surface** (validator ruling): unlike `promotion_state` — episode-owned state whose forgery hides rows and poisons transitions — a product tag cannot cross the namespace arm and grants nothing that untagged absence did not already grant. Spec 0010 records this stance explicitly so the contrast with `promotion_state` is deliberate, not accidental.\n\n## Decision D3 — spec, doc comment, probe\n\n1. Spec `0010` gains: product-filter semantics section (Product-OR-unscoped, case table, JSON-null stance, index note) and the reserved-key stance above. Both copies committed byte-identical.\n2. `RecallFilters.product` (types.rs:240) gains a doc comment stating the Product-OR-unscoped semantics, since JsonSchema exposes no behavior documentation.\n3. Probe comment on concord#46 (GitHub), **pre-registered before any outcome can land**: baseline (service restored 2026-08-30 from main 452ffb1, store 0 rows, filter Product-OR-unscoped), method (Product-scoped agent sessions; capture recall calls, namespaces+filters, whether results fit the working context), minimum corpus threshold (40+ memories, 2+ projects of one Product, 10+ tagged) before judging, rubric (sufficient = namespace+product expressed the working context without manual namespace unions or wrong-pool leakage in the transcripts; insufficient = documented failure cases), and judge-before-outcome ordering. Per the user-approved completion bar, AC4 closes on protocol+baseline; the outcome lands later as its own follow-up against the same issue. Posted: https://github.com/Sharper-Flow/concord/issues/46#issuecomment-5471105393\n\n## Verification strategy\n\nRED: new tests seed tagged and untagged rows, query `product: \"p\"`, assert untagged rows return — fails today (containment drops them). GREEN: predicate swap. Coverage: untagged-visible, tagged-match, wrong-product-excluded, global-namespace composition (untagged global visible, wrong-product global excluded), JSON-null-excluded, and (review-added) composed product+work_id+kinds. Full gate: lib tests, all DB-backed suites, clippy `-D warnings`, fmt, spec copies `cmp`-identical.\n\n## Independent validation\n\nadv-researcher verdict: **APPROVE WITH FINDINGS** — pass, high confidence, low risk, no blockers. Predicate verified against Postgres 17 docs and C source (JSON-null handling exactly as designed); ingest `product` key ruled acceptable data; single production filter caller confirmed. Advisories folded: spec mirror both copies committed, product doc comment, pre-registered probe rubric, reserved-key stance in spec.\n\nAcceptance review (adv-reviewer, contract-correctness): **NEEDS_WORK → resolved**. Two findings fixed by the reviewer in-scope (composed-filter coverage gap; over-broad `jsonb_path_ops` wording in spec and code comment) and one assigned to the orchestrator (the same wording in this design document — corrected in D1 above). Predicate semantics, JSON-null rule, AC2 boundary, and the AC4 completion bar were confirmed unchanged.",
+    "executiveSummary": "# Product scoping for episode recall\n\n## What this delivers\n\nEpisode serves memories per project. Concord organizes work one level up: a Product contains several projects. An agent working inside a Product needs its memories plus the shared pool — everything the Product's projects learned, everything stored with no Product claim — while other Products' work stays out.\n\nThe filter that was supposed to do this did the opposite of half its job. It matched only rows explicitly tagged with the Product, so every untagged memory — which is all ingested predecessor wisdom and the entire global pool — silently vanished from a Product-scoped query. The mechanism existed since August 11; nothing tested an untagged row, so the gap survived three shipped changes.\n\nThe fix is one predicate: a Product scope now matches rows tagged with that Product **or** rows carrying no Product claim at all. A row claiming a different Product stays excluded, and an explicit `product: null` counts as a claim, not an absence. The query still narrows by namespace first, so projects stay separated and only the shared pool is truly shared.\n\nEpisode still derives nothing: Product tags arrive from the caller, never from episode guessing which projects belong to which Product. That boundary keeps episode free of Concord's data model, which is the standing decision about the relationship between the two.\n\n## The probe\n\nThis change is also the instrument for a standing question between the two systems: is external product-scoping good enough, or should Concord eventually own agent memory outright? Concord resolved that question on August 30 — episode stays external — with this probe named as the trigger that could reopen it.\n\nBecause a probe that can reopen a decision deserves better than a vibe, the protocol was pre-registered on concord#46 **before** any evidence could exist: a baseline (service restored today, empty store, corrected filter semantics), a method (capture recall transcripts from real Product-scoped sessions), a minimum corpus before anyone is allowed to judge (40+ memories across 2+ projects of one Product, 10+ tagged), and a fixed rubric. The outcome lands later, on that issue, citing transcripts.\n\n## Confidence\n\nThe failing test came first: against the old filter, the untagged rows were dropped exactly as predicted, and the assertion output shows it. An independent design validator confirmed the predicate against PostgreSQL's documented behavior and C source before implementation, and the acceptance review then caught two real gaps — no test proved the product arm composes with the other filter arms, and my index explanation overstated what the GIN index's operator class covers. Both were fixed, and the overstated wording was corrected everywhere it had been repeated, including the design document, rather than defended.\n\n## Current state\n\nThe service was restored from merged main earlier today. This change ships the corrected semantics; the running service picks them up at the next deploy. The corpus the probe needs starts accruing from real Product work after that.\n"
+  },
+  "cross_project_origin": {
+    "source_project": "concord",
+    "source_path": "/home/jon/dev/concord",
+    "linked_at": "2026-08-11T00:04:21.624Z"
+  },
+  "same_project_dependencies": [],
+  "epic_membership": {
+    "epic_id": "shapeEpisodeStructuredMemory",
+    "entry_id": "change-1786406866468-7r05p2",
+    "order": 4,
+    "title": "Add product scoping to recall",
+    "linked_at": "2026-08-11T00:07:46.468Z",
+    "epic_project_id": "098dab10ebf50e5c885fb94eef48afda85032788",
+    "source": "link_existing"
+  },
+  "projection_revision": 35,
+  "projection_commits": [
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:3e20cd1f-2fa2-4d44-b4a0-aa05eeaff822",
+      "payload_hash": "c97dd03d04fea4e84c72ada4c24c1a184bc9a19d03af89f449095fdea739a632",
+      "prior_revision": 0,
+      "new_revision": 1,
+      "committed_at": "2026-08-11T00:24:39.012Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:631b7aae-ceff-4875-8722-8532cb5f54d3",
+      "payload_hash": "3f62c95d0e691163f433fd9b687533591e2ebfcd5ff24959bb75a7cbb40721ff",
+      "prior_revision": 1,
+      "new_revision": 2,
+      "committed_at": "2026-08-30T14:49:44.740Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:b37535ff-e4fd-4e28-ae13-f7d33d190fec",
+      "payload_hash": "8415d895fbf044904106dfef20c2113c9df89f7ffb3e676870f345992f71fcc0",
+      "prior_revision": 2,
+      "new_revision": 3,
+      "committed_at": "2026-08-30T15:01:02.916Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:2d8c12dd-1ec5-46df-8c36-ed99a0ead461",
+      "payload_hash": "5a44075863629dfa7c358aa0f55b7f51d9f7235e80b067741b5854521ff15021",
+      "prior_revision": 3,
+      "new_revision": 4,
+      "committed_at": "2026-08-30T16:12:02.792Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:e9f4d1ce-85a7-4f22-a513-2f93607ab897",
+      "payload_hash": "fb09738cf92b44199efb03f1bfa0c5b6923a09f17b6dcb4659b0eeaf1b189192",
+      "prior_revision": 4,
+      "new_revision": 5,
+      "committed_at": "2026-08-30T20:09:33.243Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User confirmed with \"continue\" against the anchor \"reply `continue` with your AC4 choice (a or b)\". The bare approval adopts the recommended option (a): AC4 completes when the probe protocol and baseline are recorded against concord#46; the real-usage outcome lands later as its own follow-up. The user's pattern this session has been bare approvals meaning \"take the recommended path.\"\n\nProposal refreshed 2026-08-30 before confirmation: filter-semantics finding (positive containment excludes untagged/global rows, contradicting AC1's \"+ global\"), service-restoration blockage resolved, #596 reference corrected to #598/CD-0086, Option B migration renumbered to 0004-if-ever, caller-supplied product tags pinned (no episode-side Product-membership derivation).",
+      "operation_id": "mutation:gate_completion:addProductScopingRecall:751098bf-7475-4d50-af26-952f763323df",
+      "payload_hash": "5bd601410a3501732d75cec46d4bd6203bb15545fc6c29b617c282ae5a4e3ed4",
+      "prior_revision": 5,
+      "new_revision": 6,
+      "committed_at": "2026-08-30T20:18:56.872Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Evidence pass complete, all inline (no external dimension for a predicate fix):\n\n1. Current predicate: src/store.rs:46-48,55-60 builds metadata @> {\"product\": X} — positive containment, excludes all untagged rows. Confirmed by reading build_recall_query, not assumed.\n2. Existing coverage gap: tests/recall_filters_it.rs seeds every fixture row with a product (p or q, lines 23-38). No untagged row exists in any test, which is why Product-only semantics never failed a test.\n3. Predicate form chosen: NOT (metadata ? 'product') OR metadata->>'product' = $X. The ? key-existence idiom is already the codebase convention (PROMOTE_SQL episodic branch, MARK_CANDIDATES_SQL idempotency guard), so the form is consistent rather than novel.\n4. Edges assessed: explicit JSON null product (key exists, value does not match X -> excluded; strict treatment, defensible: a row that says product:null made a claim, it is not unscoped); blank stored product via ingest raw-copy (filter value is validated non-blank at types.rs:266-268, stored garbage simply never matches, no defense needed); GIN index serves neither the negative arm nor the OR (accepted precedent: open-followup and promoted exclusions are equally unindexed, recorded in spec 0010:22 and spec 0011).\n5. Compose check on the three cases: untagged in a passed namespace stays visible; untagged in global stays visible (the + global); wrong-product-tagged in global is excluded (key present, wrong value). AC1 semantics hold.\n6. Probe protocol shape: baseline today is store at 0 rows with service restored; protocol = run Product-scoped sessions, capture recall transcripts, judge whether namespace+product expressed the working context; record outcome against concord#46.",
+      "operation_id": "mutation:gate_completion:addProductScopingRecall:0826240b-65a6-43cb-9d7d-82734af27ea0",
+      "payload_hash": "30a9140b4e0a22b7831165649055ef51a354204e7abfecec05517bbeabe412e0",
+      "prior_revision": 6,
+      "new_revision": 7,
+      "committed_at": "2026-08-30T20:19:26.846Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:e8f1ef49-11c2-4aa6-9673-741ff3637b8c",
+      "payload_hash": "f6c057c91b6b31255661d3410461f78d8e655266df8a0d2a342ba63880d9adbf",
+      "prior_revision": 7,
+      "new_revision": 8,
+      "committed_at": "2026-08-30T20:19:48.718Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "addProductScopingRecall|change:researcher:design-gate-independent-validation|adv-researcher|1",
+      "operation_id": "mutation:subagent_report_submitted:addProductScopingRecall:ca007a48-27c2-4839-81b8-887aeef8f911",
+      "payload_hash": "0c5e8d03de427f14a35305de4ae064f397b0fb27cac7f5f6a98eb862c787fdd6",
+      "prior_revision": 8,
+      "new_revision": 9,
+      "committed_at": "2026-08-30T20:27:28.118Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:356d10dd-a481-413e-a3ff-ab2963e57a19",
+      "payload_hash": "6a626ef6a0296f23025d5b746129da4444e95ad0dbff1ebe06eb332645447e22",
+      "prior_revision": 9,
+      "new_revision": 10,
+      "committed_at": "2026-08-30T20:28:08.555Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Independent validator (adv-researcher, attempt 1) returned APPROVE WITH FINDINGS: pass, high confidence, low risk, no blockers.\n\nVerified at source level: ? tests key existence not value; ->> returns SQL NULL for JSON-null values (jsonfuncs.c jsonb_object_field_text null check); the OR has no NULL-propagation trap (untagged short-circuits TRUE). Ruled the ingest-carried product key acceptable data rather than a reserved-key violation: a product tag cannot cross the namespace arm and grants nothing untagged absence did not. Traced a single production filter caller. Confirmed jsonb_path_ops serves only @>/@?/@@ so neither OR arm is GIN-servable — same accepted shape as the shipped exclusions.\n\nFour advisory findings folded into design.md: .adv/specs/0010 mirror brought under version control; RecallFilters.product doc comment; pre-registered probe rubric with minimum corpus and judge-before-outcome ordering on concord#46; explicit not-a-reserved-key stance in spec 0010 contrasting promotion_state.\n\nNo CONFLICT, no user-value tradeoff, no contract compromise — no design-approval pause required.",
+      "operation_id": "mutation:gate_completion:addProductScopingRecall:f7d4ec60-6044-4da8-8a95-c2550adfa543",
+      "payload_hash": "6c95f9a9885583b6fff47b6a00d26786840ac96868ff6fc8182e0e3f2effb041",
+      "prior_revision": 10,
+      "new_revision": 11,
+      "committed_at": "2026-08-30T20:28:15.358Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-d6774d57519e",
+      "operation_id": "mutation:task_add:addProductScopingRecall:c482b512-8072-46c5-be54-a0ddd5713d12",
+      "payload_hash": "9e1318f774c2863ba985cee388369b493442ce8c7a0b3d0bfde453c70befb387",
+      "prior_revision": 11,
+      "new_revision": 12,
+      "committed_at": "2026-08-30T20:28:27.223Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-10f2d9efe76b",
+      "operation_id": "mutation:task_add:addProductScopingRecall:4b7ffbd8-24f7-433e-805a-cdc0dcda6639",
+      "payload_hash": "1ed388c50771b1dac43527d7a286ffecfcd4c13dfcb3badcd8aec5104f35317a",
+      "prior_revision": 12,
+      "new_revision": 13,
+      "committed_at": "2026-08-30T20:28:36.339Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-d11c8a50720d",
+      "operation_id": "mutation:task_add:addProductScopingRecall:4fe74078-cbc6-41b3-b2ef-82fe0afbfcc3",
+      "payload_hash": "6bf7480bb8b41d6a294f1c1d64ecddb411ff2bb2f56747b91d7f0215006daff1",
+      "prior_revision": 13,
+      "new_revision": 14,
+      "committed_at": "2026-08-30T20:28:46.826Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User approved the prep contract with \"approve\" at the planning checkpoint.\n\nTask graph: 3 tasks — tk-d6774d57519e (RED tests + predicate swap + doc comment, implements AC1), tk-10f2d9efe76b (spec 0010 semantics, .adv mirror under version control, pre-registered probe comment on concord#46, implements AC4), tk-d11c8a50720d (full gate + AC2 static check). AC3 (Option B) deferred by design. Design validated independently: APPROVE WITH FINDINGS, advisories folded. Worktree change/addProductScopingRecall at 452ffb1.",
+      "operation_id": "mutation:gate_completion:addProductScopingRecall:a4386a39-04e2-4eef-b3f0-b16995f2fe29",
+      "payload_hash": "42d1761d80f14678ea03d006959b2e634ce59d79676613f346bf7490fafce138",
+      "prior_revision": 14,
+      "new_revision": 15,
+      "committed_at": "2026-08-30T20:29:21.005Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addProductScopingRecall:5112c052-2500-4221-9cc8-95a9e1560484",
+      "payload_hash": "70ea00776ba3f8879a2a3cb3261866e34f19fe94e5505a5b8ae0815c98aa53fe",
+      "prior_revision": 15,
+      "new_revision": 16,
+      "committed_at": "2026-08-30T20:29:28.261Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test recall_filters_it -- --ignored product_scope 2>&1 | grep -E 'left:|right:|assertion|test result' | head -5",
+      "operation_id": "mutation:test_run_recorded:addProductScopingRecall:d11966a5-c3a1-4fc0-882a-12b18b3416ee",
+      "payload_hash": "48254d06fe84dbfcce4c65ee7881312ca7a27b6b7f35088022453e5e6c163dc7",
+      "prior_revision": 16,
+      "new_revision": 17,
+      "committed_at": "2026-08-30T20:31:14.327Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --test recall_filters_it -- --ignored 2>&1 | grep -E '^test [a-z]|^test result' && echo \"=== lib + clippy ===\" && cargo test --lib 2>&1 | grep -E '^test result' && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1",
+      "operation_id": "mutation:test_run_recorded:addProductScopingRecall:432d6fa7-6067-47fa-b8a3-fef57bfcdd7c",
+      "payload_hash": "f08c9268706960a660c4e3f232e089cc21bedb2059a1631ffcdbe75f17f74499",
+      "prior_revision": 17,
+      "new_revision": 18,
+      "committed_at": "2026-08-30T20:32:44.192Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "023757282c74f6a8865d95275085b84eb12d1aeb:RED tr_mtg9lg9u_04a83ed0 exit 101: product_scope_includes_untagged_shared_pool returned left [\"tagged-p\"] where right expects the Product row plus untagged-project and untagged-shared — positive containment drops the shared pool, the exact defect. GREEN tr_mtg9ndrr_a5039356 exit 0: new test passes alongside the existing recall_filters_compose_and_use_metadata_gin (its combined-filter assertions hold unchanged, confirming the predicate split altered no shipped combination — the validator's single-production-caller trace confirmed empirically). 63 of 63 lib tests, clippy --all-targets -D warnings clean, cargo fmt applied.\n\nWork done:\n1. src/store.rs build_recall_query: product left the shared containment map and became its own predicate arm (NOT (metadata ? 'product') OR metadata->>'product' = $X), push_bind, never string-built. work_id/tags/kinds arms untouched. Comment states the shared-pool semantics, the JSON-null stance, and the jsonb_path_ops index limitation.\n2. src/types.rs RecallFilters.product: doc comment stating Product-OR-unscoped semantics (Product rows plus the no-claim pool; different Product and explicit null excluded).\n3. tests/recall_filters_it.rs: product_scope_includes_untagged_shared_pool seeds five rows across a project namespace and a stand-in shared namespace — untagged both, product p, product q in shared, explicit JSON null — and asserts exactly the AC1 case table: p + both untagged visible, q and null excluded. Stand-in namespace avoids polluting the real global namespace on the shared dev database.",
+      "operation_id": "mutation:task_checkpoint_completed:addProductScopingRecall:47fcdc1c-8795-4a29-a196-dc1479e7c542",
+      "payload_hash": "a8b6f58e62798a33556d8709f1a54066fa8dda41957d92961fe980f709a72a67",
+      "prior_revision": 18,
+      "new_revision": 19,
+      "committed_at": "2026-08-30T20:33:00.760Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addProductScopingRecall:7b9db716-9167-4c06-9d10-348610be757f",
+      "payload_hash": "96d567cd4e9295fa779ee6c25da0afae981d44f9a2977f130da0f7c520e5501f",
+      "prior_revision": 19,
+      "new_revision": 20,
+      "committed_at": "2026-08-30T20:33:09.024Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "963bed3461f0f8df888e8b31e615e251ef6ee9bb:Deliverables verified: spec 0010 section order confirmed single-copy-clean (Statement, Filter Contract, Product Scope, Query and Index Safety, Open Follow-ups, Boundaries, Verification — no duplicate sections); docs and .adv copies cmp byte-identical and both modified in one commit. Probe comment posted and URL captured: https://github.com/Sharper-Flow/concord/issues/46#issuecomment-5471105393\n\nSpec 0010 changes:\n1. Filter Contract: product removed from the exact-match bullet, work_id keeps exact-match, pointer to the new Product Scope section.\n2. New Product Scope section: the predicate, the four-row case table (tagged match, no-key match, wrong-Product excluded including shared namespace, explicit JSON null excluded with the ?/->> rationale), and the reserved-key stance contrasting promotion_state — a source-supplied product tag cannot cross the namespace arm and grants nothing untagged absence did not.\n3. Query and Index Safety: index claim updated — product predicate joins open-followup and promoted exclusions as unfiltered-by-GIN (jsonb_path_ops serves only containment operators); migration-abort, unchanged-behavior, and maintenance-window paragraphs preserved. Mid-work defect: my first edit duplicated the section; caught by section grep, merged correctly before commit.\n4. Boundaries: automatic product scoping stays out of scope (caller-supplied tags); probe pre-registered on concord#46 as operational follow-up.\n5. Verification: product-scope coverage enumerated.\n\nProbe comment pre-registers baseline (service restored 2026-08-30, store 0 rows, Product-OR-unscoped semantics), method (transcript capture per Product session), minimum corpus (40+ memories, 2+ projects of one Product, 10+ tagged), rubric (sufficient = filters express working context, CD-0086 stands; insufficient = documented transcript failures, C20 reopens), and judge-before-outcome ordering.\n\nOne validator claim corrected: .adv/specs/0010 was already tracked in the worktree (reported as M, not untracked) — both copies modified together regardless.",
+      "operation_id": "mutation:task_checkpoint_completed:addProductScopingRecall:add4fa29-e1ca-4bab-bd95-eb40f2e03336",
+      "payload_hash": "b0c68a85bcd832c03c0a86b49d81963269ce414037e8bde9a3b42bc7c51712c5",
+      "prior_revision": 20,
+      "new_revision": 21,
+      "committed_at": "2026-08-30T20:35:04.516Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addProductScopingRecall:8eafc4fb-f64d-4145-b007-fa44588c8756",
+      "payload_hash": "23c7e6b576deea4f34ffdd17714902cfc2c803817779e9a3fb4e4ab6de61da20",
+      "prior_revision": 21,
+      "new_revision": 22,
+      "committed_at": "2026-08-30T20:35:08.595Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E '^test result' && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E '^test result' && echo \"=== clippy/fmt/spec ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && echo \"spec copies byte-identical\" && echo \"=== AC2 static check: no concord/model-import surface in diff ===\" && git diff --stat main...HEAD && git diff main...HEAD | grep -ciE 'concord|product_map|ProductMapping|EPISODE_PRODUCT' || echo \"0 — no Concord import, no Product-membership derivation, no new config surface\"",
+      "operation_id": "mutation:test_run_recorded:addProductScopingRecall:d6cbfc56-9e18-434b-8598-6a6ed6a38745",
+      "payload_hash": "bacffaebbfcc8cbee797bb9e01e2193ad677e144b33542682ad562eb1a1a4d24",
+      "prior_revision": 22,
+      "new_revision": 23,
+      "committed_at": "2026-08-30T20:36:02.146Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "963bed3461f0f8df888e8b31e615e251ef6ee9bb:Full gate tr_mtg9rmio_b7f6d5f8 exit 0: build --locked clean, 63 of 63 lib tests, 21 DB-backed tests across all suites (up from 20 with product_scope_includes_untagged_shared_pool), clippy --all-targets -D warnings clean, cargo fmt --check clean, spec 0010 copies cmp byte-identical.\n\nAC2 static check: the diff touches 5 files — predicate arm in store.rs, doc comment in types.rs, new test, two spec copies. The only concord matches in the diff (4 lines) are prose in the mirrored Boundaries sections naming Concord in the out-of-scope list and referencing concord#46. No import, no Product-membership derivation, no new config surface. Episode remains Concord-agnostic: the only semantic change is the predicate and its documentation.\n\nLive-service sanity deferred by design: the running service still executes the pre-change binary; it picks the predicate up at the next deploy after this change merges, at which point the probe baseline recorded on concord#46 (issuecomment-5471105393) describes the semantics that go live.",
+      "operation_id": "mutation:task_checkpoint_completed:addProductScopingRecall:f409f271-bc3e-4f3f-9c7c-a78429a18755",
+      "payload_hash": "1f978eae5247b0c89d2018080c1634f11cf42fe7ea3dc06709a9b3521d017a85",
+      "prior_revision": 23,
+      "new_revision": 24,
+      "committed_at": "2026-08-30T20:36:23.915Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "All 3 tasks done with checkpoints: tk-d6774d57519e (0237572, RED tr_mtg9lg9u containment failure -> predicate swap -> GREEN tr_mtg9ndrr), tk-10f2d9efe76b (963bed3, spec 0010 both copies byte-identical + pre-registered probe comment https://github.com/Sharper-Flow/concord/issues/46#issuecomment-5471105393), tk-d11c8a50720d (clean checkpoint, full gate + AC2 static check).\n\nFull gate: 63 lib + 21 DB-backed tests, clippy -D warnings zero, fmt clean, spec copies identical. TDD sequence enforced and satisfied. Mid-work defects caught and fixed honestly: my first spec edit duplicated the Query and Index Safety section (caught by section grep, merged before commit); one native edit failed on hyphenation (open-follow-up vs open-followup) and was redone exact after re-read.",
+      "operation_id": "mutation:gate_completion:addProductScopingRecall:42c0fd4b-d273-487e-af90-05cf442c589e",
+      "payload_hash": "866fc6bd57ab5e6e67db32981845e9983f0a25dbf9823f63dc5379d5704554cb",
+      "prior_revision": 24,
+      "new_revision": 25,
+      "committed_at": "2026-08-30T20:36:32.622Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "963bed3461f0f8df888e8b31e615e251ef6ee9bb:Clean tree checkpoint",
+      "operation_id": "mutation:task_checkpoint_completed:addProductScopingRecall:85f3d8cb-fe41-44d4-8f7a-b4cd477514b2",
+      "payload_hash": "5af824f97492e5766ef291a3dd09c2f4dae07d6d75e6ab3c328e95c19590dcd7",
+      "prior_revision": 25,
+      "new_revision": 26,
+      "committed_at": "2026-08-30T20:36:40.292Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "addProductScopingRecall|change:review:acceptance|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:addProductScopingRecall:035bcf7a-548b-491c-bc08-22be6b2832be",
+      "payload_hash": "f378db2526e5ed86f081da75a5e60a4cc0119de7db8a0fc6116bd86d410cd693",
+      "prior_revision": 26,
+      "new_revision": 27,
+      "committed_at": "2026-08-30T20:42:39.713Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:38ce10c8-dd82-499c-a660-967efd4e9ca4",
+      "payload_hash": "ee782d4fe68f1112cf2db811eb835b7a4af2345c7506ab2fbd1ccbf1697bfb06",
+      "prior_revision": 27,
+      "new_revision": 28,
+      "committed_at": "2026-08-30T20:43:25.562Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --lib 2>&1 | grep -E '^test result' && cargo test --tests -- --ignored 2>&1 | grep -oP '^test result: ok\\. \\K[0-9]+' | paste -sd+ | bc && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && echo \"spec copies byte-identical\"",
+      "operation_id": "mutation:test_run_recorded:addProductScopingRecall:93b432ba-2b66-4fae-91b5-e4547cd50bbd",
+      "payload_hash": "278172536316a6f34a4bef821be4344d36076c33162c10f1da0a1c59a864139c",
+      "prior_revision": 28,
+      "new_revision": 29,
+      "committed_at": "2026-08-30T20:43:41.765Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "096cab9db25faf736b20b2b62f3a439dddbb5cf2:Acceptance-review remediation, independently re-verified (tr_mtga1h6f_6d1983ae exit 0): 63 of 63 lib tests, 21 DB-backed tests, clippy --all-targets -D warnings clean, fmt clean, spec copies byte-identical.\n\nReviewer verdict NEEDS_WORK with two in-scope fixes (accepted after line-by-line inspection) and one item assigned to me (completed):\n\n1. Composition coverage gap (accepted): the original test proved each product case in isolation but never that the split-out product arm ANDs with the containment arms. Reviewer added a composed query (product p + work_id w + kinds gotcha) with work_id added to the tagged fixtures, proving the arms compose.\n2. Over-broad index wording (accepted): I had written that jsonb_path_ops \"serves only containment operators\" in the spec, code comment, and design. Imprecise — it also serves path operators @? and @@; the true reasons the product predicate is unservable are that jsonb_path_ops does not support bare key-existence and the ->>' equality arm is not an indexed expression. Reviewer corrected spec (both copies) and the code comment; I corrected design.md D1 and the validation section, crediting the correction rather than defending the phrase.\n3. design.md GIN claim (my assigned item): corrected as above.\n\nThe predicate itself, the JSON-null rule, the AC2 boundary, and the AC4 completion bar were all confirmed unchanged by the review.",
+      "operation_id": "mutation:task_checkpoint_completed:addProductScopingRecall:20632ffe-7410-467b-b397-d96bdd60c085",
+      "payload_hash": "4b7ef8105056da0a2dd1745fe3de5b1f9d63f8e7593711637011df0bc4ec0cd1",
+      "prior_revision": 29,
+      "new_revision": 30,
+      "committed_at": "2026-08-30T20:43:56.279Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addProductScopingRecall:c4f1e6e2-07b7-4c50-9c5a-8d20cba2a71e",
+      "payload_hash": "7e86132dad18c1c513384d8eba17c60ba1e86a0ce2eeebcf677f8a1f53f957b4",
+      "prior_revision": 30,
+      "new_revision": 31,
+      "committed_at": "2026-08-30T20:44:10.623Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User accepted at the acceptance checkpoint, replying \"continue\" against the anchor phrase \"Reply `continue` to accept and proceed to harden, or reply with what to adjust.\"\n\nReview verdict APPROVED after NEEDS_WORK was resolved: two findings fixed by the reviewer in-scope (composed product+work_id+kinds coverage; over-broad jsonb_path_ops wording in spec copies and code comment) and one assigned item completed by the orchestrator (same wording corrected in design.md). Final verification tr_mtga1h6f exit 0: 63 lib + 21 DB-backed tests, clippy -D warnings zero, fmt clean, spec copies byte-identical. Executive summary persisted. Review fixes committed at 096cab9 after independent re-verification.\n\nAC1 proven case-by-case and composed. AC2 static-checked: no Concord import, no Product-membership derivation, no new config surface. AC4 closed at the user-approved completion bar: probe protocol, corpus threshold, and rubric pre-registered on concord#46 (issuecomment-5471105393) before any evidence exists. AC3 (Option B) deferred by design.",
+      "operation_id": "mutation:gate_completion:addProductScopingRecall:a65bd5ba-8935-40e7-9ef2-76ecafaad947",
+      "payload_hash": "e98e7735e897aa817fa3f961ab99133588a4cf5caab033d2c07b8cb5eb0ad1ff",
+      "prior_revision": 31,
+      "new_revision": 32,
+      "committed_at": "2026-08-30T21:16:31.866Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "addProductScopingRecall|change:harden:release|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:addProductScopingRecall:7f8c668c-d80b-466a-968b-cd1ea31ac2d4",
+      "payload_hash": "49003f9b94972e4648e52d7ce6fc09859f6d81a6c6d33c82ba7685cf54a61529",
+      "prior_revision": 32,
+      "new_revision": 33,
+      "committed_at": "2026-08-30T21:28:27.807Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --lib 2>&1 | grep -E '^test result' && cargo test --tests -- --ignored 2>&1 | grep -oP '^test result: ok\\. \\K[0-9]+' | paste -sd+ | bc && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp docs/specs/0010-recall-metadata-filters.md .adv/specs/0010-recall-metadata-filters.md && echo \"spec copies byte-identical\" && docker exec episode-db psql -U episode -d episode -t -c \"SELECT count(*) FROM memories WHERE namespace LIKE 'it\\_%';\"",
+      "operation_id": "mutation:test_run_recorded:addProductScopingRecall:9b84922d-8798-451c-9454-ce97c5057a70",
+      "payload_hash": "16c068981184f347d34354507759cfea8655900e180ef35c5c083240c7bbee91",
+      "prior_revision": 33,
+      "new_revision": 34,
+      "committed_at": "2026-08-30T21:29:19.470Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "e8607d09c08c69df2b906aeda865d0ab8a38a486:Harden pass verdict READY, zero code changes to the predicate, schema, or indexes. Independently re-verified (tr_mtgabo5jg_ef9482b4 exit 0): 63 of 63 lib, 21 DB-backed, clippy -D warnings zero, fmt clean, spec copies byte-identical, zero it_% residue rows.\n\nReviewer findings, all resolved:\n1. Query-plan reality measured with EXPLAIN at synthetic scale: namespace filtering preserves the composite-PK plan; the product predicate adds about 0.105 ms per 1,000 candidates; worst-case low-selectivity all-corpus recall took 37.9 ms at 50,000 rows. Within the interactive envelope; Option B remains the named escape hatch if ever needed.\n2. Structural test-cleanup fix accepted: product_scope_includes_untagged_shared_pool restructured so seed+recall run inside a Result and cleanup executes unconditionally BEFORE assertions panic. Kills the leak-on-assertion-failure class permanently for this test — the same class that leaked rows twice this session.\n3. Probe capture solved: opencode export <sessionID> --sanitize surfaces tool calls including recall parameters and results. The pre-registered method on concord#46 is executable as written. Addendum comment pinned: issuecomment-5471369765.\n4. Corpus status verified by direct read, not assumption: the 7 rows now in the store are REAL ingested wisdom (advance 2, pokeedge 4, pokeedge-web 1; live reconcile content), not residue — the restored service has begun accruing the probe corpus. Left untouched deliberately; zero it_% rows confirm the cleanup fix.",
+      "operation_id": "mutation:task_checkpoint_completed:addProductScopingRecall:06864b9e-d984-44b0-ba1a-396cd9f8d436",
+      "payload_hash": "28b66597ac55f0eea0f050e48c73f9ebbf1ed3a406996ed9fa6f71e05f926f9c",
+      "prior_revision": 34,
+      "new_revision": 35,
+      "committed_at": "2026-08-30T21:29:29.130Z"
+    }
+  ]
+}
