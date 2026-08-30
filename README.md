@@ -104,6 +104,14 @@ cargo test --test recall_it -- --ignored --nocapture
 `scripts/deploy.sh` builds a release binary to `~/.local/bin/episode`, which
 Vision spawns and proxies (one instance, many agent sessions).
 
+Episode applies pending SQLx migrations before it serves MCP requests. Stop the
+service and take a database backup before a schema-changing release. A failed
+transactional migration leaves the prior schema active and prevents startup.
+
+Roll back a schema-changing release with a database snapshot that matches the
+old binary. A binary-only rollback can fail after a forward migration changes a
+constraint or index that the old SQL expects.
+
 ## Language support and scope
 
 Episode v0 is intentionally English-only. It uses the local fastembed
