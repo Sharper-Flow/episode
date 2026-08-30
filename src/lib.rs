@@ -164,8 +164,12 @@ pub async fn reconcile_root(
 ) -> ReconcileOutcome {
     let adv_dir = root.path.join(".adv");
     let mut items: Vec<MemoryInput> = Vec::new();
+    let mut invalidated: Vec<String> = Vec::new();
     match ingest::parse_wisdom(&root.namespace, &adv_dir) {
-        Ok(mut w) => items.append(&mut w),
+        Ok(mut w) => {
+            items.append(&mut w.items);
+            invalidated.append(&mut w.invalidated);
+        }
         Err(e) => {
             tracing::warn!(namespace = %root.namespace, error = %e, "wisdom parse failed")
         }
@@ -174,6 +178,29 @@ pub async fn reconcile_root(
         Ok(mut r) => items.append(&mut r),
         Err(e) => {
             tracing::warn!(namespace = %root.namespace, error = %e, "reflection parse failed")
+        }
+    }
+
+    // Apply retractions before ingesting. Dedup makes the store blind to ADV
+    // fields that change after first ingest, so a retracted entry that was
+    // stored while it was still valid can only be removed by addressing the row
+    // directly. Running this first means a later embed failure cannot leave
+    // knowledge ADV has withdrawn still being served.
+    match store.forget_ingested(&root.namespace, &invalidated).await {
+        Ok(removed) if removed > 0 => {
+            tracing::info!(
+                namespace = %root.namespace,
+                removed,
+                "removed memories retracted in ADV"
+            );
+        }
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!(
+                namespace = %root.namespace,
+                error = %e,
+                "retraction removal failed; retried on the next reconcile"
+            );
         }
     }
 

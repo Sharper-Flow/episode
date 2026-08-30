@@ -40,6 +40,21 @@ fn read_jsonl(path: &Path) -> Result<Vec<Value>> {
     Ok(out)
 }
 
+/// Outcome of parsing `wisdom.jsonl`: rows to store, plus state changes that
+/// apply to rows already stored.
+///
+/// The second half exists because ingestion is write-once per `source_id`.
+/// Dedup drops an already-stored item before it reaches the store, so an ADV
+/// field that changes *after* first ingest can only be applied by addressing the
+/// stored row directly.
+#[derive(Debug, Default)]
+pub struct WisdomParse {
+    /// Entries eligible to be embedded and stored.
+    pub items: Vec<MemoryInput>,
+    /// Source ids whose ADV entry now carries a non-null `invalidated_by`.
+    pub invalidated: Vec<String>,
+}
+
 /// Parse `{adv_dir}/wisdom.jsonl` into memory inputs.
 ///
 /// Each line is a JSON object (ADV `ProjectWisdomEntry`):
@@ -52,11 +67,13 @@ fn read_jsonl(path: &Path) -> Result<Vec<Value>> {
 ///   - skip blank/malformed lines (do NOT fail the whole file — mirror ADV's
 ///     `parseWisdomEntries` graceful-degradation behavior).
 ///   - skip entries whose `invalidated_by` is present and non-null
-///     (superseded / soft-deleted).
-///   - if the file does not exist, return `Ok(vec![])`.
-pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>> {
+///     (superseded / soft-deleted), and collect their ids so reconcile can
+///     remove copies stored before the retraction.
+///   - if the file does not exist, return an empty [`WisdomParse`].
+pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<WisdomParse> {
     let path = adv_dir.join("wisdom.jsonl");
     let mut items = Vec::new();
+    let mut invalidated = Vec::new();
 
     for value in read_jsonl(&path)? {
         let obj = match value.as_object() {
@@ -64,15 +81,18 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>>
             None => continue,
         };
 
-        // Superseded / soft-deleted entries are not retrievable.
-        if obj.get("invalidated_by").is_some_and(|v| !v.is_null()) {
-            continue;
-        }
-
         let id = match obj.get("id").and_then(nonempty_str) {
             Some(s) => s.to_string(),
             None => continue,
         };
+
+        // Superseded / soft-deleted entries are not retrievable. Skipping keeps
+        // them out; collecting the id is what removes an already-stored copy.
+        if obj.get("invalidated_by").is_some_and(|v| !v.is_null()) {
+            invalidated.push(id);
+            continue;
+        }
+
         let content = match obj.get("content").and_then(nonempty_str) {
             Some(s) => s.to_string(),
             None => continue,
@@ -100,7 +120,7 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<Vec<MemoryInput>>
         });
     }
 
-    Ok(items)
+    Ok(WisdomParse { items, invalidated })
 }
 
 /// Parse `{adv_dir}/reflections.jsonl` into memory inputs.
@@ -279,11 +299,16 @@ mod tests {
         )
         .unwrap();
 
-        let got = parse_wisdom("proj", adv).unwrap();
+        let parsed = parse_wisdom("proj", adv).unwrap();
+        let got = &parsed.items;
 
         // pw-3 dropped (invalidated_by non-null); malformed line dropped;
         // blank dropped; pw-4 kept (invalidated_by is null) => 3 kept.
         assert_eq!(got.len(), 3);
+
+        // Skipping keeps an invalidated entry out; the collected id is what lets
+        // reconcile remove one that was already stored before the retraction.
+        assert_eq!(parsed.invalidated, vec!["pw-3".to_string()]);
 
         let first = &got[0];
         assert_eq!(first.id, "pw-1");
@@ -366,7 +391,9 @@ mod tests {
     fn missing_files_return_empty() {
         let tmp = TmpDir::new("missing");
         let adv = tmp.path(); // empty dir: no wisdom.jsonl / reflections.jsonl
-        assert!(parse_wisdom("proj", adv).unwrap().is_empty());
+        let parsed = parse_wisdom("proj", adv).unwrap();
+        assert!(parsed.items.is_empty());
+        assert!(parsed.invalidated.is_empty());
         assert!(parse_reflections("proj", adv).unwrap().is_empty());
     }
 }

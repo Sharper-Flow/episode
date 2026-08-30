@@ -313,6 +313,34 @@ impl Store {
         Ok(result.rows_affected())
     }
 
+    /// Remove ingested rows whose ADV source was retracted (AC6).
+    ///
+    /// Counterpart to [`Self::forget_manual`]: that one is restricted to
+    /// `source = 'manual'`, which left ingested rows with no removal path at all.
+    /// This one is restricted to ingested sources, so reconcile can retract
+    /// knowledge without gaining the power to delete a human's memories.
+    ///
+    /// Deletion rather than a tombstone is self-healing. If ADV later
+    /// un-invalidates an entry, the row is absent from
+    /// [`Self::existing_source_ids`] and the next reconcile re-ingests it fresh.
+    ///
+    /// An empty `source_ids` returns `Ok(0)` without a database call.
+    pub async fn forget_ingested(&self, namespace: &str, source_ids: &[String]) -> Result<u64> {
+        if source_ids.is_empty() {
+            return Ok(0);
+        }
+        let result = sqlx::query(
+            "DELETE FROM memories \
+             WHERE namespace = $1 AND source_id = ANY($2) \
+               AND source IN ('adv_wisdom', 'adv_reflection')",
+        )
+        .bind(namespace)
+        .bind(source_ids)
+        .execute(&self.pool)
+        .await?;
+        Ok(result.rows_affected())
+    }
+
     /// Compare-and-set a memory's promotion state (AC5).
     ///
     /// Borrows [`Self::forget_manual`]'s shape — one statement, structural
