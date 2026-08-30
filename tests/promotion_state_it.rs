@@ -124,12 +124,16 @@ async fn recall_excludes_promoted_by_default_and_keeps_candidates_visible() {
         .expect("cleanup");
 }
 
-async fn stored_state(pool: &sqlx::PgPool, id: &str) -> Option<PromotionState> {
-    let raw: serde_json::Value = sqlx::query_scalar("SELECT metadata FROM memories WHERE id = $1")
-        .bind(id)
-        .fetch_one(pool)
-        .await
-        .expect("read metadata");
+/// Ids are unique per namespace, not globally: two projects can both hold a
+/// `pw-1`. Every row lookup in these tests binds the namespace beside the id.
+async fn stored_state(pool: &sqlx::PgPool, ns: &str, id: &str) -> Option<PromotionState> {
+    let raw: serde_json::Value =
+        sqlx::query_scalar("SELECT metadata FROM memories WHERE id = $1 AND namespace = $2")
+            .bind(id)
+            .bind(ns)
+            .fetch_one(pool)
+            .await
+            .expect("read metadata");
     raw.get(PROMOTION_STATE_KEY)
         .map(|value| serde_json::from_value(value.clone()).expect("stored state must be valid"))
 }
@@ -147,7 +151,11 @@ async fn promote_transitions_run_in_both_directions() {
     let id = format!("{ns}-a");
 
     seed(&store, &ns, "a", None).await;
-    assert_eq!(stored_state(&pool, &id).await, None, "seeds start episodic");
+    assert_eq!(
+        stored_state(&pool, &ns, &id).await,
+        None,
+        "seeds start episodic"
+    );
 
     // Episodic -> candidate.
     assert_eq!(
@@ -163,7 +171,7 @@ async fn promote_transitions_run_in_both_directions() {
         1
     );
     assert_eq!(
-        stored_state(&pool, &id).await,
+        stored_state(&pool, &ns, &id).await,
         Some(PromotionState::PromotionCandidate {})
     );
 
@@ -184,7 +192,7 @@ async fn promote_transitions_run_in_both_directions() {
         1
     );
     assert_eq!(
-        stored_state(&pool, &id).await,
+        stored_state(&pool, &ns, &id).await,
         Some(PromotionState::Promoted {
             target: target.into()
         })
@@ -207,7 +215,7 @@ async fn promote_transitions_run_in_both_directions() {
         1
     );
     assert_eq!(
-        stored_state(&pool, &id).await,
+        stored_state(&pool, &ns, &id).await,
         Some(PromotionState::Promoted {
             target: retarget.into()
         })
@@ -227,7 +235,7 @@ async fn promote_transitions_run_in_both_directions() {
         1
     );
     assert_eq!(
-        stored_state(&pool, &id).await,
+        stored_state(&pool, &ns, &id).await,
         Some(PromotionState::PromotionCandidate {})
     );
     assert_eq!(
@@ -293,7 +301,7 @@ async fn promote_rejects_from_state_mismatch() {
         0
     );
     assert_eq!(
-        stored_state(&pool, &id).await,
+        stored_state(&pool, &ns, &id).await,
         Some(PromotionState::PromotionCandidate {}),
         "a losing transition must leave the state untouched"
     );
@@ -466,7 +474,7 @@ async fn concurrent_ingest_conflict_preserves_promotion_state() {
         .await
         .expect("losing ingest conflict");
     assert_eq!(
-        stored_state(&pool, &id).await,
+        stored_state(&pool, &ns, &id).await,
         Some(PromotionState::Promoted {
             target: target.into(),
         }),

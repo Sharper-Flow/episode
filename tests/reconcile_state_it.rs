@@ -102,16 +102,19 @@ async fn reconcile_once(store: &Store, root: &ProjectRoot) -> episode::Reconcile
     outcome
 }
 
-async fn stored_metadata(pool: &sqlx::PgPool, id: &str) -> serde_json::Value {
-    sqlx::query_scalar("SELECT metadata FROM memories WHERE id = $1")
+/// Ids are unique per namespace, not globally: two projects can both hold a
+/// `pw-1`. Every row lookup in these tests binds the namespace beside the id.
+async fn stored_metadata(pool: &sqlx::PgPool, ns: &str, id: &str) -> serde_json::Value {
+    sqlx::query_scalar("SELECT metadata FROM memories WHERE id = $1 AND namespace = $2")
         .bind(id)
+        .bind(ns)
         .fetch_one(pool)
         .await
         .expect("read metadata")
 }
 
-async fn stored_state(pool: &sqlx::PgPool, id: &str) -> Option<PromotionState> {
-    stored_metadata(pool, id)
+async fn stored_state(pool: &sqlx::PgPool, ns: &str, id: &str) -> Option<PromotionState> {
+    stored_metadata(pool, ns, id)
         .await
         .get(PROMOTION_STATE_KEY)
         .map(|value| serde_json::from_value(value.clone()).expect("valid stored state"))
@@ -210,7 +213,7 @@ async fn reconcile_maps_promotion_recorded_after_ingest() {
     tmp.write_wisdom(&[r#"{"id":"pw-late","type":"gotcha","content":"graduates later"}"#]);
     assert_eq!(reconcile_once(&store, &root).await.ingested, 1);
     assert_eq!(
-        stored_state(&pool, "pw-late").await,
+        stored_state(&pool, &ns, "pw-late").await,
         None,
         "an unpromoted entry must stay episodic"
     );
@@ -221,7 +224,7 @@ async fn reconcile_maps_promotion_recorded_after_ingest() {
     ]);
     reconcile_once(&store, &root).await;
     assert_eq!(
-        stored_state(&pool, "pw-late").await,
+        stored_state(&pool, &ns, "pw-late").await,
         Some(PromotionState::PromotionCandidate {}),
         "promotion recorded after ingest must reach the stored row"
     );
@@ -267,7 +270,7 @@ async fn reconcile_never_clobbers_a_human_promotion() {
     ]);
     reconcile_once(&store, &root).await;
     assert_eq!(
-        stored_state(&pool, "pw-idem").await,
+        stored_state(&pool, &ns, "pw-idem").await,
         Some(PromotionState::PromotionCandidate {}),
         "an entry promoted before first ingest must map too"
     );
@@ -293,7 +296,7 @@ async fn reconcile_never_clobbers_a_human_promotion() {
     reconcile_once(&store, &root).await;
     reconcile_once(&store, &root).await;
     assert_eq!(
-        stored_state(&pool, "pw-idem").await,
+        stored_state(&pool, &ns, "pw-idem").await,
         Some(PromotionState::Promoted {
             target: target.into()
         }),
@@ -326,7 +329,7 @@ async fn stored_metadata_drops_the_raw_promoted_at_field() {
     ]);
     reconcile_once(&store, &root).await;
 
-    let metadata = stored_metadata(&pool, "pw-strip").await;
+    let metadata = stored_metadata(&pool, &ns, "pw-strip").await;
     assert!(
         metadata.get("promoted_at").is_none(),
         "promoted_at must not survive alongside promotion_state: {metadata}"
@@ -368,17 +371,17 @@ async fn source_supplied_promotion_state_cannot_hijack_the_reserved_key() {
     reconcile_once(&store, &root).await;
 
     assert_eq!(
-        stored_state(&pool, "pw-hijack").await,
+        stored_state(&pool, &ns, "pw-hijack").await,
         None,
         "a source-supplied promotion state must not reach the store"
     );
     assert_eq!(
-        stored_state(&pool, "pw-garbage").await,
+        stored_state(&pool, &ns, "pw-garbage").await,
         None,
         "a malformed source-supplied value must not reach the store either"
     );
     assert_eq!(
-        stored_metadata(&pool, "pw-hijack")
+        stored_metadata(&pool, &ns, "pw-hijack")
             .await
             .get("source_change")
             .and_then(|v| v.as_str()),
@@ -447,6 +450,101 @@ async fn retraction_is_scoped_to_the_reconciled_namespace() {
     );
 
     for namespace in [&ns, &other] {
+        sqlx::query("DELETE FROM memories WHERE namespace = $1")
+            .bind(namespace)
+            .execute(&pool)
+            .await
+            .expect("cleanup");
+    }
+}
+
+/// Ingested ids are raw per-project ADV ids, so two watched projects both hold
+/// a `pw-1`. A row's identity is (namespace, id): project B's reconcile must
+/// not steal, move, or overwrite project A's row, and a promotion in B must
+/// not touch A's same-id row.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn same_adv_id_in_two_namespaces_survives_independently() {
+    let db = db_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+
+    let ns_a = format!("it_collision_a_{}", uuid::Uuid::new_v4().simple());
+    let ns_b = format!("it_collision_b_{}", uuid::Uuid::new_v4().simple());
+    let tmp_a = TempRoot::new("collision-a");
+    let tmp_b = TempRoot::new("collision-b");
+
+    tmp_a.write_wisdom(&[
+        r#"{"id":"pw-1","type":"gotcha","content":"project A lesson","source_change":"ca"}"#,
+    ]);
+    tmp_b.write_wisdom(&[
+        r#"{"id":"pw-1","type":"gotcha","content":"project B lesson","source_change":"cb"}"#,
+    ]);
+
+    reconcile_once(&store, &tmp_a.root(&ns_a)).await;
+    reconcile_once(&store, &tmp_b.root(&ns_b)).await;
+
+    // Both rows survive under the same id, each in its own namespace with its
+    // own content.
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT namespace, content FROM memories WHERE id = 'pw-1' ORDER BY namespace",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("read rows");
+    assert_eq!(
+        rows,
+        vec![
+            (ns_a.clone(), "project A lesson".to_string()),
+            (ns_b.clone(), "project B lesson".to_string()),
+        ],
+        "the same raw id must survive independently in both namespaces"
+    );
+
+    // Recall stays scoped: each namespace returns exactly its own memory.
+    for (ns, expected) in [(&ns_a, "project A lesson"), (&ns_b, "project B lesson")] {
+        let hits = store
+            .recall(
+                &vec![0.0f32; EMBEDDING_DIM],
+                std::slice::from_ref(ns),
+                10,
+                Some(&RecallFilters::default()),
+            )
+            .await
+            .expect("recall");
+        assert_eq!(hits.len(), 1, "recall in {ns} returns exactly one row");
+        assert_eq!(hits[0].id, "pw-1");
+        assert_eq!(hits[0].namespace, *ns);
+        assert_eq!(hits[0].content, expected);
+    }
+
+    // A promotion in B addresses only B's row. A's same-id row is untouched.
+    let target = "docs/specs/0012-namespace-id-pk.md#sha256:collision";
+    let updated = store
+        .promote(
+            "pw-1",
+            &ns_b,
+            &PromotionState::Promoted {
+                target: target.to_string(),
+            },
+            PromotionStateKind::Episodic,
+        )
+        .await
+        .expect("promote B's row");
+    assert_eq!(updated, 1);
+    assert_eq!(
+        stored_state(&pool, &ns_b, "pw-1").await,
+        Some(PromotionState::Promoted {
+            target: target.to_string()
+        })
+    );
+    assert_eq!(
+        stored_state(&pool, &ns_a, "pw-1").await,
+        None,
+        "promoting B's row must not touch A's same-id row"
+    );
+
+    for namespace in [&ns_a, &ns_b] {
         sqlx::query("DELETE FROM memories WHERE namespace = $1")
             .bind(namespace)
             .execute(&pool)
