@@ -253,7 +253,7 @@ pub struct RecallFilters {
     /// Exclude rows first captured longer ago than this many days. The basis
     /// is `created_at` — first-capture time, which write-once ingest and
     /// promotion transitions never move. Pure filter: ranking and scores are
-    /// untouched. Must be positive.
+    /// untouched. Must fit PostgreSQL's signed four-byte day argument.
     pub max_age_days: Option<u32>,
     pub include_open_followups: bool,
     /// Return rows already graduated to a durable Concord record.
@@ -314,9 +314,12 @@ impl RecallFilters {
                 "sources filter must not be empty",
             ));
         }
-        if self.max_age_days.is_some_and(|days| days == 0) {
+        if self
+            .max_age_days
+            .is_some_and(|days| days == 0 || i32::try_from(days).is_err())
+        {
             return Err(RecallFilterValidationError(
-                "max_age_days filter must be positive",
+                "max_age_days filter must be between 1 and 2147483647",
             ));
         }
         Ok(())

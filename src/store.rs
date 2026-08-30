@@ -335,6 +335,9 @@ impl Store {
         top_k: i64,
         filters: Option<&RecallFilters>,
     ) -> Result<Vec<RecallHit>> {
+        if let Some(filters) = filters {
+            filters.validate()?;
+        }
         let q = pgvector::Vector::from(query_embedding.to_vec());
         let mut query = build_recall_query(q, namespaces, top_k, filters);
         let rows = query.build().fetch_all(&self.pool).await?;
@@ -521,8 +524,8 @@ mod tests {
             work_id: Some("secret-work".into()),
             tags: Some(vec!["secret-tag".into()]),
             kinds: Some(vec!["secret-kind".into()]),
-            sources: None,
-            max_age_days: None,
+            sources: Some(vec![crate::types::MemorySource::Manual]),
+            max_age_days: Some(30),
             include_open_followups: false,
             include_promoted: false,
         };
@@ -537,8 +540,16 @@ mod tests {
         assert!(sql.contains("namespace = ANY("));
         assert!(sql.contains("metadata @>"));
         assert!(sql.contains("kind = ANY("));
+        assert!(sql.contains("source = ANY("));
+        assert!(sql.contains("make_interval(days => "));
         assert!(sql.contains("NOT (metadata @>"));
-        for value in ["secret-product", "secret-work", "secret-tag", "secret-kind"] {
+        for value in [
+            "secret-product",
+            "secret-work",
+            "secret-tag",
+            "secret-kind",
+            "manual",
+        ] {
             assert!(!sql.contains(value));
         }
     }

@@ -180,8 +180,8 @@ async fn recall_filters_compose_and_use_metadata_gin() {
         work_id: Some("w".into()),
         tags: Some(vec!["a".into(), "b".into()]),
         kinds: Some(vec!["gotcha".into()]),
-        sources: None,
-        max_age_days: None,
+        sources: Some(vec![MemorySource::Manual]),
+        max_age_days: Some(30),
         include_open_followups: false,
         include_promoted: false,
     };
@@ -313,6 +313,23 @@ async fn sources_and_max_age_filter_recall() {
             .map(|h| h.content)
             .collect()
     }
+
+    let out_of_range = RecallFilters {
+        max_age_days: Some(u32::MAX),
+        ..Default::default()
+    };
+    assert!(
+        store
+            .recall(
+                &vector(),
+                std::slice::from_ref(&ns),
+                20,
+                Some(&out_of_range),
+            )
+            .await
+            .is_err(),
+        "the public store boundary must reject day counts that cannot bind as int4"
+    );
 
     // Cleanup runs before assertions can panic.
     let result: anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> = async {

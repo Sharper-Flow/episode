@@ -1,12 +1,12 @@
 //! Parse ADV wisdom/reflection JSONL into embeddable memory inputs.
 //!
 //! These are PURE functions (no DB, no embeddings). The ingestion loop that
-//! calls them, dedups, embeds, and upserts lives in `main.rs`.
+//! calls them, dedups, embeds, and upserts lives in `lib.rs`.
 //!
 //! Parsing is deliberately lenient: ADV schemas carry many optional fields and
 //! evolve over time, so we work with `serde_json::Value`, skip blank/malformed
 //! lines, and never fail the whole file because one line is bad. A missing
-//! target file is treated as an empty source (`Ok(vec![])`).
+//! target file is treated as an empty source.
 
 use anyhow::Result;
 use serde_json::Value;
@@ -71,8 +71,7 @@ pub struct SourceParse {
 /// Implementations resolve their own paths and file formats — the trait is
 /// parser-shaped, not format-shaped, so a source reading git-backed markdown
 /// with a manifest (Concord's CD-0026 lesson surface) fits without change.
-/// Parsing is synchronous and filesystem-bound today; an implementation
-/// needing blocking-heavy IO dispatches `spawn_blocking` internally.
+/// Parsing is synchronous and filesystem-bound.
 pub trait IngestSource {
     /// Stable lowercase name for log lines.
     fn name(&self) -> &'static str;

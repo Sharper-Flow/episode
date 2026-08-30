@@ -11,7 +11,7 @@ Recall may constrain semantic results by structured memory context while excludi
 - Every requested tag must be present; tag order and additional stored tags do not matter.
 - A memory matches any requested `kind` from the typed column.
 - A memory matches any requested `source` from the closed set `manual`, `adv_wisdom`, `adv_reflection`; unknown values reject at deserialization and an empty list rejects validation.
-- `max_age_days` excludes rows whose first capture (`created_at`) is older than the cutoff. Zero rejects validation. The basis is deliberately `created_at`: write-once ingest never moves it, and promotion transitions touch only `updated_at`. A retracted-then-reinstated row gets a fresh `created_at` — reinstatement is a new capture of re-validated knowledge. Recency is a filter, never a ranking input; cosine order is untouched.
+- `max_age_days` excludes rows whose first capture (`created_at`) is older than the cutoff. Values outside `1..=2147483647` reject validation because PostgreSQL's `make_interval(days => ...)` argument is a signed four-byte integer. The basis is deliberately `created_at`: write-once ingest never moves it, and promotion transitions touch only `updated_at`. A retracted-then-reinstated row gets a fresh `created_at` — reinstatement is a new capture of re-validated knowledge. Recency is a filter, never a ranking input; cosine order is untouched.
 - Product, work ID, tags, kind, source, age, and namespace compose with AND semantics.
 - Empty strings, empty lists, blank list members, and zero day counts reject before embedding.
 - Omitted fields add no constraint.
@@ -41,7 +41,7 @@ Default recall excludes `metadata.action.kind = open_followup` while retaining a
 
 ## Boundaries
 
-Automatic product scoping (deriving Product membership episode-side) remains out of scope: product tags are caller-supplied. The C8/C20 product-scoping probe is pre-registered on concord#46 (baseline, method, rubric) and runs as operational follow-up; its outcome lands on that issue. This capability does not add promotion, recency, ranking, ingest-quality, host-capture, typed-column, Concord, or Fleet behavior. Fleet remains intentionally disabled.
+Automatic product scoping (deriving Product membership episode-side) remains out of scope: product tags are caller-supplied. The C8/C20 product-scoping probe is pre-registered on concord#46 (baseline, method, rubric) and runs as operational follow-up; its outcome lands on that issue. This capability does not add promotion, recency scoring, ranking, ingest-quality, host-capture, Concord, or Fleet behavior. Fleet remains intentionally disabled.
 
 ## Verification
 

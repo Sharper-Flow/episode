@@ -467,6 +467,7 @@ mod tests {
             json!({"kinds": [""]}),
             json!({"sources": []}),
             json!({"max_age_days": 0}),
+            json!({"max_age_days": u32::MAX}),
         ] {
             let filters: RecallFilters = serde_json::from_value(invalid).unwrap();
             assert!(filters.validate().is_err());

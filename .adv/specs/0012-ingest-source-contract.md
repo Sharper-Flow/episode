@@ -19,7 +19,7 @@ pub trait IngestSource {
 }
 ```
 
-Implementations resolve their own paths and file formats from `project_root`; the trait is parser-shaped, not format-shaped. A source reading git-backed markdown with a manifest (Concord's CD-0026 lesson surface: working-tree files, publish-side git authority, idempotent publish, no retraction stream) fits without change. Parsing is synchronous and filesystem-bound; an implementation needing blocking-heavy IO dispatches `spawn_blocking` internally rather than widening the trait.
+Implementations resolve their own paths and file formats from `project_root`; the trait is parser-shaped, not format-shaped. A source reading git-backed markdown with a manifest (Concord's CD-0026 lesson surface: working-tree files, publish-side git authority, idempotent publish, no retraction stream) fits without change. Parsing is synchronous and filesystem-bound.
 
 ## Ownership
 

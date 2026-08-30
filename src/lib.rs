@@ -137,7 +137,7 @@ pub struct ReconcileOutcome {
     pub stopped: bool,
 }
 
-/// Reconcile one project root: parse both ADV sources, bulk-dedup against the
+/// Reconcile one project root: parse configured ingest sources, bulk-dedup against the
 /// store, then embed and persist eligible items in bounded, transactional
 /// partitions.
 ///
