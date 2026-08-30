@@ -38,13 +38,21 @@ A condition that cannot be evaluated is a dangling option by AC3's own letter. A
 
 ## Verification
 
-One independent validator and two review passes. Seven citation errors were corrected, including one introduced during the first correction round.
+One independent validator and two review passes before archive, and one correction after it. Seven citation errors were corrected before archive. One inverted claim survived into the archived record and is corrected here.
 
-The most serious was an unsupported claim that an operator-approved decision had resolved C20 as "episode stays external and optional." No such approval exists. C20 records its direction as unchanged, and Concord's 2026-08-30 note states the ownership lean is untouched with probe evidence remaining the only direction input. The claim had propagated into all four proposals and was removed from each.
+## Concord's position, corrected after archive
 
-## Open cross-project finding
+The archived record originally stated that no operator approval resolving C20 existed. That was wrong, and it inverted a material fact about the counterparty.
 
-**concord#46's issue body repeats that unsupported operator-approval claim and contradicts C20 in Concord's own accepted documents.** That body is where the claim entered this work. It was not edited, because it belongs to another repository and sits outside this change's scope. It should be reconciled against `docs/clarifications.md` C20 by Concord.
+Concord's operator approved the direction on 2026-08-30 and recorded it in concord#46: **episode stays external, optional, and Product-scoped when configured**, with the probe demoted to a reopen trigger. The issue body is a work order. Its documentation deliverables had not run, so Concord's accepted documents still read as open.
+
+Reading the documents alone produced "not resolved." Reading the issue alone produced "resolved." Two reviewers reported their own surfaces accurately, and the conflict was resolved in the wrong direction — by deleting the claim rather than by establishing which surface leads.
+
+The reconciliation landed as concord PR #596, executing concord#46's deliverables: C20 resolved in place, the probe recorded as a reopen trigger, and a new statement that Concord carries no required dependency on episode.
+
+**The decision is unaffected.** It rests on scope — CD-0002's authority rule and Concord's Go direction do not reach satellite services — which holds regardless of how C20 resolves. Concord's approval corroborates the boundary rather than creating it.
+
+The durable lesson concerns source conflict, not citation care. Two reliable reviewers disagreed because they read different surfaces of one system at a moment when those surfaces disagreed. The failure was resolving that by deletion instead of by asking which surface leads. A tracker recording an approved decision leads its own unexecuted documentation deliverables.
 
 ## Scope
 

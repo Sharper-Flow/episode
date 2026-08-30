@@ -22,9 +22,11 @@ Concord's Go direction is likewise scoped. `docs/core-architecture.md:40-60` pla
 
 Concord treats episode as one of three independent general-purpose tools. `docs/vertical-integration.md:64` states plainly: "Tools stay independent; Concord orchestrates product context." The promotion seam specifically crosses a manifest-path + sha256 boundary (`:130-158`), holds a `target` that is opaque to episode, and records no runtime event. That seam is language- and storage-agnostic by construction. It is the promotion boundary, not the whole integration surface, so it should not be cited as though it governed every interaction.
 
-**What Concord has and has not decided.** The episode ownership question is clarification **C20**, split out of C8 by concord#101 precisely so episode's trigger could fire without implying a direction change for lgrep and vision. C20's recorded direction is 🟡 **unchanged** as of 2026-08-14, owned by concord#46. The 2026-08-30 update records only that the promotion-receiving contract is defined, and states explicitly that "the ownership lean is untouched; the probe evidence gate (Item 1) remains the only direction input."
+**What Concord has decided.** The episode ownership question is clarification **C20**, split out of C8 by concord#101 precisely so episode's trigger could fire without implying a direction change for lgrep and vision. Concord's operator approved a direction on 2026-08-30, recorded in concord#46: **episode stays external, optional, and Product-scoped when configured**, with the product-scoping probe demoted to a reopen trigger rather than an acceptance prerequisite.
 
-So Concord has **not** resolved episode's ownership. Its lean is product-scoping first, and it is holding that lean open pending probe evidence. The argument above rests on scope — CD-0002 and the Go direction do not reach satellites — not on a Concord ruling that episode stays external.
+That approval was recorded in the issue before its documentation deliverables ran, so Concord's accepted documents lagged behind it for a period and still described C20 as open. Concord PR #596 executes those deliverables and closes the gap.
+
+**This decision does not depend on that approval.** The argument above rests on scope: CD-0002's authority rule and the Go direction do not reach satellite services. That holds regardless of how C20 resolves, which is why it is the ground this decision stands on. Concord's approval corroborates the boundary; it does not create it.
 
 So there is no architectural divergence to resolve. There are two systems with a documented boundary between them, and an open ownership question that neither side has closed.
 
