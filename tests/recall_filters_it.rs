@@ -33,16 +33,20 @@ async fn product_scope_includes_untagged_shared_pool() {
             "untagged-shared",
             serde_json::json!({"tags":["b"]}),
         ),
-        (ns.clone(), "tagged-p", serde_json::json!({"product":"p"})),
+        (
+            ns.clone(),
+            "tagged-p",
+            serde_json::json!({"product":"p","work_id":"w"}),
+        ),
         (
             shared.clone(),
             "tagged-q",
-            serde_json::json!({"product":"q"}),
+            serde_json::json!({"product":"q","work_id":"w"}),
         ),
         (
             ns.clone(),
             "null-product",
-            serde_json::json!({"product":null}),
+            serde_json::json!({"product":null,"work_id":"w"}),
         ),
     ];
     for (namespace, content, metadata) in seed {
@@ -83,6 +87,31 @@ async fn product_scope_includes_untagged_shared_pool() {
             "untagged-shared".to_string(),
         ],
         "a Product scope returns the Product's rows plus the untagged shared pool"
+    );
+
+    let composed = RecallFilters {
+        product: Some("p".into()),
+        work_id: Some("w".into()),
+        kinds: Some(vec!["gotcha".into()]),
+        ..Default::default()
+    };
+    let mut got: Vec<String> = store
+        .recall(
+            &vector(),
+            &[ns.clone(), shared.clone()],
+            20,
+            Some(&composed),
+        )
+        .await
+        .expect("product + work + kind recall")
+        .into_iter()
+        .map(|hit| hit.content)
+        .collect();
+    got.sort();
+    assert_eq!(
+        got,
+        vec!["tagged-p".to_string(), "untagged-project".to_string()],
+        "the Product-OR-unscoped arm composes with work and kind filters"
     );
 
     for namespace in [ns, shared] {

@@ -27,7 +27,7 @@ Product is caller-supplied data, not a reserved key. Unlike `promotion_state` (s
 
 ## Query and Index Safety
 
-All caller values are bound with sqlx `QueryBuilder`; caller text never enters SQL syntax. Positive work/tag containment uses `metadata @>` and `memories_metadata_gin` with `jsonb_path_ops`. The index claim applies to positive containment only. The product predicate and the negative open-followup and promoted exclusions are not servable by `jsonb_path_ops` (it serves only containment operators), so they filter without index assistance — the accepted shape shared by all three.
+All caller values are bound with sqlx `QueryBuilder`; caller text never enters SQL syntax. Positive work/tag containment uses `metadata @>` and `memories_metadata_gin` with `jsonb_path_ops`. The index claim applies to positive containment only. The product predicate is not servable by this index: `jsonb_path_ops` does not support key existence, and the extracted-text equality arm is not an indexed expression. The negative open-followup and promoted exclusions also filter without index assistance — the accepted scan shape shared by all three.
 
 Migration failure or checksum mismatch aborts startup before MCP serving. Namespace expansion, cosine ordering, and top-k clamping remain unchanged.
 

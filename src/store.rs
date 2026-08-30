@@ -46,9 +46,9 @@ fn build_recall_query(
         // pool": rows carrying no product claim stay visible, rows claiming a
         // different Product (or an explicit `product: null`) stay excluded.
         // `?` treats a JSON null as present, so the null case fails both arms.
-        // Neither arm is servable by the `jsonb_path_ops` GIN index (it serves
-        // only containment), the same accepted shape as the open-followup and
-        // promoted exclusions below.
+        // The `jsonb_path_ops` GIN index does not support key existence or the
+        // extracted-text equality arm. This is the same accepted scan shape as
+        // the open-followup and promoted exclusions below.
         if let Some(product) = filters.product.as_ref() {
             push_and(&mut builder, &mut has_where);
             builder
