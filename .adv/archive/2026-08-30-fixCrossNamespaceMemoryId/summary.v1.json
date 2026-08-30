@@ -1,0 +1,19 @@
+{
+  "archived_at": "2026-08-30T19:56:51.101Z",
+  "capabilities": [],
+  "change_hash": "ce7d40d2ce67ef30119921f90726498dd6e8a6db4b35d36c6ff8f8e0ab8b72b0",
+  "change_id": "fixCrossNamespaceMemoryId",
+  "completed_tasks": 3,
+  "created_at": "2026-08-30T17:02:07.158Z",
+  "current_gate": "release",
+  "fast_follow_of": {
+    "linked_at": "2026-08-30T17:02:06.711Z",
+    "parent_change_id": "addPromotionStateMemories"
+  },
+  "last_activity_at": "2026-08-30T19:53:53.319Z",
+  "status": "archived",
+  "summary_hash": "6fbaf3c8366b522198eca847dfaf7e050f65a6295e05232a929edd702af08a30",
+  "task_count": 3,
+  "title": "Fix cross-namespace memory id collision",
+  "version": "1"
+}

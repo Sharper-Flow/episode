@@ -1,0 +1,827 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Sharper-Flow/Advance/trunk/plugin/schemas/change.schema.json",
+  "id": "fixCrossNamespaceMemoryId",
+  "title": "Fix cross-namespace memory id collision",
+  "status": "archived",
+  "created_at": "2026-08-30T17:02:07.158Z",
+  "tasks": [
+    {
+      "id": "tk-9c7405c70243",
+      "title": "Write the two-namespace regression test and scope test helpers by namespace (RED)",
+      "type": "code",
+      "section": "Implementation",
+      "status": "done",
+      "priority": 0,
+      "deps": [],
+      "created_at": "2026-08-30T19:17:55.309Z",
+      "started_at": "2026-08-30T19:19:18.038Z",
+      "completed_at": "2026-08-30T19:22:04.688Z",
+      "verification": "RED tr_mtg74706_b0fd0e77 exit 101. Assertion output shows the steal exactly as predicted: left (actual) holds only namespace B's row (it_collision_b_..., \"project B lesson\") while right (expected) holds both namespaces' rows. Project A's pw-1 was moved and overwritten in place by project B's reconcile against the current 0001-0002 schema.\n\nWork done:\n1. Namespace-scoped the bare-id test helpers per validator A3. stored_metadata/stored_state in tests/reconcile_state_it.rs (:105-118) and stored_state in tests/promotion_state_it.rs (:127) now bind namespace beside id (WHERE id = $1 AND namespace = $2). All 15 call sites updated. A bare id is no longer assumed globally unique, so the helpers cannot mask a cross-namespace collision.\n2. New regression test same_adv_id_in_two_namespaces_survives_independertly in tests/reconcile_state_it.rs: same raw id pw-1 seeded in two namespaces with distinct content; asserts both rows survive with their own namespace and content (AC1/AC2), recall in each namespace returns exactly its own row (AC1), and promoting B's row leaves A's same-id row untouched (AC4).\n\nBuild clean, cargo fmt applied.",
+      "summary": "RED tr_mtg74706_b0fd0e77 exit 101. Assertion output shows the steal exactly as predicted: left (actual) holds only namespace B's row (it_collision_b_..., \"project B lesson\") while right (expected) holds both namespaces' rows. Project A's pw-1 was moved and overwritten in place by project B's reconcile against the current 0001-0002 schema.\n\nWork done:\n1. Namespace-scoped the bare-id test helpers per validator A3. stored_metadata/stored_state in tests/reconcile_state_it.rs (:105-118) and stored_state in tests/promotion_state_it.rs (:127) now bind namespace beside id (WHERE id = $1 AND namespace = $2). All 15 call sites updated. A bare id is no longer assumed globally unique, so the helpers cannot mask a cross-namespace collision.\n2. New regression test same_adv_id_in_two_namespaces_survives_independertly in tests/reconcile_state_it.rs: same raw id pw-1 seeded in two namespaces with distinct content; asserts both rows survive with their own namespace and content (AC1/AC2), recall in each namespace returns exactly its own row (AC1), and promoting B's row leaves A's same-id row untouched (AC4).\n\nBuild clean, cargo fmt applied.",
+      "filesTouched": [
+        "tests/promotion_state_it.rs",
+        "tests/reconcile_state_it.rs"
+      ],
+      "checkpointSha": "5fae48bd987965602c1a588cec91dd7c1933ebfd",
+      "completedAt": "2026-08-30T19:22:04.688Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC1",
+          "AC2",
+          "AC4"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-67fe7ce1cd3c",
+      "title": "Migration 0003 + upsert_batch conflict retarget (GREEN)",
+      "type": "code",
+      "section": "Implementation",
+      "status": "done",
+      "priority": 1,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-9c7405c70243"
+        }
+      ],
+      "created_at": "2026-08-30T19:18:03.253Z",
+      "started_at": "2026-08-30T19:22:11.927Z",
+      "completed_at": "2026-08-30T19:24:19.360Z",
+      "verification": "GREEN tr_mtg772r7_0e2625e0 exit 0: all 7 reconcile_state_it tests pass including same_adv_id_in_two_namespaces_survives_independently, and all 6 promotion_state_it tests pass including concurrent_ingest_conflict_preserves_promotion_state under the new conflict target. Migration 0003 confirmed applied on the dev database (_sqlx_migrations version 3 \"namespace id pk\").\n\nWork done:\n1. migrations/0003_namespace_id_pk.sql: plain DROP CONSTRAINT memories_pkey, ADD PRIMARY KEY (namespace, id), DROP INDEX memories_namespace_idx (redundant: composite PK btree leads on namespace). No idempotency guards per validator A5; sqlx owns single-apply semantics.\n2. src/store.rs upsert_batch: ON CONFLICT (id) -> ON CONFLICT (namespace, id); removed namespace = EXCLUDED.namespace from the DO UPDATE set list since a row conflicting on (namespace, id) cannot change namespace. The promotion-state preservation CASE is untouched.\n3. Doc comments at :166 and :178-181 rewritten to the new conflict target and (namespace, id) keying, current-state phrasing only.\n\nMid-run defect in my own test, diagnosed and fixed rather than papered over: first GREEN run failed with 5 rows for id pw-1. The migration was working — this run's two rows survived correctly — but earlier RED runs had panicked before their cleanup DELETE and leaked rows, and my row query asserted globally on bare id across the shared database. That was the same global-uniqueness assumption the change exists to remove, in my own test. Fixed by scoping the query to this run's two namespaces (WHERE id = 'pw-1' AND namespace IN ($1, $2)), which is the correct isolation for a shared test database regardless. Leaked rows from the failed runs deleted once-off via psql.\n\nIntermediate failing run recorded as tr_mtg75us7_fb3e1979 with the 5-row output showing both the leak and the correct per-run rows.",
+      "summary": "GREEN tr_mtg772r7_0e2625e0 exit 0: all 7 reconcile_state_it tests pass including same_adv_id_in_two_namespaces_survives_independently, and all 6 promotion_state_it tests pass including concurrent_ingest_conflict_preserves_promotion_state under the new conflict target. Migration 0003 confirmed applied on the dev database (_sqlx_migrations version 3 \"namespace id pk\").\n\nWork done:\n1. migrations/0003_namespace_id_pk.sql: plain DROP CONSTRAINT memories_pkey, ADD PRIMARY KEY (namespace, id), DROP INDEX memories_namespace_idx (redundant: composite PK btree leads on namespace). No idempotency guards per validator A5; sqlx owns single-apply semantics.\n2. src/store.rs upsert_batch: ON CONFLICT (id) -> ON CONFLICT (namespace, id); removed namespace = EXCLUDED.namespace from the DO UPDATE set list since a row conflicting on (namespace, id) cannot change namespace. The promotion-state preservation CASE is untouched.\n3. Doc comments at :166 and :178-181 rewritten to the new conflict target and (namespace, id) keying, current-state phrasing only.\n\nMid-run defect in my own test, diagnosed and fixed rather than papered over: first GREEN run failed with 5 rows for id pw-1. The migration was working — this run's two rows survived correctly — but earlier RED runs had panicked before their cleanup DELETE and leaked rows, and my row query asserted globally on bare id across the shared database. That was the same global-uniqueness assumption the change exists to remove, in my own test. Fixed by scoping the query to this run's two namespaces (WHERE id = 'pw-1' AND namespace IN ($1, $2)), which is the correct isolation for a shared test database regardless. Leaked rows from the failed runs deleted once-off via psql.\n\nIntermediate failing run recorded as tr_mtg75us7_fb3e1979 with the 5-row output showing both the leak and the correct per-run rows.",
+      "filesTouched": [
+        "migrations/0003_namespace_id_pk.sql",
+        "src/store.rs",
+        "tests/reconcile_state_it.rs"
+      ],
+      "checkpointSha": "cd5a80ab52bbe61f09289644e6363703ec3955b5",
+      "completedAt": "2026-08-30T19:24:19.360Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC1",
+          "AC2",
+          "AC3",
+          "AC5"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-c9a25b5233d5",
+      "title": "Revert-proof and full verification gate",
+      "type": "verification",
+      "section": "Verification",
+      "status": "done",
+      "priority": 2,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-67fe7ce1cd3c"
+        }
+      ],
+      "created_at": "2026-08-30T19:18:12.831Z",
+      "started_at": "2026-08-30T19:24:42.359Z",
+      "completed_at": "2026-08-30T19:53:53.319Z",
+      "verification": "Harden pass verdict READY, no code changes required. Migration SQL and store logic left unchanged — the reviewer confirmed by EXPLAIN evidence and migration-concurrency analysis that the shipped form is correct operationally.\n\nOne documentation addition accepted after line-by-line inspection: README.md gains an operational paragraph recording that the service applies pending sqlx migrations before serving, that a failed transactional migration leaves the prior schema active and blocks startup, and that rollback of a schema-changing release requires a database snapshot matching the old binary because a binary-only rollback can fail against a migrated constraint. Verified the startup-migration claim against Store::connect (store.rs:160-163, migrate!() runs before the store is returned). This is durable operator guidance, not derivable from code, and the placement beside the deploy paragraph is coherent.\n\nAll prior verification stands: 63 lib + 20 DB-backed tests, clippy -D warnings zero, fmt clean.",
+      "summary": "Harden pass verdict READY, no code changes required. Migration SQL and store logic left unchanged — the reviewer confirmed by EXPLAIN evidence and migration-concurrency analysis that the shipped form is correct operationally.\n\nOne documentation addition accepted after line-by-line inspection: README.md gains an operational paragraph recording that the service applies pending sqlx migrations before serving, that a failed transactional migration leaves the prior schema active and blocks startup, and that rollback of a schema-changing release requires a database snapshot matching the old binary because a binary-only rollback can fail against a migrated constraint. Verified the startup-migration claim against Store::connect (store.rs:160-163, migrate!() runs before the store is returned). This is durable operator guidance, not derivable from code, and the placement beside the deploy paragraph is coherent.\n\nAll prior verification stands: 63 lib + 20 DB-backed tests, clippy -D warnings zero, fmt clean.",
+      "filesTouched": [
+        "README.md"
+      ],
+      "checkpointSha": "fcc864a33fae89b5b5101e38a1370bf733f21ecf",
+      "completedAt": "2026-08-30T19:53:53.319Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC5",
+          "AC6",
+          "AC7",
+          "AC8"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "separate_verification"
+      }
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "fixCrossNamespaceMemoryId",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-gate-independent-validation"
+      },
+      "agent": "adv-researcher",
+      "topic": "Independent design validation: composite PK (namespace, id) fix for cross-namespace id collision",
+      "sources": [
+        {
+          "label": "sqlx Migrator source (run loop, checksum, pending-only apply)",
+          "locator": "https://github.com/launchbadge/sqlx/blob/main/sqlx-core/src/migrate/migrator.rs",
+          "summary": "run_direct validates applied-migration checksums (VersionMismatch on edit) and executes only pending migrations; applied ones are skipped, so startup re-run is a no-op."
+        },
+        {
+          "label": "sqlx Postgres migrate source (transactional apply)",
+          "locator": "https://github.com/launchbadge/sqlx/blob/main/sqlx-postgres/src/migrate.rs",
+          "summary": "apply() wraps migration SQL plus bookkeeping INSERT in one transaction unless no_tx (comment cites launchbadge/sqlx#1966); advisory lock serializes concurrent migrators."
+        },
+        {
+          "label": "sqlx docs.rs Migrator::run",
+          "locator": "https://docs.rs/sqlx/latest/sqlx/migrate/struct.Migrator.html",
+          "summary": "Run pending migrations; validate previously applied migrations against current source to detect accidental changes."
+        },
+        {
+          "label": "PostgreSQL 17 INSERT / ON CONFLICT",
+          "locator": "https://www.postgresql.org/docs/17/sql-insert.html",
+          "summary": "conflict_target selects arbiter indexes via unique-index inference (must match PK columns for DO UPDATE); the statement cannot affect any single existing row more than once (cardinality violation)."
+        },
+        {
+          "label": "PostgreSQL 17 DDL constraints (primary keys)",
+          "locator": "https://www.postgresql.org/docs/17/ddl-constraints.html",
+          "summary": "PRIMARY KEY (a, c) composite form documented; a PK auto-creates a unique B-tree index and forces NOT NULL."
+        },
+        {
+          "label": "PostgreSQL 17 multicolumn B-tree indexes",
+          "locator": "https://www.postgresql.org/docs/17/indexes-multicolumn.html",
+          "summary": "Equality on the leading (leftmost) columns limits the index scan, so PK (namespace, id) serves namespace-only predicates."
+        },
+        {
+          "label": "PostgreSQL 17 ALTER TABLE (PK swap pattern)",
+          "locator": "https://www.postgresql.org/docs/17/sql-altertable.html",
+          "summary": "Documents the DROP CONSTRAINT x_pkey / ADD PRIMARY KEY pattern and default {table}_pkey constraint naming."
+        }
+      ],
+      "architecture_assessment": "VERDICT: APPROVE WITH FINDINGS (no blocking corrections; five advisory notes).\n\n1) ID-ADDRESSED QUERY INVENTORY — COMPLETE. Full production SQL inventory traced. Bare-id row addressing exists ONLY in the upsert conflict clause itself (src/store.rs:229). Every other path is already namespace-composite or namespace-scoped: promote WHERE id=$1 AND namespace=$2 (store.rs:105-108), forget_manual id+namespace+source (store.rs:336), exists_source / existing_source_ids namespace+source_id (store.rs:260, 288-289), forget_ingested + mark_candidates namespace+source_id (store.rs:362-364, 120-125), stats GROUP BY namespace (store.rs:442-445), recall returns id WITH namespace in RecallHit (store.rs:31, types.rs:318-321). MCP tools forget/promote already require namespace (server.rs:57-78), so the recall->promote/forget feedback loop is namespace-complete; no wire-schema change needed. No in-repo consumer dedups recall results by id. Test-only bare-id reads WHERE id=$1 ... fetch_one (tests/promotion_state_it.rs:128, tests/reconcile_state_it.rs:106) still work because test ids are uuid-unique; see advisory A3.\n\n2) MIGRATION MECHANICS — CORRECT. Drop+add PK in one 0003 file is atomic: sqlx Postgres apply() executes migration SQL and the _sqlx_migrations bookkeeping INSERT in a single transaction unless the file is marked no-transaction (sqlx-postgres/src/migrate.rs, comment citing issue #1966); a mid-file failure rolls back fully and is not recorded applied. Re-run no-op (AC5) holds structurally: Migrator::run only executes PENDING migrations; applied ones are checksum-validated and skipped, so repeated startups never re-execute 0003 (migrator.rs run_direct). Consequence: never edit 0003 after it is applied anywhere — startup errors with VersionMismatch. Plain ALTER TABLE memories DROP CONSTRAINT memories_pkey (default {table}_pkey naming) is correct; IF EXISTS would only mask schema drift. Dependent objects: none — no FKs reference memories, and no Rust code names memories_pkey or memories_namespace_idx (grep verified). Extra safety the design can claim: the old global PK (id) strictly implies (namespace, id) uniqueness and both columns are already NOT NULL (0001_init.sql:9,13), so ADD PRIMARY KEY (namespace, id) cannot fail on existing data even if the zero-rows premise were stale.\n\n3) ON CONFLICT RETARGET — SEMANTICS NARROW EXACTLY AS INTENDED. New arbiter (namespace, id) matches the new PK per unique-index inference (PG 17 sql-insert). The conflict set strictly NARROWS: old (id) fired on any-namespace same-id (the row-steal bug: bulk dedup sees namespace B clean because the row lives in A, lib.rs:210-228, then DO UPDATE SET namespace=EXCLUDED.namespace steals it, store.rs:229-232); new (namespace, id) fires only same-namespace, so cross-namespace same-id inserts a fresh row. No same-namespace conflict becomes newly reachable. The TOCTOU claim holds: filter_eligible drops stored (namespace, source_id)s before upsert (lib.rs:105-113, 210-228), and id==source_id for both parsers (ingest.rs:141-142, 268-271), so the DO UPDATE branch is reachable only via a concurrent writer between the dedup SELECT and the INSERT — exactly the race whose promotion_state-preserving CASE (store.rs:235-247) the harden fix added, and which spec 0011 line 43 documents. That CASE is untouched by the retarget. Dropping namespace = EXCLUDED.namespace from SET is correct: with arbiter (namespace,id) the matched row's namespace equals EXCLUDED.namespace by definition, so the assignment was the steal mechanism and is now dead code. Pre-existing non-blocking hazard unchanged: duplicate ids WITHIN one batch statement are not deduped by filter_eligible and raise the PG cardinality-violation error (cannot affect one row twice) under both old and new arbiter.\n\n4) memories_source_uniq RETENTION — JUSTIFIED, RATIONALE IMPROVABLE. It is the write-side enforcer of the exact key the dedup READ uses — (namespace, source, source_id), cf. existing_source_ids store.rs:288-289 — while the PK covers that key only through the parsers' private id==source_id convention, which no schema constraint enforces. It can independently fire only if id ever diverges from source_id (same ns+source+source_id, different id), which is precisely the divergence case. Cost is one partial index over zero rows. Retain. The stated rationale ('guards if id diverges') is right but should be phrased as dedup-read/write key alignment.\n\n5) REJECTED ALTERNATIVE — REJECTION UPHELD. Namespace-qualified stored ids ({ns}/pw-1) keep the single-column PK but denormalize namespace into the id, invent a wire format, and change every caller-visible ingested id plus every existing_source_ids comparison. Composite PK concerns checked and dismissed: pgvector HNSW index is independent of the PK (0001:50-51); no replication configured (docker-compose.yml — single pg16 node); PK width (2x TEXT) negligible at this scale; composite PK is the documented PG form (ddl-constraints PRIMARY KEY (a,c)).\n\n6) BLAST RADIUS BEYOND THE DESIGN LIST — THREE ITEMS. (a) memories_namespace_idx (0001:54) becomes REDUNDANT: the PK btree (namespace, id) has namespace leading and serves all namespace-only predicates (indexes-multicolumn), and no code references the index by name — candidate for DROP in 0003 (P41). (b) Stale doc comments referencing the old arbiter must be updated with the code (store.rs:166 'keyed on stable id', store.rs:181 'ON CONFLICT (id)'). (c) Wire-visible behavior: un-namespaced recall may now legitimately return two hits with the same id in different namespaces — previously impossible because the bug collapsed them; correct by design, worth one line in acceptance notes. No durable doc restates the single-column PK as a contract (grep: only read-only .adv/archive artifacts).",
+      "validation": {
+        "status": "pass",
+        "blockers": [],
+        "notes": "All six design claims verified against traced code and official sources. Migration is atomic and re-run-safe by sqlx construction; the conflict-target change strictly narrows the update set; no production path addresses rows by bare id besides the fixed clause. Advisory findings A1-A5; none block."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "low",
+        "tradeoffs": [
+          "Composite PK widens the uniqueness key and makes id non-globally-unique on the wire; every consumer must pair id with namespace (all in-repo consumers already do).",
+          "Keeping memories_source_uniq costs one partial unique index and write-side checks; buys write-side enforcement of the dedup read key independent of the parsers' id==source_id convention.",
+          "Forward-only migration: once 0003 is applied anywhere, editing the file breaks startup via sqlx VersionMismatch — acceptable for a single-operator service.",
+          "Redundant memories_namespace_idx (if kept) adds minor write amplification for zero query value once PK (namespace,id) exists."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Namespace-qualify stored ids at parse time ({ns}/pw-1)",
+            "disposition": "rejected",
+            "rationale": "Denormalizes namespace into the id value, invents a wire format, changes every caller-visible ingested id, and still needs every dedup comparison updated; strictly worse than letting the schema carry the key."
+          },
+          {
+            "option": "Drop memories_source_uniq as subsumed by the new PK",
+            "disposition": "rejected",
+            "rationale": "PK covers (namespace, source, source_id) only via the unenforced parser convention id==source_id; the unique index is the structural guarantee matching the dedup read path."
+          },
+          {
+            "option": "Drop memories_namespace_idx in the same 0003 migration",
+            "disposition": "deferred",
+            "rationale": "PK (namespace, id) leading column serves all namespace-only predicates; index is dead weight afterward. Optional in-change, else named follow-up."
+          },
+          {
+            "option": "ON CONFLICT ON CONSTRAINT memories_pkey instead of column-list inference",
+            "disposition": "rejected",
+            "rationale": "PG docs recommend unique-index inference over naming a constraint: inference keeps working if the index is replaced concurrently."
+          }
+        ],
+        "recommendation": "Proceed with D1 exactly as specified. Fold in advisories: (A1) drop memories_namespace_idx in 0003 or record a named follow-up; (A2) update stale store.rs doc comments (lines 166, 181) in the same change; (A3) scope the bare-id test helpers (promotion_state_it.rs:128, reconcile_state_it.rs:106) by namespace, since the new two-namespace regression test makes duplicate ids a first-class scenario; (A4) note the wire-visible duplicate-id recall behavior in acceptance notes; (A5) treat 0003 as immutable once applied. Keep plain DROP CONSTRAINT (no IF EXISTS) so drift surfaces."
+      },
+      "recommendation": "APPROVE WITH FINDINGS. The design is correct, minimal, and forward-safe: no production query path breaks, the conflict semantics narrow exactly to the bug, the migration is atomic and re-run-no-op by sqlx construction, and the alternative is strictly worse. Apply advisory notes A1-A5 (namespace_idx drop, comment updates, test-helper scoping, wire-behavior note, migration immutability) in or alongside the change.",
+      "follow_ups": [
+        "Advisory A1: drop redundant memories_namespace_idx in 0003 (or record named follow-up) — PK (namespace,id) leading column covers namespace-only predicates per PG 17 indexes-multicolumn.",
+        "Advisory A3: scope bare-id fetch_one test helpers in tests/promotion_state_it.rs:128 and tests/reconcile_state_it.rs:106 by namespace before landing the two-namespace regression test.",
+        "Advisory A2: update store.rs doc comments at :166 and :181 that still describe the single-column arbiter.",
+        "Advisory A4: document in acceptance notes that un-namespaced recall may now return same-id hits from different namespaces (intended fix outcome)."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "fixCrossNamespaceMemoryId",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/fixCrossNamespaceMemoryId",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [
+        {
+          "id": "contract-praise-1",
+          "label": "praise",
+          "file": "src/store.rs",
+          "line": 231,
+          "what": "The conflict target now matches the composite row identity while preserving the promotion-state CASE branch.",
+          "why": "Cross-namespace ids no longer conflict, and same-namespace race updates retain human promotion state."
+        }
+      ],
+      "changes_made": [
+        {
+          "file": "tests/reconcile_state_it.rs",
+          "summary": "Added explicit unchanged-source no-op coverage, reused one raw id in the retraction scope test, and removed stale global-id commentary.",
+          "verification": "Seven reconcile_state_it database tests passed, including collision, dedup, promotion, and retraction cases."
+        },
+        {
+          "file": "tests/recall_it.rs",
+          "summary": "Added same-id manual rows in two namespaces and proved forget removes only the addressed namespace row. Removed stale contract citations from the test comment.",
+          "verification": "Both recall_it database tests passed. The same-id peer remained addressable after the first delete."
+        },
+        {
+          "file": "src/store.rs",
+          "summary": "Removed stale agreement and design citations from the upsert documentation.",
+          "verification": "cargo test --lib, clippy, formatting, and database tests passed."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "Never edit an applied sqlx migration, including comments. sqlx validates the full migration checksum and rejects any changed byte on the next connection."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "cargo test --test reconcile_state_it -- --ignored",
+          "cargo test --test recall_it -- --ignored",
+          "EPISODE_TEST_DATABASE_URL=postgres://episode:episode@localhost:5434/<isolated-db> cargo test --tests -- --ignored",
+          "cargo test --lib",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo fmt --check",
+          "git diff --check"
+        ],
+        "results": "pass",
+        "evidence": "Final results: 7/7 reconcile tests, 2/2 recall tests, 20/20 DB-backed tests on a fresh isolated database, and 63/63 library tests passed. Clippy reported zero warnings. Formatting and diff checks passed. The fresh database exercised migrations 0001-0003; repeated Store::connect calls proved migration reruns are no-ops. The isolated database was dropped by an EXIT trap. An initial targeted run failed after a review-only comment edit changed migration 0003's checksum. I reverted that edit byte-for-byte, confirmed no migration diff from HEAD, and reran all checks successfully. Persisted execution evidence also records AC7's pre-0003 failure and post-0003 pass."
+      },
+      "scope_drift": null,
+      "risks": [],
+      "required_main_agent_actions": [
+        "Checkpoint the three reviewer-modified files before acceptance.",
+        "Keep migrations/0003_namespace_id_pk.sql byte-identical because the development database has already applied it."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "fixCrossNamespaceMemoryId",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/fixCrossNamespaceMemoryId",
+      "scope": {
+        "kind": "change",
+        "scope_key": "harden:release"
+      },
+      "agent": "adv-reviewer",
+      "phase": "harden",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [
+        {
+          "id": "operational-scale-1",
+          "label": "suggestion",
+          "file": "migrations/0003_namespace_id_pk.sql",
+          "line": 12,
+          "what": "The plain primary-key rebuild is correct for the expected empty database but holds ACCESS EXCLUSIVE through a synchronous index build on populated databases.",
+          "why": "PostgreSQL documents ACCESS EXCLUSIVE for these ALTER TABLE forms. A 20,002-row, 242 MB scratch copy completed the single transaction in 0.22 seconds with warm local storage. Reassess a concurrent unique-index prebuild plus PRIMARY KEY USING INDEX at roughly million-row or multi-GB scale, or whenever the measured build exceeds the maintenance outage budget. That staged form is not warranted for the zero-row restoration."
+        },
+        {
+          "id": "query-plan-1",
+          "label": "praise",
+          "file": "migrations/0003_namespace_id_pk.sql",
+          "line": 15,
+          "what": "The composite primary key replaces the dropped namespace index for selective namespace predicates.",
+          "why": "On 20,002 rows across 102 namespaces, EXPLAIN used memories_pkey Bitmap Index Scan for recall namespace ANY, memories_source_uniq index scans for existing_source_ids, forget_ingested, and mark_candidates, and memories_pkey Index Scan for promote. Stats used a Seq Scan because it intentionally reads and groups the full table, not because the namespace index is absent."
+        },
+        {
+          "id": "migration-concurrency-1",
+          "label": "praise",
+          "file": "src/store.rs",
+          "line": 162,
+          "what": "Startup migration ordering prevents new processes from serving against a partial schema.",
+          "why": "Two simultaneous Episode starts against a database reset to migration 0002 serialized through SQLx migration locking. Migration 0003 recorded one successful application, both processes passed migration, and both later failed only because the MCP stdin probe omitted initialize."
+        }
+      ],
+      "changes_made": [
+        {
+          "file": "README.md",
+          "summary": "Added durable deployment guidance to stop the service, take a backup, and restore a schema-compatible snapshot for binary rollback.",
+          "verification": "git diff --check, cargo fmt --all --check, cargo clippy --all-targets --all-features --locked -- -D warnings, cargo test --locked, and all 20 ignored database tests passed."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "A forward schema migration can be transactionally safe yet make binary-only rollback unsafe. Document the binary/schema compatibility boundary and require a matching database snapshot for rollback."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "EXPLAIN six production query shapes on a 20,002-row, 102-namespace, 242 MB scratch database",
+          "Timed migration 0003 transaction on the populated scratch database",
+          "Started two Episode processes simultaneously against migration 0002",
+          "Ran an old ON CONFLICT (id) upsert while migration 0003 held its table lock",
+          "cargo fmt --all --check",
+          "cargo clippy --all-targets --all-features --locked -- -D warnings",
+          "cargo test --locked",
+          "EPISODE_TEST_DATABASE_URL='postgres://episode:episode@localhost:5434/episode' cargo test --tests -- --ignored",
+          "git diff --check"
+        ],
+        "results": "pass",
+        "evidence": "Operational-robustness area 1 is clean at expected scale: the populated migration was atomic and took 0.22 seconds locally; ACCESS EXCLUSIVE and synchronous rebuild become material at million-row or multi-GB scale. Area 2 is clean: selective namespace query shapes used memories_pkey or memories_source_uniq; stats correctly used a full-table Seq Scan. Area 3 is clean for new processes: SQLx locking serialized starts. An old-service upsert waited about 2 seconds for DDL, then failed because ON CONFLICT (id) no longer had a matching unique constraint, which confirms the stop-first cutover requirement. Area 4 is clean: failure rolls back the file transaction; restore of a pre-0003 backup lets the new binary replay 0003, while old-binary rollback requires the matching snapshot. Area 5 is clean for this deployment: startup propagates migration errors before serving, the service-down cutover avoids pool lock waits, DROP INDEX removed the relation without VACUUM, and dev has no replication. Large replicated deployments can see WAL and replay lag from the index rebuild."
+      },
+      "scope_drift": null,
+      "risks": [
+        "The packet supplied scope key harden:operational-robustness, but the report schema accepts only harden:release for an independent harden report. This report preserves the requested dimension in its finding and evidence IDs.",
+        "A running old binary becomes write-incompatible after migration 0003 commits; stop it before cutover and do not use binary-only rollback.",
+        "No database lock timeout bounds an unexpected wait behind a long transaction. This is acceptable for the stated service-down restoration but needs an operator maintenance window for populated databases.",
+        "A future replicated multi-GB database can incur WAL volume and standby replay lag during the primary-key rebuild."
+      ],
+      "required_main_agent_actions": [
+        "Keep the README stop, backup, and schema-compatible rollback guidance with this change.",
+        "For the stated zero-row service restoration, retain the plain transactional migration and continue hardening.",
+        "If a future database reaches roughly one million rows or multiple gigabytes, benchmark the migration and consider a staged concurrent unique-index build with PRIMARY KEY USING INDEX."
+      ]
+    }
+  ],
+  "test_runs": {
+    "tk-9c7405c70243": [
+      {
+        "runId": "tr_mtg74706_b0fd0e77",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --test reconcile_state_it -- --ignored same_adv_id 2>&1 | grep -E 'left:|right:|assertion|test result' | head -6",
+        "durationMs": 548.1177060008049,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T19:21:49.692Z"
+      }
+    ],
+    "tk-67fe7ce1cd3c": [
+      {
+        "runId": "tr_mtg75us7_fb3e1979",
+        "phase": "green",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo fmt && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\" && echo \"=== promotion suite ===\" && cargo test --test promotion_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\"",
+        "durationMs": 9054.905602000654,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T19:23:07.162Z"
+      },
+      {
+        "runId": "tr_mtg772r7_0e2625e0",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\" && echo \"=== promotion suite ===\" && cargo test --test promotion_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\"",
+        "durationMs": 6273.622941993177,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T19:24:04.153Z"
+      }
+    ],
+    "tk-c9a25b5233d5": [
+      {
+        "runId": "tr_mtg7bqxl_2f94c52f",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E \"^test result\" && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== clippy/fmt ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && docker exec episode-db dropdb -U episode episode_ac7_a && docker exec episode-db dropdb -U episode episode_ac7_b && echo \"temp dbs dropped\"",
+        "durationMs": 113578.68621599674,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T19:27:42.128Z"
+      },
+      {
+        "runId": "tr_mtg7mrr2_5004b49f",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E \"^test result\" && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== gates ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\"",
+        "durationMs": 10158.710322998464,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T19:36:16.410Z"
+      }
+    ]
+  },
+  "deltas": {},
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-08-30T19:07:31.686Z",
+      "completed_by": "user",
+      "approval_evidence": "User approved starting this change with \"go\", directly after the triage recommendation \"fixCrossNamespaceMemoryId — do this next. Confirmed silent cross-project data corruption. Land it before service restoration.\" The problem statement, evidence, reproduction, and verification bar were presented in that recommendation and in the acceptance/archive reports of the parent change."
+    },
+    "discovery": {
+      "status": "done",
+      "completed_at": "2026-08-30T19:08:14.125Z",
+      "completed_by": "agent",
+      "approval_evidence": "Code evidence gathered inline; no external research dimension exists for this defect.\n\nKey findings: (1) only one ON CONFLICT exists in the codebase — upsert_batch src/store.rs:229 on (id); (2) both id-addressed queries already pair id+namespace — promote at :108, forget_manual at :336; (3) existing_source_ids dedup is already namespace-scoped (:278-286); (4) manual ids are mem-{uuid} (server.rs:145) and cannot collide; (5) ingested ids are raw per-project ADV ids (ingest.rs:90) and reflection children (ingest.rs:270) — both collide across projects; (6) store holds zero rows and service is down since 2026-08-19, so a PK reshape needs no backfill and has no compatibility window; (7) no index references the PK (HNSW on embedding, GIN on metadata, btree on namespace).\n\nConclusion: the collision is confined to upsert_batch's conflict target disagreeing with the row's real identity domain (namespace, id). Everything downstream of the write already assumes namespace-scoped identity. Scope is one migration plus one conflict clause."
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-08-30T19:16:54.720Z",
+      "completed_by": "agent",
+      "approval_evidence": "Independent validator (adv-researcher, attempt 1, scope researcher:design-gate-independent-validation) returned APPROVE WITH FINDINGS: pass, high confidence, low risk, zero blocking corrections.\n\nValidator independently confirmed: the bare-id inventory is complete (no id-addressed path outside the old conflict clause); the migration is transactional and single-apply in sqlx; global (id) uniqueness strictly implies (namespace, id) uniqueness so the migration cannot fail on data even beyond the zero-row premise; the conflict set strictly narrows to the same-namespace TOCTOU race; and the promotion-state preservation branch is untouched.\n\nFive advisory findings, all folded into design.md: A1 drop the now-redundant memories_namespace_idx in 0003 (composite PK leads on namespace); A2 rewrite stale ON CONFLICT doc comments; A3 namespace-scope the bare-id test helpers before the regression lands; A4 record the same-id-across-namespaces recall behavior as intended in acceptance; A5 keep 0003 immutable with plain DROP CONSTRAINT — idempotency comes from sqlx bookkeeping, not SQL guards, which corrected my original IF EXISTS approach.\n\nNo user-value/product tradeoff, no CONFLICT verdict, no contract compromise — no design-approval pause required."
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-08-30T19:19:11.991Z",
+      "completed_by": "user",
+      "approval_evidence": "User approved the prep contract with \"approve\" at the planning checkpoint, against \"Reply `approve` to start execution, or reply with what to adjust.\"\n\nTask graph: 3 tasks (tk-9c7405c70243 RED regression + helper scoping; tk-67fe7ce1cd3c migration 0003 + conflict retarget GREEN; tk-c9a25b5233d5 revert-proof + full gate), all 8 acceptance criteria covered with no uncovered criteria. Design validated independently (APPROVE WITH FINDINGS, advisories folded). Worktree change/fixCrossNamespaceMemoryId at ee54ae1."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-08-30T19:28:12.078Z",
+      "completed_by": "agent",
+      "approval_evidence": "All 3 tasks done with checkpoints: tk-9c7405c70243 (5fae48b, RED regression + helper scoping), tk-67fe7ce1cd3c (cd5a80a, migration 0003 + conflict retarget GREEN), tk-c9a25b5233d5 (clean checkpoint, revert-proof + full gate).\n\nTDD sequence enforced and satisfied: RED tr_mtg74706 (steal visible against 0001-0002), GREEN tr_mtg772r7 (pass against 0003, all 13 reconcile+promotion tests), revert-proof pair on isolated databases (fail at 0002, pass at 0003, full fresh migration path exercised).\n\nFull gate tr_mtg7bqxl: 63 lib + 20 DB-backed tests, clippy -D warnings zero, fmt clean. One in-flight test defect found and fixed honestly: my own regression test initially asserted globally on bare id across the shared database — the same global-uniqueness assumption this change removes — and leaked rows from failed RED runs exposed it. Query scoped to the run's namespaces; leaked rows cleaned."
+    },
+    "acceptance": {
+      "status": "done",
+      "completed_at": "2026-08-30T19:41:58.079Z",
+      "completed_by": "user",
+      "approval_evidence": "User accepted at the acceptance checkpoint, replying \"continue\" against the anchor phrase \"Reply `continue` to accept and proceed to harden, or reply with what to adjust.\"\n\nReview verdict APPROVED. All 8 acceptance criteria demonstrated: two-namespace survival with same raw id (AC1), no cross-project mutation including delete and promotion isolation (AC2/AC4), dedup no-op proven by direct assertion (AC3, reviewer-added), forward-only migration no-op on re-run (AC5), manual memories including same-id cross-namespace rows (AC6), regression revert-proven on isolated databases at 0002 vs 0003 with the full fresh migration path exercised (AC7), full gate green — 63 lib + 20 DB-backed, clippy -D warnings zero, fmt clean (AC8).\n\nExecutive summary persisted. Review fixes committed at 49ea293 after independent re-verification."
+    },
+    "release": {
+      "status": "pending"
+    }
+  },
+  "documents": {
+    "proposal": "# Fix cross-namespace memory id collision\n\n> Routed finding. Surfaced while writing a namespace-scoping test in\n> `addPromotionStateMemories` task `tk-76bb0834b5e5`. Pre-existing and unrelated\n> to promotion state, so it was not folded into that change.\n\n## Problem\n\nIngested memories use the raw ADV entry id as the global primary key. ADV wisdom\nids are per-project sequential (`pw-1`, `pw-2`, ...), so two watched projects\nalmost certainly both contain `pw-1`. The second project's reconcile silently\nsteals the first project's row.\n\nEvidence:\n\n- `migrations/0001_init.sql:9` — `id TEXT PRIMARY KEY`, global across namespaces.\n- `src/ingest.rs` — `parse_wisdom` sets `id` to the raw ADV id, unprefixed.\n- `src/store.rs:211-221` — `ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace, ...`.\n\nThe intended guard, `memories_source_uniq` on `(namespace, source, source_id)`\n(`migrations/0001_init.sql:45-47`), never fires: the primary-key conflict is\nevaluated first, so the statement takes the `DO UPDATE` branch and rewrites the\nexisting row's namespace instead of inserting a second row.\n\n## Observed, not just derived\n\nThis is not a paper reading of the schema. It reproduced within minutes of being\nfound.\n\nWhile implementing `addPromotionStateMemories` task `tk-568afae7fe07`, two new\nintegration tests in `tests/reconcile_state_it.rs` each seeded an entry with id\n`pw-1` under two different, uniquely-named namespaces. They collided. The second\ntest's upsert took the `ON CONFLICT (id) DO UPDATE` branch and moved the first\ntest's row into the second namespace, so a state assertion read `None` where the\nrow should have been.\n\nThe failure presented as a promotion-state bug and was not one. That is the\nshape this defect will take in production: a memory goes missing in project A,\nand the cause looks like whatever subsystem happened to read it next.\n\nThe tests were fixed by giving each a distinct id. That is a fixture workaround,\nnot a fix — it sidesteps the collision rather than resolving it.\n\n## Impact\n\nProject A ingests `pw-1`. Project B later ingests its own unrelated `pw-1`. A's\nmemory is overwritten in place — content, kind, metadata, embedding, and\nnamespace all replaced. A loses the memory with no error and no log line. Recall\nfor A silently returns less than it should.\n\nManual memories are unaffected: they use `mem-{uuid}` ids.\n\nReflection children are also exposed — `{rf_id}:{kind}:{index}` is likewise\nper-project.\n\n## Severity\n\nLatent today and cheap to fix now. The store holds zero rows and the service has\nbeen disabled since 2026-08-19. It becomes live as soon as episode watches a\nsecond project after restoration.\n\n## Scope\n\n- `migrations/` — one new migration, shape depending on the direction chosen.\n- `src/ingest.rs` — `parse_wisdom` and `parse_reflections` id construction.\n- `src/store.rs` — `upsert_batch`'s `ON CONFLICT` target; check `forget_manual`,\n  `forget_ingested`, `mark_candidates`, and `promote`, which all address rows by\n  `id` plus `namespace` and are correct either way.\n- `src/server.rs` — `forget` and `promote` take a caller-supplied `id`; confirm\n  whether the caller-facing id changes shape.\n- `tests/reconcile_state_it.rs` — remove the distinct-id workaround once real\n  isolation exists.\n\n## Candidate directions\n\nNot yet decided; discovery should settle it.\n\n1. Namespace-qualify the stored id at parse time. Keeps `source_id` as the raw\n   ADV id for dedup, so `existing_source_ids` is unaffected. Changes the\n   caller-facing id, which `forget` and `promote` accept.\n2. Make the primary key composite on `(namespace, id)` and retarget the\n   `ON CONFLICT` clause. Larger migration, no id rewriting, caller-facing id\n   unchanged.\n\nEither way the fix must keep the `ON CONFLICT` target aligned with whichever\nuniqueness constraint is authoritative, since that misalignment is the bug.\n\n## Verification\n\nA regression test must ingest the same ADV id under two namespaces and assert\nboth rows survive independently. Such a test cannot pass today.\n",
+    "agreement": "# Agreement — fix cross-namespace memory id collision\n\n## Objectives\n\n1. Two projects ingesting the same raw ADV id (`pw-1`) both retain independent rows. Neither reconcile steals the other's row.\n2. The fix is structural: the `ON CONFLICT` target aligns with whichever uniqueness constraint is authoritative, rather than sidestepping collisions.\n3. No caller-facing contract change: `remember`, `recall`, `forget`, and `promote` keep their current parameter shapes and semantics.\n4. The distinct-id fixture workaround in `tests/reconcile_state_it.rs` becomes provably unnecessary — real isolation is demonstrated by test, not by id avoidance.\n\n## Acceptance criteria\n\n- AC1: Ingesting the same ADV id under two distinct namespaces produces two surviving rows, each addressable and recallable in its own namespace.\n- AC2: Reconcile of project B does not modify, move, or delete any row belonging to project A (asserted on content, namespace, and promotion state).\n- AC3: Re-ingest of an unchanged source under the same namespace is still a no-op (dedup via `existing_source_ids` continues to work; `upsert_batch`'s conflict path is only the concurrency race).\n- AC4: `promote` and `forget` address rows by id + namespace exactly as before; a same-id row in another namespace is untouched.\n- AC5: A migration exists, is forward-only, and runs on an empty store; re-running migrations is a no-op.\n- AC6: Manual memories (`mem-{uuid}`) are unaffected.\n- AC7: The regression test (AC1/AC2) fails on the pre-fix schema and passes after — proven by revert check, not assumed.\n- AC8: `cargo test --lib`, all DB-backed tests, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check` pass.\n\n## Constraints\n\n- Episode service is down and the store holds zero rows. The migration may reshape the primary key without backfill; it must not depend on row data.\n- No speculative unique-index cleanup: `memories_source_uniq` stays. It guards a distinct constraint (same source_id under different id shapes) and is not dead.\n- Promotion-state semantics from spec 0011 are untouched; the promotion tests must pass unchanged.\n\n## Avoidances\n\n- Do not namespace-qualify the stored id (rejected direction): it denormalizes namespace into id, invents a wire format, and changes every caller-visible ingested id.\n- Do not alter MCP tool schemas.\n- Do not fold in unrelated store refactors.",
+    "design": "# Design — composite primary key (namespace, id)\n\n## Root cause\n\n`migrations/0001_init.sql:9` declares `id TEXT PRIMARY KEY` — globally unique across namespaces. Ingested ids are raw per-project ADV ids (`pw-1`, `{rf_id}:{kind}:{index}`), so a second project's reconcile hits the PK conflict and takes `upsert_batch`'s `ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace, ...` branch (`src/store.rs:229`), silently rewriting the first project's row in place. The intended guard, `memories_source_uniq (namespace, source, source_id)` at `:45-47`, never evaluates — the PK conflict wins first.\n\nThe row's real identity domain is (namespace, id). Every id-addressed query already assumes it: `promote` (`src/store.rs:105-108`) and `forget_manual` (`:336`) both filter `id = $1 AND namespace = $2`; `forget_ingested`/`mark_candidates` bind namespace + source ids; `RecallHit` returns id **and** namespace; the MCP tools already require namespace. Only the primary key disagreed.\n\n## Decision D1 — composite PK, not id rewriting\n\n**Chosen:** drop `memories_pkey`, add `PRIMARY KEY (namespace, id)` in migration `0003_namespace_id_pk.sql`. Retarget `upsert_batch`'s conflict clause to `ON CONFLICT (namespace, id)`.\n\n**Rejected:** namespace-qualifying the stored id at parse time (`{namespace}/pw-1`). It would keep the single-column PK but denormalize namespace into every ingested id, invent a separator convention that becomes caller-visible wire format, and change the id shape for wisdom rows, reflection children, and every stored reference. Identity belongs in the constraint, not copied into the value.\n\n**Cost:** zero-row store (service down since 2026-08-19) makes the PK rebuild an instant catalog operation. No backfill, no dual-write, no compatibility window. Independent validator confirmed the zero-rows premise is not even load-bearing: global `(id)` uniqueness strictly implies `(namespace, id)` uniqueness, so the migration cannot fail on data at any row count.\n\n## What changes\n\n1. **`migrations/0003_namespace_id_pk.sql`** — plain `ALTER TABLE memories DROP CONSTRAINT memories_pkey` then `ADD PRIMARY KEY (namespace, id)`, plus `DROP INDEX memories_namespace_idx` (validator A1: the composite PK's btree leads on namespace and serves every namespace-only predicate, making the standalone index redundant). No `IF EXISTS` guards: sqlx applies each migration exactly once in its own transaction with checksum validation (validator-verified against sqlx source), so idempotency comes from the migrator, not the SQL — and the file is immutable once applied.\n2. **`src/store.rs` `upsert_batch`** — conflict target `(namespace, id)`; drop `namespace = EXCLUDED.namespace` from the `DO UPDATE` set list (a row conflicting on `(namespace, id)` cannot change namespace; keeping the assignment is misleading). The promotion-state preservation branch from `addPromotionStateMemories` keeps its exact semantics — it guards metadata regardless of which conflict target fired.\n3. **Stale doc comments** (`src/store.rs:166,181` — validator A2) — rewritten to the new conflict target under comment hygiene: current behavior only, no change narration.\n4. **Test helpers** (`tests/promotion_state_it.rs:128`, `tests/reconcile_state_it.rs:106` — validator A3) — bare-id `fetch_one` helpers gain a namespace bind before the two-namespace regression test lands, because a bare id can now legitimately match two rows.\n5. **`tests/reconcile_state_it.rs`** — new regression `same_adv_id_in_two_namespaces_survives_independently`: ingest `pw-1` under namespaces A and B, reconcile both, assert both rows survive with their own content; promote B's row and assert A's is untouched. Existing fixture distinct-ids (`pw-late`, `pw-idem`, ...) stay — renaming them adds churn without adding proof the new test does not carry.\n\n## What deliberately does not change\n\n- `promote`, `forget`, `forget_ingested`, `mark_candidates`, `existing_source_ids`, stats: all already namespace-scoped (validator-verified inventory; no bare-id row addressing exists outside the old conflict clause).\n- MCP tool schemas and `RecallHit` shape: no caller-contract change. One behavior note for acceptance (validator A4): recall across multiple namespaces may now return same-id hits from different namespaces — the intended outcome of the fix, since those are distinct memories.\n- `memories_source_uniq`: retained. Validator sharpened the rationale: it is the write-side enforcer of the dedup **read** key `(namespace, source, source_id)` (`store.rs:288-289`), which the PK covers only through the unenforced parser convention that id == source_id. Dropping it would leave dedup correctness resting on a convention instead of a constraint.\n- HNSW and GIN indexes: reference no PK column.\n\n## Concurrency note\n\nThe conflict set strictly narrows. Old `(id)` fired on any-namespace same-id — the steal. New `(namespace, id)` fires only on same-namespace re-ingest, which is exactly the TOCTOU race `filter_eligible` cannot close (check-then-act across two reconciles of one namespace). Cross-namespace collision is structurally impossible: two namespaces cannot produce the same `(namespace, id)` pair.\n\n## Verification strategy\n\nRED: the new regression test against the current schema — namespace B's reconcile steals A's row and the first assertion fails. GREEN: migration + conflict retarget. Revert-proof (AC7): run the regression against a database migrated only through 0002 and confirm the steal, then through 0003 and confirm isolation. Full gate: lib tests, all DB-backed suites, clippy `-D warnings`, fmt, and a migration re-run against an already-migrated database (must be a no-op via sqlx bookkeeping, per validator source-check).\n\n## Independent validation\n\nadv-researcher verdict: **APPROVE WITH FINDINGS** — pass, high confidence, low risk, zero blocking corrections. Five advisory notes (A1 redundant index, A2 stale comments, A3 test-helper scoping, A4 recall behavior note, A5 migration immutability/plain DROP) all folded above. Sources: sqlx migrate implementation (transactional single-apply, checksum validation), PostgreSQL 17 docs (conflict-target inference, composite PK auto-index, leading-column rule, ALTER TABLE PK swap).",
+    "executiveSummary": "# Cross-namespace memory id collision, fixed\n\n## What this delivers\n\nEpisode stores each project's lessons in its own namespace. The lesson's id, however, was globally unique across the whole database. Those two rules disagreed: ingested lesson ids are raw per-project ADV ids like `pw-1`, so the moment a second project was watched, both projects held a row called `pw-1` and only one could exist.\n\nThe second project's reconcile silently stole the first project's row: content, metadata, and namespace all replaced in place, with no error and no log line. The first project's memory simply vanished, and whatever subsystem read it next would take the blame.\n\nThe fix is one structural change: a row's identity is now the pair (namespace, id) — the primary key — instead of the id alone. Two projects can both hold `pw-1` because they are different rows. The steal is impossible by construction rather than guarded against.\n\n## How it was found\n\nThe defect reproduced by accident during unrelated work: two new tests in the promotion-state change each seeded `pw-1` under different namespaces and collided, presenting as a promotion bug. It was not one. It was routed to its own change with the reproduction attached, and that reproduction became this change's regression test.\n\n## Confidence\n\nThe regression test was proven load-bearing on isolated databases rather than assumed: against the old schema it fails with exactly the steal (one row where two belong), and against the new schema both rows survive. The migration was also exercised from an empty database, not just an upgraded one.\n\nAn independent review confirmed the design before implementation and a second independent review checked the result against the acceptance criteria. The second review tightened three tests that were weaker than their claims, including retiring the last test workaround that existed only because of this defect.\n\nOne defect in my own regression test surfaced mid-run and was fixed rather than papered over: it initially asserted against every row in the shared test database instead of the run's own namespaces — the same global-uniqueness assumption this change removes, applied by habit.\n\n## Current state and impact\n\nNothing was harmed: the episode service has been switched off since 19 August 2026 and the store holds zero rows. The defect would have gone live on the first day a second project was watched after restoration. That restoration is now unblocked by this fix.\n\n## Behavior note\n\nRecall spanning several namespaces may now return hits carrying the same id from different namespaces. That is intended: they are distinct memories that merely share a raw source id. Every addressing surface (promote, forget) already required the namespace beside the id, so no caller contract changed.\n"
+  },
+  "same_project_dependencies": [],
+  "fast_follow_of": {
+    "parent_change_id": "addPromotionStateMemories",
+    "linked_at": "2026-08-30T17:02:06.711Z"
+  },
+  "origin": {
+    "kind": "discovery",
+    "source_artifact": "addPromotionStateMemories/tk-76bb0834b5e5"
+  },
+  "projection_revision": 30,
+  "projection_commits": [
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:fixCrossNamespaceMemoryId:68bc71fe-ab5e-4f7d-9325-4538afe7bcdf",
+      "payload_hash": "2237ddc54d6f42f8c80233123e94fbcbfd7acd47d102ea52dab94e77131e5614",
+      "prior_revision": 0,
+      "new_revision": 1,
+      "committed_at": "2026-08-30T17:11:25.661Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User approved starting this change with \"go\", directly after the triage recommendation \"fixCrossNamespaceMemoryId — do this next. Confirmed silent cross-project data corruption. Land it before service restoration.\" The problem statement, evidence, reproduction, and verification bar were presented in that recommendation and in the acceptance/archive reports of the parent change.",
+      "operation_id": "mutation:gate_completion:fixCrossNamespaceMemoryId:d97490f4-425f-4c51-8ec6-3d8cf75806f0",
+      "payload_hash": "7191fe0f61c1628dda03296a594d71d73108506e3069b6014654419f2cd080c6",
+      "prior_revision": 1,
+      "new_revision": 2,
+      "committed_at": "2026-08-30T19:07:31.728Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:fixCrossNamespaceMemoryId:b4f2f9c8-9f53-4f33-a720-818c8e8cbdd6",
+      "payload_hash": "2f09ab13816f94dc06ded6f9636a61429ad6927ff955717b185606910d83ad71",
+      "prior_revision": 2,
+      "new_revision": 3,
+      "committed_at": "2026-08-30T19:08:03.555Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Code evidence gathered inline; no external research dimension exists for this defect.\n\nKey findings: (1) only one ON CONFLICT exists in the codebase — upsert_batch src/store.rs:229 on (id); (2) both id-addressed queries already pair id+namespace — promote at :108, forget_manual at :336; (3) existing_source_ids dedup is already namespace-scoped (:278-286); (4) manual ids are mem-{uuid} (server.rs:145) and cannot collide; (5) ingested ids are raw per-project ADV ids (ingest.rs:90) and reflection children (ingest.rs:270) — both collide across projects; (6) store holds zero rows and service is down since 2026-08-19, so a PK reshape needs no backfill and has no compatibility window; (7) no index references the PK (HNSW on embedding, GIN on metadata, btree on namespace).\n\nConclusion: the collision is confined to upsert_batch's conflict target disagreeing with the row's real identity domain (namespace, id). Everything downstream of the write already assumes namespace-scoped identity. Scope is one migration plus one conflict clause.",
+      "operation_id": "mutation:gate_completion:fixCrossNamespaceMemoryId:24364ac5-0d5b-4791-ab75-e112a493991a",
+      "payload_hash": "68a2c4636c35e747c8a53df8244102f5b45c88ac985a7d3287dfa84389203e31",
+      "prior_revision": 3,
+      "new_revision": 4,
+      "committed_at": "2026-08-30T19:08:14.131Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "fixCrossNamespaceMemoryId|change:researcher:design-gate-independent-validation|adv-researcher|1",
+      "operation_id": "mutation:subagent_report_submitted:fixCrossNamespaceMemoryId:b8ef4d37-01d1-46a9-87d8-fcf6a6476cf1",
+      "payload_hash": "d571d5d86c946dd80ef465c99befcd35c6817dd65754f69f424e26e7424f7804",
+      "prior_revision": 4,
+      "new_revision": 5,
+      "committed_at": "2026-08-30T19:15:44.327Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:fixCrossNamespaceMemoryId:4e0a59d9-55ea-4787-9fc6-4cc9be9c722b",
+      "payload_hash": "fd51638d096f8bb26a35d98e904706bfa3bd0ec6b43181a0dadb2014e4a08892",
+      "prior_revision": 5,
+      "new_revision": 6,
+      "committed_at": "2026-08-30T19:16:44.309Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Independent validator (adv-researcher, attempt 1, scope researcher:design-gate-independent-validation) returned APPROVE WITH FINDINGS: pass, high confidence, low risk, zero blocking corrections.\n\nValidator independently confirmed: the bare-id inventory is complete (no id-addressed path outside the old conflict clause); the migration is transactional and single-apply in sqlx; global (id) uniqueness strictly implies (namespace, id) uniqueness so the migration cannot fail on data even beyond the zero-row premise; the conflict set strictly narrows to the same-namespace TOCTOU race; and the promotion-state preservation branch is untouched.\n\nFive advisory findings, all folded into design.md: A1 drop the now-redundant memories_namespace_idx in 0003 (composite PK leads on namespace); A2 rewrite stale ON CONFLICT doc comments; A3 namespace-scope the bare-id test helpers before the regression lands; A4 record the same-id-across-namespaces recall behavior as intended in acceptance; A5 keep 0003 immutable with plain DROP CONSTRAINT — idempotency comes from sqlx bookkeeping, not SQL guards, which corrected my original IF EXISTS approach.\n\nNo user-value/product tradeoff, no CONFLICT verdict, no contract compromise — no design-approval pause required.",
+      "operation_id": "mutation:gate_completion:fixCrossNamespaceMemoryId:7d5072f4-3c40-4a3d-a0f3-0f4e7cdc14d8",
+      "payload_hash": "c35d7330330198d6f40e3a1a47cfdaa6e0c5a4d7c230065cf574819284dbefb3",
+      "prior_revision": 6,
+      "new_revision": 7,
+      "committed_at": "2026-08-30T19:16:54.832Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-9c7405c70243",
+      "operation_id": "mutation:task_add:fixCrossNamespaceMemoryId:4b25b589-3359-410a-9c09-dbde61b588c9",
+      "payload_hash": "d00b71779821e3834769857a9fb88638bb45cf6cc1214ee217056b55e8ece8d6",
+      "prior_revision": 7,
+      "new_revision": 8,
+      "committed_at": "2026-08-30T19:17:55.346Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-67fe7ce1cd3c",
+      "operation_id": "mutation:task_add:fixCrossNamespaceMemoryId:ce4d57b8-8d70-460f-bf8c-6a511f25e969",
+      "payload_hash": "1cc288b9680f0b4e1dc07ea42e1c67e88bfa33a74b717403a49aef01aac85f7a",
+      "prior_revision": 8,
+      "new_revision": 9,
+      "committed_at": "2026-08-30T19:18:03.269Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-c9a25b5233d5",
+      "operation_id": "mutation:task_add:fixCrossNamespaceMemoryId:fcbc38d3-5796-4176-883a-49f11035cfa6",
+      "payload_hash": "ea435cf0f70aac6a98cb27627e3031f7f24003854e54b8da448ab43d5b252abe",
+      "prior_revision": 9,
+      "new_revision": 10,
+      "committed_at": "2026-08-30T19:18:12.857Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User approved the prep contract with \"approve\" at the planning checkpoint, against \"Reply `approve` to start execution, or reply with what to adjust.\"\n\nTask graph: 3 tasks (tk-9c7405c70243 RED regression + helper scoping; tk-67fe7ce1cd3c migration 0003 + conflict retarget GREEN; tk-c9a25b5233d5 revert-proof + full gate), all 8 acceptance criteria covered with no uncovered criteria. Design validated independently (APPROVE WITH FINDINGS, advisories folded). Worktree change/fixCrossNamespaceMemoryId at ee54ae1.",
+      "operation_id": "mutation:gate_completion:fixCrossNamespaceMemoryId:6ee125d8-6aee-4f4f-8fbe-880a29b5a827",
+      "payload_hash": "d41aab5371b1336c6d9fcb84a5bee25007dc19a9ebeb31a865b01b99eaca02ac",
+      "prior_revision": 10,
+      "new_revision": 11,
+      "committed_at": "2026-08-30T19:19:12.025Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:fixCrossNamespaceMemoryId:033c1cdc-1b06-45fc-a0fd-5f3f0dad5df1",
+      "payload_hash": "a8a4bfe67b90c3db47784c602aa68d1b9b7e615d181f70ec24587a9d4a29ac75",
+      "prior_revision": 11,
+      "new_revision": 12,
+      "committed_at": "2026-08-30T19:19:18.180Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test reconcile_state_it -- --ignored same_adv_id 2>&1 | grep -E 'left:|right:|assertion|test result' | head -6",
+      "operation_id": "mutation:test_run_recorded:fixCrossNamespaceMemoryId:eca7a0da-d32d-4118-86c1-fe66e612339d",
+      "payload_hash": "931c7510a9efe3a4421c66a06f2d4107685ada3ccd600e2fa1810aa3e2db133a",
+      "prior_revision": 12,
+      "new_revision": 13,
+      "committed_at": "2026-08-30T19:21:49.699Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "5fae48bd987965602c1a588cec91dd7c1933ebfd:RED tr_mtg74706_b0fd0e77 exit 101. Assertion output shows the steal exactly as predicted: left (actual) holds only namespace B's row (it_collision_b_..., \"project B lesson\") while right (expected) holds both namespaces' rows. Project A's pw-1 was moved and overwritten in place by project B's reconcile against the current 0001-0002 schema.\n\nWork done:\n1. Namespace-scoped the bare-id test helpers per validator A3. stored_metadata/stored_state in tests/reconcile_state_it.rs (:105-118) and stored_state in tests/promotion_state_it.rs (:127) now bind namespace beside id (WHERE id = $1 AND namespace = $2). All 15 call sites updated. A bare id is no longer assumed globally unique, so the helpers cannot mask a cross-namespace collision.\n2. New regression test same_adv_id_in_two_namespaces_survives_independertly in tests/reconcile_state_it.rs: same raw id pw-1 seeded in two namespaces with distinct content; asserts both rows survive with their own namespace and content (AC1/AC2), recall in each namespace returns exactly its own row (AC1), and promoting B's row leaves A's same-id row untouched (AC4).\n\nBuild clean, cargo fmt applied.",
+      "operation_id": "mutation:task_checkpoint_completed:fixCrossNamespaceMemoryId:efbbffd0-12bf-4740-bcb6-dd8f6f4ef7a1",
+      "payload_hash": "0aa0dcc17d584c5d4931fdbdd1189e328a81c8790985edb79414bc6fec0cfb1a",
+      "prior_revision": 13,
+      "new_revision": 14,
+      "committed_at": "2026-08-30T19:22:04.692Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:fixCrossNamespaceMemoryId:28e908f2-1957-419b-b3b4-c4f4b185fab4",
+      "payload_hash": "befb84d51e1f85f2df56cec0f0860c4be00afe6473a4b58a39ce786cb803f03a",
+      "prior_revision": 14,
+      "new_revision": 15,
+      "committed_at": "2026-08-30T19:22:12.014Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\" && echo \"=== promotion suite ===\" && cargo test --test promotion_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\"",
+      "operation_id": "mutation:test_run_recorded:fixCrossNamespaceMemoryId:3cb413b0-cd7f-46d6-82d5-2eeedc476659",
+      "payload_hash": "20addc298afa2938ee2edc6212bfad58a24b54d53a18a573120df2fda6307722",
+      "prior_revision": 15,
+      "new_revision": 16,
+      "committed_at": "2026-08-30T19:23:07.165Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\" && echo \"=== promotion suite ===\" && cargo test --test promotion_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\"",
+      "operation_id": "mutation:test_run_recorded:fixCrossNamespaceMemoryId:6023ec38-b567-45dc-b062-2e97caba9a10",
+      "payload_hash": "7118287b9be8ff1cbd6d0aa9c0a8fe1fe94672209d82a01fa8feb9ab9c0f98e2",
+      "prior_revision": 16,
+      "new_revision": 17,
+      "committed_at": "2026-08-30T19:24:04.157Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "cd5a80ab52bbe61f09289644e6363703ec3955b5:GREEN tr_mtg772r7_0e2625e0 exit 0: all 7 reconcile_state_it tests pass including same_adv_id_in_two_namespaces_survives_independently, and all 6 promotion_state_it tests pass including concurrent_ingest_conflict_preserves_promotion_state under the new conflict target. Migration 0003 confirmed applied on the dev database (_sqlx_migrations version 3 \"namespace id pk\").\n\nWork done:\n1. migrations/0003_namespace_id_pk.sql: plain DROP CONSTRAINT memories_pkey, ADD PRIMARY KEY (namespace, id), DROP INDEX memories_namespace_idx (redundant: composite PK btree leads on namespace). No idempotency guards per validator A5; sqlx owns single-apply semantics.\n2. src/store.rs upsert_batch: ON CONFLICT (id) -> ON CONFLICT (namespace, id); removed namespace = EXCLUDED.namespace from the DO UPDATE set list since a row conflicting on (namespace, id) cannot change namespace. The promotion-state preservation CASE is untouched.\n3. Doc comments at :166 and :178-181 rewritten to the new conflict target and (namespace, id) keying, current-state phrasing only.\n\nMid-run defect in my own test, diagnosed and fixed rather than papered over: first GREEN run failed with 5 rows for id pw-1. The migration was working — this run's two rows survived correctly — but earlier RED runs had panicked before their cleanup DELETE and leaked rows, and my row query asserted globally on bare id across the shared database. That was the same global-uniqueness assumption the change exists to remove, in my own test. Fixed by scoping the query to this run's two namespaces (WHERE id = 'pw-1' AND namespace IN ($1, $2)), which is the correct isolation for a shared test database regardless. Leaked rows from the failed runs deleted once-off via psql.\n\nIntermediate failing run recorded as tr_mtg75us7_fb3e1979 with the 5-row output showing both the leak and the correct per-run rows.",
+      "operation_id": "mutation:task_checkpoint_completed:fixCrossNamespaceMemoryId:fce2fb26-2eee-4ef3-b178-f103c36d791b",
+      "payload_hash": "dc7ba3f28d6e44fef25b0a4c41ffd093f1b54d60014542ec2f7d9742d852fd45",
+      "prior_revision": 17,
+      "new_revision": 18,
+      "committed_at": "2026-08-30T19:24:19.367Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:fixCrossNamespaceMemoryId:8fef4015-8dd0-41b2-85c9-8ed9c942515e",
+      "payload_hash": "ecd2f9adabc5f80c072f8a0e32b2d38537e04e90513a1b638656f563ffd7da05",
+      "prior_revision": 18,
+      "new_revision": 19,
+      "committed_at": "2026-08-30T19:24:42.405Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E \"^test result\" && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== clippy/fmt ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && docker exec episode-db dropdb -U episode episode_ac7_a && docker exec episode-db dropdb -U episode episode_ac7_b && echo \"temp dbs dropped\"",
+      "operation_id": "mutation:test_run_recorded:fixCrossNamespaceMemoryId:0a6b906b-0b9a-426d-bbaf-1b944858d6de",
+      "payload_hash": "d9079ac799a0f3ddd08dcdc51c3a4acf571ecd1d5af599ce1e272af546ef854a",
+      "prior_revision": 19,
+      "new_revision": 20,
+      "committed_at": "2026-08-30T19:27:42.144Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "cd5a80ab52bbe61f09289644e6363703ec3955b5:Full verify exit 0 (tr_mtg7bqxl_2f94c52f): build --locked clean, 63 of 63 lib tests, 20 DB-backed tests across all suites (up from 19 with the new regression), clippy --all-targets -D warnings clean, cargo fmt --check clean.\n\nAC7 REVERT-PROOF, done on isolated fresh databases rather than the shared dev database, so leaked state from other runs could not influence either half:\n- At migrations 0001-0002 with pre-fix code (git checkout of the task-1 state, 0003 removed): same_adv_id_in_two_namespaces_survives_independently FAILS with the steal — left holds only namespace B's row, right expects both. Isolated database episode_ac7_a.\n- At migrations 0001-0003 with HEAD code, fresh database episode_ac7_b: PASSES. This run also exercised the full 0001-to-0003 migration path from an empty database, not just the already-migrated shared one.\n- One accidental intermediate run produced its own evidence: pre-fix code against the post-fix schema errors on ON CONFLICT arbiter inference (no unique index on bare id remains), confirming code and migration must ship together, which they do in this change.\n\nAC5: second run against the already-migrated episode_ac7_b passed; the migrator no-ops on applied versions (sqlx pending-only apply). Migration file kept byte-identical after first apply.\n\nAC6: manual-memory paths covered by the full suite (forget_manual and mem-{uuid} tests all green, unchanged).\n\nAC4/A1 acceptance note recorded for review: recall spanning multiple namespaces may now return same-id hits from different namespaces — intended, they are distinct memories.\n\nCleanup: episode_ac7_a and episode_ac7_b dropped; worktree restored to HEAD (git checkout HEAD -- migrations/ src/), tree clean.",
+      "operation_id": "mutation:task_checkpoint_completed:fixCrossNamespaceMemoryId:08262577-7f92-4901-b2a8-d57d3f7a4b59",
+      "payload_hash": "a55428892557be6d629c554070a21a9db5e6280112345307ea904844e11fb8a9",
+      "prior_revision": 20,
+      "new_revision": 21,
+      "committed_at": "2026-08-30T19:28:00.627Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "All 3 tasks done with checkpoints: tk-9c7405c70243 (5fae48b, RED regression + helper scoping), tk-67fe7ce1cd3c (cd5a80a, migration 0003 + conflict retarget GREEN), tk-c9a25b5233d5 (clean checkpoint, revert-proof + full gate).\n\nTDD sequence enforced and satisfied: RED tr_mtg74706 (steal visible against 0001-0002), GREEN tr_mtg772r7 (pass against 0003, all 13 reconcile+promotion tests), revert-proof pair on isolated databases (fail at 0002, pass at 0003, full fresh migration path exercised).\n\nFull gate tr_mtg7bqxl: 63 lib + 20 DB-backed tests, clippy -D warnings zero, fmt clean. One in-flight test defect found and fixed honestly: my own regression test initially asserted globally on bare id across the shared database — the same global-uniqueness assumption this change removes — and leaked rows from failed RED runs exposed it. Query scoped to the run's namespaces; leaked rows cleaned.",
+      "operation_id": "mutation:gate_completion:fixCrossNamespaceMemoryId:61da2c52-0fb9-41e8-b6c5-9fcb34d10055",
+      "payload_hash": "a00328b0409f53e08956ebb79dab9dea09ca35333ea2764bb5cc0d0488bf2588",
+      "prior_revision": 21,
+      "new_revision": 22,
+      "committed_at": "2026-08-30T19:28:12.083Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "cd5a80ab52bbe61f09289644e6363703ec3955b5:Clean tree checkpoint",
+      "operation_id": "mutation:task_checkpoint_completed:fixCrossNamespaceMemoryId:a6a94c46-e157-44a8-9fbc-2fe392ca5200",
+      "payload_hash": "fe1c521a6f68424d04c16eaa5e0ab8f85dc5efa054d0bd40d1341b311d22f989",
+      "prior_revision": 22,
+      "new_revision": 23,
+      "committed_at": "2026-08-30T19:28:17.273Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "fixCrossNamespaceMemoryId|change:review:acceptance|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:fixCrossNamespaceMemoryId:29f920df-e4fe-4c33-b30f-062e6addc2ac",
+      "payload_hash": "5d9f56020c868110dfea6516cedc04f695dc2c5747e9c036e9411d0323698624",
+      "prior_revision": 23,
+      "new_revision": 24,
+      "committed_at": "2026-08-30T19:35:35.534Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && cargo test --lib 2>&1 | grep -E \"^test result\" && echo \"=== all DB-backed ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== gates ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\"",
+      "operation_id": "mutation:test_run_recorded:fixCrossNamespaceMemoryId:5551a5b6-3efe-449e-9792-a854490c10c9",
+      "payload_hash": "4a62d8ef8c116e9638bef45e78c7c7cdc3f6cd8eaf2a98242162d0f259f7f273",
+      "prior_revision": 24,
+      "new_revision": 25,
+      "committed_at": "2026-08-30T19:36:16.417Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "49ea2938234eb1b6d48599e8de4ce613f7cf6158:Acceptance-review remediation, verified independently (tr_mtg7mrr2_5004b49f exit 0): 63 of 63 lib tests, 20 DB-backed tests, clippy --all-targets -D warnings clean, fmt clean.\n\nReviewer verdict READY with four in-scope fixes, all accepted after inspecting the diff and re-running the full gate myself:\n\n1. AC3 was claimed but only implicitly demonstrated. The regression test now re-reconciles namespace A's unchanged source and asserts ingested: 0 with the stored row unchanged — a real dedup no-op proof under the composite key.\n2. The retraction-scoping test still used distinct ids per namespace (pw-a1/pw-b1), a leftover of the distinct-id workaround this change exists to retire. It now uses pw-shared in both namespaces, proving delete scoping under same-id collision directly. The doc comment explaining why ids had to differ — which described the defect — is deleted with it.\n3. forget_manual (AC4/AC6) now seeds the same manual id in a second namespace and asserts deleting one leaves the peer addressable, covering same-id manual rows.\n4. Stale provenance comments removed (AC4 / DONT3 / design §4 in store.rs; AC1 / C3 / DONT1 in recall_it.rs) — task-narration references that violate comment hygiene.",
+      "operation_id": "mutation:task_checkpoint_completed:fixCrossNamespaceMemoryId:eebdd149-2b80-4b6b-89b4-a05fc0cff1c0",
+      "payload_hash": "e32e90bf76ac8fdb20e1aa0832588f26e8f03f68cdb9b116acfc8b04938e5e29",
+      "prior_revision": 25,
+      "new_revision": 26,
+      "committed_at": "2026-08-30T19:36:25.600Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:fixCrossNamespaceMemoryId:943170cd-060b-45fa-9072-79de33c05916",
+      "payload_hash": "e327ca8385bf1b6787d3b24c49450e815c0f1b80c373e13c5a1d0d6946992f50",
+      "prior_revision": 26,
+      "new_revision": 27,
+      "committed_at": "2026-08-30T19:36:40.635Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User accepted at the acceptance checkpoint, replying \"continue\" against the anchor phrase \"Reply `continue` to accept and proceed to harden, or reply with what to adjust.\"\n\nReview verdict APPROVED. All 8 acceptance criteria demonstrated: two-namespace survival with same raw id (AC1), no cross-project mutation including delete and promotion isolation (AC2/AC4), dedup no-op proven by direct assertion (AC3, reviewer-added), forward-only migration no-op on re-run (AC5), manual memories including same-id cross-namespace rows (AC6), regression revert-proven on isolated databases at 0002 vs 0003 with the full fresh migration path exercised (AC7), full gate green — 63 lib + 20 DB-backed, clippy -D warnings zero, fmt clean (AC8).\n\nExecutive summary persisted. Review fixes committed at 49ea293 after independent re-verification.",
+      "operation_id": "mutation:gate_completion:fixCrossNamespaceMemoryId:cc982d9b-764d-4808-b474-340ae7e41868",
+      "payload_hash": "439748a1465a7853b5c96b4a254250722107d20d994ffdb7640bc8cb157754fb",
+      "prior_revision": 27,
+      "new_revision": 28,
+      "committed_at": "2026-08-30T19:41:58.220Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "fixCrossNamespaceMemoryId|change:harden:release|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:fixCrossNamespaceMemoryId:a8039201-b487-44f8-937e-df90defe589f",
+      "payload_hash": "4c3465b94b51c1262c8ed34643d79a32d3b7fb778c273e1f8c706c105912ca78",
+      "prior_revision": 28,
+      "new_revision": 29,
+      "committed_at": "2026-08-30T19:53:30.033Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "fcc864a33fae89b5b5101e38a1370bf733f21ecf:Harden pass verdict READY, no code changes required. Migration SQL and store logic left unchanged — the reviewer confirmed by EXPLAIN evidence and migration-concurrency analysis that the shipped form is correct operationally.\n\nOne documentation addition accepted after line-by-line inspection: README.md gains an operational paragraph recording that the service applies pending sqlx migrations before serving, that a failed transactional migration leaves the prior schema active and blocks startup, and that rollback of a schema-changing release requires a database snapshot matching the old binary because a binary-only rollback can fail against a migrated constraint. Verified the startup-migration claim against Store::connect (store.rs:160-163, migrate!() runs before the store is returned). This is durable operator guidance, not derivable from code, and the placement beside the deploy paragraph is coherent.\n\nAll prior verification stands: 63 lib + 20 DB-backed tests, clippy -D warnings zero, fmt clean.",
+      "operation_id": "mutation:task_checkpoint_completed:fixCrossNamespaceMemoryId:97cbf681-28c7-43e2-a36d-f925751fd82e",
+      "payload_hash": "bdda10b68598355a8a4241252d59ddd060a38af5f9b15b73bb90c200d435fe8c",
+      "prior_revision": 29,
+      "new_revision": 30,
+      "committed_at": "2026-08-30T19:53:53.326Z"
+    }
+  ]
+}
