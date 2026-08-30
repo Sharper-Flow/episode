@@ -416,6 +416,9 @@ mod tests {
         }))
         .expect("valid filters deserialize");
         assert!(!valid.include_open_followups);
+        // AC3: an omitted flag must default to exclusion, so existing callers
+        // stop receiving graduated knowledge without changing their request.
+        assert!(!valid.include_promoted);
         valid.validate().expect("valid filters pass");
 
         for invalid in [

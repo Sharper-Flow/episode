@@ -205,6 +205,12 @@ pub struct RecallFilters {
     pub tags: Option<Vec<String>>,
     pub kinds: Option<Vec<String>>,
     pub include_open_followups: bool,
+    /// Return rows already graduated to a durable Concord record.
+    ///
+    /// Defaults to `false` so recall stops serving knowledge a spec now owns.
+    /// `PromotionCandidate` rows are unaffected in either mode: a candidate has
+    /// not graduated, so episode still holds the authoritative copy.
+    pub include_promoted: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

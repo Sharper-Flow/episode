@@ -62,6 +62,7 @@ async fn recall_filters_compose_and_use_metadata_gin() {
         tags: Some(vec!["a".into(), "b".into()]),
         kinds: Some(vec!["gotcha".into()]),
         include_open_followups: false,
+        include_promoted: false,
     };
     let hits = store
         .recall(&vector(), std::slice::from_ref(&ns), 20, Some(&matching))

@@ -70,6 +70,21 @@ fn build_recall_query(
             .push_bind(serde_json::json!({"action":{"kind":"open_followup"}}))
             .push(")");
     }
+    // Promoted rows are owned by a durable Concord record; serving episode's
+    // copy alongside it lets the two disagree with no signal about which is law.
+    //
+    // This predicate is negative and therefore does NOT use the
+    // `memories_metadata_gin` index, exactly as the open-followup exclusion
+    // above does not. See `docs/specs/0011-promotion-state.md`.
+    if !filters.is_some_and(|value| value.include_promoted) {
+        push_and(&mut builder, &mut has_where);
+        builder
+            .push("NOT (metadata @> ")
+            .push_bind(serde_json::json!({
+                crate::types::PROMOTION_STATE_KEY: {"kind": "promoted"}
+            }))
+            .push(")");
+    }
     builder
         .push(" ORDER BY embedding <=> ")
         .push_bind(vector)
@@ -337,6 +352,7 @@ mod tests {
             tags: Some(vec!["secret-tag".into()]),
             kinds: Some(vec!["secret-kind".into()]),
             include_open_followups: false,
+            include_promoted: false,
         };
         let query = build_recall_query(
             pgvector::Vector::from(vec![1.0; EMBEDDING_DIM]),
@@ -352,6 +368,61 @@ mod tests {
         assert!(sql.contains("NOT (metadata @>"));
         for value in ["secret-product", "secret-work", "secret-tag", "secret-kind"] {
             assert!(!sql.contains(value));
+        }
+    }
+
+    fn promotion_query(filters: &RecallFilters) -> QueryBuilder<Postgres> {
+        build_recall_query(
+            pgvector::Vector::from(vec![1.0; EMBEDDING_DIM]),
+            &["project".into()],
+            8,
+            Some(filters),
+        )
+    }
+
+    /// AC3: the promoted exclusion is on by default, alongside the open-followup
+    /// exclusion. Two independent `NOT (metadata @> $n)` clauses.
+    #[test]
+    fn recall_query_excludes_promoted_by_default() {
+        let query = promotion_query(&RecallFilters::default());
+        let sql_text = query.sql();
+        let sql = sql_text.as_str();
+        assert_eq!(
+            sql.matches("NOT (metadata @>").count(),
+            2,
+            "default recall must exclude both open followups and promoted rows:\n{sql}"
+        );
+    }
+
+    /// AC4: opting in drops only the promoted exclusion; the open-followup
+    /// exclusion is independent and must survive.
+    #[test]
+    fn recall_query_omits_promoted_exclusion_when_opted_in() {
+        let query = promotion_query(&RecallFilters {
+            include_promoted: true,
+            ..Default::default()
+        });
+        let sql_text = query.sql();
+        let sql = sql_text.as_str();
+        assert_eq!(
+            sql.matches("NOT (metadata @>").count(),
+            1,
+            "opting into promoted rows must leave the open-followup exclusion:\n{sql}"
+        );
+    }
+
+    /// Mirrors `recall_query_uses_bound_filters_and_default_open_exclusion`:
+    /// promotion state literals are bound parameters, never SQL syntax.
+    #[test]
+    fn recall_query_binds_promotion_state_rather_than_inlining_it() {
+        let query = promotion_query(&RecallFilters::default());
+        let sql_text = query.sql();
+        let sql = sql_text.as_str();
+        for value in ["promotion_state", "promoted"] {
+            assert!(
+                !sql.contains(value),
+                "{value:?} must be a bound value, not SQL text:\n{sql}"
+            );
         }
     }
 }
