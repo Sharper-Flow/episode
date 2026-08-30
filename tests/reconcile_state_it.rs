@@ -20,7 +20,9 @@ use episode::config::ProjectRoot;
 use episode::embed::Embedder;
 use episode::scheduler::{self, NoopRecorder, SchedulerConfig};
 use episode::store::Store;
-use episode::types::EMBEDDING_DIM;
+use episode::types::{
+    EMBEDDING_DIM, PROMOTION_STATE_KEY, PromotionState, PromotionStateKind, RecallFilters,
+};
 use tokio::sync::watch;
 
 fn db_url() -> String {
@@ -100,6 +102,21 @@ async fn reconcile_once(store: &Store, root: &ProjectRoot) -> episode::Reconcile
     outcome
 }
 
+async fn stored_metadata(pool: &sqlx::PgPool, id: &str) -> serde_json::Value {
+    sqlx::query_scalar("SELECT metadata FROM memories WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .expect("read metadata")
+}
+
+async fn stored_state(pool: &sqlx::PgPool, id: &str) -> Option<PromotionState> {
+    stored_metadata(pool, id)
+        .await
+        .get(PROMOTION_STATE_KEY)
+        .map(|value| serde_json::from_value(value.clone()).expect("valid stored state"))
+}
+
 async fn stored_ids(pool: &sqlx::PgPool, ns: &str) -> Vec<String> {
     let mut ids: Vec<String> =
         sqlx::query_scalar("SELECT id FROM memories WHERE namespace = $1 ORDER BY id")
@@ -162,6 +179,162 @@ async fn reconcile_removes_rows_retracted_after_ingest() {
         stored_ids(&pool, &ns).await,
         vec!["pw-drop".to_string(), "pw-keep".to_string()],
         "un-invalidating in ADV must restore the memory"
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
+/// AC6: a `promoted_at` set in ADV *after* first ingest must reach the stored
+/// row.
+///
+/// This is the case that makes the mechanism worth having. Wisdom is
+/// overwhelmingly ingested while still episodic and promoted later, so dedup
+/// skips the row on every subsequent pass. A parse-time-only mapping would be
+/// inert in the common case and the feature would appear to work while doing
+/// nothing.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn reconcile_maps_promotion_recorded_after_ingest() {
+    let db = db_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_late_{}", uuid::Uuid::new_v4().simple());
+    let tmp = TempRoot::new("promote-late");
+    let root = tmp.root(&ns);
+
+    // Pass 1: ordinary episodic entry.
+    tmp.write_wisdom(&[r#"{"id":"pw-late","type":"gotcha","content":"graduates later"}"#]);
+    assert_eq!(reconcile_once(&store, &root).await.ingested, 1);
+    assert_eq!(
+        stored_state(&pool, "pw-late").await,
+        None,
+        "an unpromoted entry must stay episodic"
+    );
+
+    // ADV graduates it. Dedup skips the row, so only a direct update can apply.
+    tmp.write_wisdom(&[
+        r#"{"id":"pw-late","type":"gotcha","content":"graduates later","promoted_at":"2026-08-30T00:00:00Z"}"#,
+    ]);
+    reconcile_once(&store, &root).await;
+    assert_eq!(
+        stored_state(&pool, "pw-late").await,
+        Some(PromotionState::PromotionCandidate {}),
+        "promotion recorded after ingest must reach the stored row"
+    );
+
+    // A candidate has not graduated into a durable record yet, so episode still
+    // holds the authoritative copy and must keep serving it.
+    let hits = store
+        .recall(
+            &vec![0.0f32; EMBEDDING_DIM],
+            std::slice::from_ref(&ns),
+            10,
+            Some(&RecallFilters::default()),
+        )
+        .await
+        .expect("recall");
+    assert_eq!(hits.len(), 1, "a candidate must stay visible in recall");
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
+/// AC7: reconcile is idempotent and must never walk a human's promotion back.
+///
+/// `promoted_at` stays in the source file forever, so every later pass re-collects
+/// the id. Without the absent-key guard each pass would reset a human-set
+/// `Promoted { target }` to a candidate, silently un-graduating the memory and
+/// resurrecting it in recall alongside the Concord record that owns it.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn reconcile_never_clobbers_a_human_promotion() {
+    let db = db_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_idem_{}", uuid::Uuid::new_v4().simple());
+    let tmp = TempRoot::new("promote-idem");
+    let root = tmp.root(&ns);
+
+    tmp.write_wisdom(&[
+        r#"{"id":"pw-idem","type":"gotcha","content":"graduated","promoted_at":"2026-08-30T00:00:00Z"}"#,
+    ]);
+    reconcile_once(&store, &root).await;
+    assert_eq!(
+        stored_state(&pool, "pw-idem").await,
+        Some(PromotionState::PromotionCandidate {}),
+        "an entry promoted before first ingest must map too"
+    );
+
+    // A human supplies the Concord target that ADV cannot.
+    let target = "docs/specs/0011-promotion-state.md#sha256:abc";
+    assert_eq!(
+        store
+            .promote(
+                "pw-idem",
+                &ns,
+                &PromotionState::Promoted {
+                    target: target.into()
+                },
+                PromotionStateKind::PromotionCandidate
+            )
+            .await
+            .expect("graduate"),
+        1
+    );
+
+    // Two further passes must both be no-ops against the promotion state.
+    reconcile_once(&store, &root).await;
+    reconcile_once(&store, &root).await;
+    assert_eq!(
+        stored_state(&pool, "pw-idem").await,
+        Some(PromotionState::Promoted {
+            target: target.into()
+        }),
+        "reconcile must not reset a human-set promotion to a candidate"
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
+/// `promotion_state` is the single source of truth. Leaving the raw ADV
+/// timestamp behind would give agents a second, differently-populated field to
+/// filter on: present on entries promoted before first ingest, absent on
+/// entries promoted after it, because dedup freezes metadata at first write.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn stored_metadata_drops_the_raw_promoted_at_field() {
+    let db = db_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_strip_{}", uuid::Uuid::new_v4().simple());
+    let tmp = TempRoot::new("promote-strip");
+    let root = tmp.root(&ns);
+
+    tmp.write_wisdom(&[
+        r#"{"id":"pw-strip","type":"gotcha","content":"graduated","promoted_at":"2026-08-30T00:00:00Z","source_change":"c1"}"#,
+    ]);
+    reconcile_once(&store, &root).await;
+
+    let metadata = stored_metadata(&pool, "pw-strip").await;
+    assert!(
+        metadata.get("promoted_at").is_none(),
+        "promoted_at must not survive alongside promotion_state: {metadata}"
+    );
+    assert_eq!(
+        metadata.get("source_change").and_then(|v| v.as_str()),
+        Some("c1"),
+        "unrelated provenance must be preserved"
     );
 
     sqlx::query("DELETE FROM memories WHERE namespace = $1")

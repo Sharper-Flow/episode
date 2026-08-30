@@ -109,6 +109,19 @@ const PROMOTE_SQL: &str = "UPDATE memories \
      WHERE id = $1 AND namespace = $2 \
        AND metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5";
 
+/// Flag ingested rows as promotion candidates, skipping any row that already
+/// carries a promotion state.
+///
+/// `NOT (metadata ? $3)` is the whole idempotency story: a row a human has
+/// already promoted is invisible to this statement, so repeated reconciles
+/// cannot walk that promotion back.
+const MARK_CANDIDATES_SQL: &str = "UPDATE memories \
+     SET metadata = jsonb_set(metadata, ARRAY[$3], $4::jsonb, true), \
+         updated_at = now() \
+     WHERE namespace = $1 AND source_id = ANY($2) \
+       AND source IN ('adv_wisdom', 'adv_reflection') \
+       AND NOT (metadata ? $3)";
+
 /// Maximum time to wait when acquiring a connection from the pool (AC3).
 const POOL_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 /// Idle connection lifetime before it is closed (AC3).
@@ -338,6 +351,37 @@ impl Store {
         .bind(source_ids)
         .execute(&self.pool)
         .await?;
+        Ok(result.rows_affected())
+    }
+
+    /// Flag ingested rows that ADV has graduated, without disturbing rows that
+    /// already carry a promotion state (AC6 / AC7).
+    ///
+    /// Needed because ingestion is write-once per `source_id`: a `promoted_at`
+    /// set after first ingest never reaches `upsert_batch`, so the stored row
+    /// must be addressed directly.
+    ///
+    /// The `NOT (metadata ? key)` guard does two jobs. It makes the operation
+    /// idempotent, and it stops a later reconcile from resetting a human-set
+    /// [`PromotionState::Promoted`] back to a candidate — `promoted_at` stays in
+    /// the source file forever, so every pass re-collects the same ids.
+    ///
+    /// Rows become [`PromotionState::PromotionCandidate`], never `Promoted`:
+    /// ADV records graduation as a timestamp and carries no manifest path or
+    /// sha256, so there is no Concord target to name. Claiming `Promoted` with
+    /// an empty target would hide the memory from recall while pointing at
+    /// nothing, losing it on both sides at once.
+    pub async fn mark_candidates(&self, namespace: &str, source_ids: &[String]) -> Result<u64> {
+        if source_ids.is_empty() {
+            return Ok(0);
+        }
+        let result = sqlx::query(MARK_CANDIDATES_SQL)
+            .bind(namespace)
+            .bind(source_ids)
+            .bind(PROMOTION_STATE_KEY)
+            .bind(serde_json::to_value(PromotionState::PromotionCandidate {})?)
+            .execute(&self.pool)
+            .await?;
         Ok(result.rows_affected())
     }
 

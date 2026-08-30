@@ -165,10 +165,12 @@ pub async fn reconcile_root(
     let adv_dir = root.path.join(".adv");
     let mut items: Vec<MemoryInput> = Vec::new();
     let mut invalidated: Vec<String> = Vec::new();
+    let mut promoted: Vec<String> = Vec::new();
     match ingest::parse_wisdom(&root.namespace, &adv_dir) {
         Ok(mut w) => {
             items.append(&mut w.items);
             invalidated.append(&mut w.invalidated);
+            promoted.append(&mut w.promoted);
         }
         Err(e) => {
             tracing::warn!(namespace = %root.namespace, error = %e, "wisdom parse failed")
@@ -275,6 +277,28 @@ pub async fn reconcile_root(
             }
         }
     }
+    // Apply graduations last, so one statement covers both an entry promoted
+    // before its first ingest — just written above — and one promoted long
+    // after, which dedup skipped. The statement ignores rows that already carry
+    // a state, so a human's `Promoted { target }` survives every later pass.
+    match store.mark_candidates(&root.namespace, &promoted).await {
+        Ok(flagged) if flagged > 0 => {
+            tracing::info!(
+                namespace = %root.namespace,
+                flagged,
+                "flagged memories graduated in ADV as promotion candidates"
+            );
+        }
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!(
+                namespace = %root.namespace,
+                error = %e,
+                "promotion flagging failed; retried on the next reconcile"
+            );
+        }
+    }
+
     ReconcileOutcome {
         ingested,
         stopped: false,

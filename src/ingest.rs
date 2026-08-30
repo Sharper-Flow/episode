@@ -53,6 +53,11 @@ pub struct WisdomParse {
     pub items: Vec<MemoryInput>,
     /// Source ids whose ADV entry now carries a non-null `invalidated_by`.
     pub invalidated: Vec<String>,
+    /// Source ids whose ADV entry now carries a non-null `promoted_at`.
+    ///
+    /// Collected from the file on every pass, so a failed update simply retries
+    /// on the next reconcile.
+    pub promoted: Vec<String>,
 }
 
 /// Parse `{adv_dir}/wisdom.jsonl` into memory inputs.
@@ -74,6 +79,7 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<WisdomParse> {
     let path = adv_dir.join("wisdom.jsonl");
     let mut items = Vec::new();
     let mut invalidated = Vec::new();
+    let mut promoted = Vec::new();
 
     for value in read_jsonl(&path)? {
         let obj = match value.as_object() {
@@ -102,11 +108,25 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<WisdomParse> {
             .and_then(nonempty_str)
             .map(|s| s.to_string());
 
+        // ADV records graduation as a timestamp. Episode records it as state,
+        // applied to the stored row by reconcile. Collecting the id here rather
+        // than writing the state inline keeps one writer for `promotion_state`:
+        // an entry promoted before first ingest and one promoted after it take
+        // the same path.
+        if obj.get("promoted_at").is_some_and(|v| !v.is_null()) {
+            promoted.push(id.clone());
+        }
+
         // Metadata = full object minus the `content` key (content is the
-        // embeddable text; everything else is provenance/filter data).
+        // embeddable text; everything else is provenance/filter data). The raw
+        // `promoted_at` goes too, so `promotion_state` is the only promotion
+        // field agents can filter on. Keeping both would give them a second
+        // field populated only on entries that arrived already-promoted, since
+        // dedup freezes metadata at first write.
         let mut metadata = value.clone();
         if let Some(map) = metadata.as_object_mut() {
             map.remove("content");
+            map.remove("promoted_at");
         }
 
         items.push(MemoryInput {
@@ -120,7 +140,11 @@ pub fn parse_wisdom(namespace: &str, adv_dir: &Path) -> Result<WisdomParse> {
         });
     }
 
-    Ok(WisdomParse { items, invalidated })
+    Ok(WisdomParse {
+        items,
+        invalidated,
+        promoted,
+    })
 }
 
 /// Parse `{adv_dir}/reflections.jsonl` into memory inputs.
@@ -309,6 +333,16 @@ mod tests {
         // Skipping keeps an invalidated entry out; the collected id is what lets
         // reconcile remove one that was already stored before the retraction.
         assert_eq!(parsed.invalidated, vec!["pw-3".to_string()]);
+
+        // pw-2 carries promoted_at. Its id is collected so reconcile can apply the
+        // state to a row that dedup would otherwise skip, and the raw timestamp is
+        // stripped so `promotion_state` is the only promotion field agents see.
+        assert_eq!(parsed.promoted, vec!["pw-2".to_string()]);
+        assert_eq!(got[1].id, "pw-2");
+        assert!(
+            got[1].metadata.get("promoted_at").is_none(),
+            "promoted_at must not persist alongside promotion_state"
+        );
 
         let first = &got[0];
         assert_eq!(first.id, "pw-1");
