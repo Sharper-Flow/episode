@@ -80,8 +80,8 @@ async fn embed_store_recall_ranks_semantically() {
     }
 }
 
-/// AC1 / C3 / DONT1: `forget_manual` deletes only a matching `manual` row in the
-/// given namespace, enforced by a single SQL predicate — no pre-read and no
+/// `forget_manual` deletes only a matching `manual` row in the given namespace,
+/// enforced by a single SQL predicate — no pre-read and no
 /// app-layer source check. Wrong namespace, an ingested source, an unknown id,
 /// and a repeated delete must all return `removed = 0`; only the exact
 /// `(id, namespace, manual)` match returns `1`.
@@ -95,6 +95,7 @@ async fn forget_manual_enforces_namespace_and_manual_source() {
     // Unique namespace per run so this test never collides with other data.
     let ns = format!("it_delete_{}", uuid::Uuid::new_v4().simple());
     let wrong_ns = format!("{ns}_wrong");
+    let other_ns = format!("{ns}_other");
     let zero_vec = vec![0.0f32; EMBEDDING_DIM];
 
     let manual_id = format!("{ns}-manual");
@@ -124,6 +125,15 @@ async fn forget_manual_enforces_namespace_and_manual_source() {
         .upsert(&manual, &zero_vec)
         .await
         .expect("upsert manual");
+    let same_id_other_namespace = MemoryInput {
+        namespace: other_ns.clone(),
+        content: "same id in another namespace".to_string(),
+        ..manual.clone()
+    };
+    store
+        .upsert(&same_id_other_namespace, &zero_vec)
+        .await
+        .expect("upsert same-id manual in other namespace");
     store
         .upsert(&ingested, &zero_vec)
         .await
@@ -167,6 +177,14 @@ async fn forget_manual_enforces_namespace_and_manual_source() {
             .expect("forget manual match"),
         1,
         "matching manual row must be deleted exactly once"
+    );
+    assert_eq!(
+        store
+            .forget_manual(&manual_id, &other_ns)
+            .await
+            .expect("forget same-id manual in other namespace"),
+        1,
+        "deleting one namespace must leave its same-id peer addressable"
     );
 
     // 5) Repeated delete -> 0 (already gone).

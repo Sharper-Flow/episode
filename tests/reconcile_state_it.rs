@@ -412,11 +412,8 @@ async fn source_supplied_promotion_state_cannot_hijack_the_reserved_key() {
         .expect("cleanup");
 }
 
-/// Retraction is scoped to the namespace being reconciled.
-///
-/// Ids differ per namespace because `id` is a global primary key today, so
-/// reusing one id across namespaces would exercise upsert collision rather than
-/// delete scoping.
+/// Retraction is scoped to the namespace being reconciled, including when
+/// another namespace holds the same id.
 #[tokio::test]
 #[ignore = "requires Postgres"]
 async fn retraction_is_scoped_to_the_reconciled_namespace() {
@@ -428,25 +425,25 @@ async fn retraction_is_scoped_to_the_reconciled_namespace() {
 
     let tmp_a = TempRoot::new("scope-a");
     let root_a = tmp_a.root(&ns);
-    tmp_a.write_wisdom(&[r#"{"id":"pw-a1","type":"gotcha","content":"namespace a"}"#]);
+    tmp_a.write_wisdom(&[r#"{"id":"pw-shared","type":"gotcha","content":"namespace a"}"#]);
     reconcile_once(&store, &root_a).await;
 
     let tmp_b = TempRoot::new("scope-b");
     let root_b = tmp_b.root(&other);
-    tmp_b.write_wisdom(&[r#"{"id":"pw-b1","type":"gotcha","content":"namespace b"}"#]);
+    tmp_b.write_wisdom(&[r#"{"id":"pw-shared","type":"gotcha","content":"namespace b"}"#]);
     reconcile_once(&store, &root_b).await;
 
     // Retract only in namespace A.
     tmp_a.write_wisdom(&[
-        r#"{"id":"pw-a1","type":"gotcha","content":"namespace a","invalidated_by":"pw-9"}"#,
+        r#"{"id":"pw-shared","type":"gotcha","content":"namespace a","invalidated_by":"pw-9"}"#,
     ]);
     reconcile_once(&store, &root_a).await;
 
     assert!(stored_ids(&pool, &ns).await.is_empty());
     assert_eq!(
         stored_ids(&pool, &other).await,
-        vec!["pw-b1".to_string()],
-        "retraction in one namespace must not delete another namespace's row"
+        vec!["pw-shared".to_string()],
+        "retraction must not delete a same-id row in another namespace"
     );
 
     for namespace in [&ns, &other] {
@@ -485,8 +482,7 @@ async fn same_adv_id_in_two_namespaces_survives_independently() {
     reconcile_once(&store, &tmp_b.root(&ns_b)).await;
 
     // Both rows survive under the same id, each in its own namespace with its
-    // own content. Scoped to this run's namespaces: the database is shared,
-    // and an earlier failing run can have leaked its rows past cleanup.
+    // own content. The query is namespace-scoped because the database is shared.
     let rows: Vec<(String, String)> = sqlx::query_as(
         "SELECT namespace, content FROM memories \
          WHERE id = 'pw-1' AND namespace IN ($1, $2) ORDER BY namespace",
@@ -503,6 +499,15 @@ async fn same_adv_id_in_two_namespaces_survives_independently() {
             (ns_b.clone(), "project B lesson".to_string()),
         ],
         "the same raw id must survive independently in both namespaces"
+    );
+
+    // An unchanged source remains a dedup no-op in its own namespace.
+    let unchanged = reconcile_once(&store, &tmp_a.root(&ns_a)).await;
+    assert_eq!(unchanged.ingested, 0, "unchanged source must not re-ingest");
+    assert_eq!(
+        stored_state(&pool, &ns_a, "pw-1").await,
+        None,
+        "dedup must leave the stored row unchanged"
     );
 
     // Recall stays scoped: each namespace returns exactly its own memory.

@@ -176,7 +176,7 @@ impl Store {
         Ok(())
     }
 
-    /// Transactional batch upsert for the ingestion path (AC4 / DONT3 / design §4).
+    /// Transactional batch upsert for the ingestion path.
     ///
     /// Persists one bounded ingestion partition in a single
     /// `INSERT ... ON CONFLICT (namespace, id) DO UPDATE` statement wrapped in a
