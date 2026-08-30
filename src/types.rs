@@ -128,6 +128,74 @@ impl MemoryContext {
     }
 }
 
+/// Reserved `metadata` key holding a memory's [`PromotionState`].
+///
+/// Sits alongside the `action` key rather than in a typed column: promotion is
+/// a filterable attribute of an existing row, not a new dimension of the schema.
+pub const PROMOTION_STATE_KEY: &str = "promotion_state";
+
+/// Where a memory sits on the path from episodic recall to durable Product
+/// knowledge.
+///
+/// The episodic default is the *absence* of [`PROMOTION_STATE_KEY`], not a
+/// stored variant. Recall excludes one tagged shape and passes everything else,
+/// so an explicit marker would need a backfill across every row and buy nothing.
+///
+/// `Superseded { by }` was considered and dropped: retracted rows are deleted
+/// rather than marked, and `forget_manual` covers manual deletion, so no caller
+/// could produce it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub enum PromotionState {
+    /// Graduated in ADV, or flagged as recurring. Episode still holds the
+    /// authoritative copy, so this stays visible in recall.
+    PromotionCandidate {},
+    /// Graduated, naming the Concord record that now owns the content.
+    Promoted {
+        /// Opaque to episode. Concord resolves a target by manifest path plus
+        /// sha256 and publishes no serialized format, so episode stores the
+        /// string verbatim and never parses it.
+        target: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PromotionStateValidationError {
+    EmptyPromotionTarget,
+}
+
+impl fmt::Display for PromotionStateValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyPromotionTarget => {
+                write!(f, "promoted state requires a non-blank target")
+            }
+        }
+    }
+}
+
+impl std::error::Error for PromotionStateValidationError {}
+
+impl PromotionState {
+    /// Non-blank is the only check episode can honestly make. Concord exposes no
+    /// runtime resolution surface, so a deeper local check could not tell a real
+    /// target from a plausible one.
+    ///
+    /// The accepted failure mode: a malformed target is excluded from episode
+    /// recall *and* rejected by Concord as `knowledge_missing`. The two-step
+    /// flow bounds it — nothing is hidden until a human supplies a target — and
+    /// demotion recovers from it.
+    pub fn validate(&self) -> Result<(), PromotionStateValidationError> {
+        match self {
+            Self::Promoted { target } if target.trim().is_empty() => {
+                Err(PromotionStateValidationError::EmptyPromotionTarget)
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 #[schemars(crate = "rmcp::schemars")]
@@ -221,6 +289,134 @@ pub struct NamespaceStat {
     pub namespace: String,
     pub source: String,
     pub count: i64,
+}
+
+#[cfg(test)]
+mod promotion_state_tests {
+    use super::{PromotionState, PromotionStateValidationError};
+    use serde_json::json;
+    use std::collections::BTreeSet;
+
+    /// AC1: both stored variants round-trip under the `kind` tag in snake_case.
+    #[test]
+    fn variant_tags_serialize_snake_case() {
+        assert_eq!(
+            serde_json::to_value(PromotionState::PromotionCandidate {})
+                .expect("candidate must serialize"),
+            json!({ "kind": "promotion_candidate" })
+        );
+        assert_eq!(
+            serde_json::to_value(PromotionState::Promoted {
+                target: "spec/0011#sha256:abc".to_string(),
+            })
+            .expect("promoted must serialize"),
+            json!({ "kind": "promoted", "target": "spec/0011#sha256:abc" })
+        );
+    }
+
+    #[test]
+    fn variant_tags_deserialize_round_trip() {
+        let candidate: PromotionState =
+            serde_json::from_value(json!({ "kind": "promotion_candidate" }))
+                .expect("candidate must deserialize");
+        assert_eq!(candidate, PromotionState::PromotionCandidate {});
+
+        let promoted: PromotionState =
+            serde_json::from_value(json!({ "kind": "promoted", "target": "t" }))
+                .expect("promoted must deserialize");
+        assert_eq!(
+            promoted,
+            PromotionState::Promoted {
+                target: "t".to_string()
+            }
+        );
+    }
+
+    /// AC1: `Episodic` is the absent-key default and must never be a variant.
+    /// A stored literal would force a backfill over every existing row.
+    #[test]
+    fn episodic_is_not_a_variant() {
+        let parsed = serde_json::from_value::<PromotionState>(json!({ "kind": "episodic" }));
+        assert!(
+            parsed.is_err(),
+            "episodic must not be a stored variant; absence of the key is the default"
+        );
+    }
+
+    #[test]
+    fn unknown_fields_are_rejected() {
+        let parsed = serde_json::from_value::<PromotionState>(
+            json!({ "kind": "promotion_candidate", "extra": 1 }),
+        );
+        assert!(parsed.is_err(), "deny_unknown_fields must reject extras");
+    }
+
+    /// AC8: `target` is opaque. Validation is non-blank and nothing more —
+    /// Concord publishes no serialized format and exposes no resolution surface,
+    /// so any deeper local check would be theater.
+    #[test]
+    fn validate_rejects_blank_target() {
+        for blank in ["", "   ", "\t\n"] {
+            let state = PromotionState::Promoted {
+                target: blank.to_string(),
+            };
+            assert_eq!(
+                state.validate(),
+                Err(PromotionStateValidationError::EmptyPromotionTarget),
+                "blank target {blank:?} must be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_accepts_opaque_nonblank_target() {
+        // Deliberately unparseable shapes: episode must not infer structure.
+        for target in [
+            "x",
+            "docs/decisions/CD-0002.md#sha256:deadbeef",
+            "{\"a\":1}",
+        ] {
+            let state = PromotionState::Promoted {
+                target: target.to_string(),
+            };
+            assert_eq!(
+                state.validate(),
+                Ok(()),
+                "opaque target {target:?} must pass"
+            );
+        }
+        assert_eq!(PromotionState::PromotionCandidate {}.validate(), Ok(()));
+    }
+
+    /// AC1: the empty-payload variant must stay closed under schemars, matching
+    /// the `LinkedWork {}` / `OpenFollowup {}` precedent verified in server.rs.
+    #[test]
+    fn schema_variants_are_closed_and_exact() {
+        let schema = serde_json::to_value(rmcp::schemars::schema_for!(PromotionState))
+            .expect("promotion state schema must serialize");
+        let variants = schema
+            .get("oneOf")
+            .or_else(|| schema.get("anyOf"))
+            .and_then(serde_json::Value::as_array)
+            .expect("schema must expose variant branches");
+
+        let actual = variants
+            .iter()
+            .filter_map(|v| v["properties"]["kind"]["const"].as_str())
+            .collect::<BTreeSet<_>>();
+        let expected = ["promotion_candidate", "promoted"]
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+        assert_eq!(actual, expected);
+
+        for variant in variants {
+            assert_eq!(
+                variant["additionalProperties"],
+                json!(false),
+                "each promotion state variant must be closed"
+            );
+        }
+    }
 }
 
 #[cfg(test)]
