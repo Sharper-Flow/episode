@@ -91,7 +91,7 @@ fn build_recall_query(
         if let Some(max_age_days) = filters.max_age_days {
             push_and(&mut builder, &mut has_where);
             builder
-                .push("created_at >= now() - make_interval(days => ")
+                .push("now() - created_at <= make_interval(days => ")
                 .push_bind(i32::try_from(max_age_days).expect("day count fits i32"))
                 .push(")");
         }

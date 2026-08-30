@@ -8,6 +8,13 @@ fn vector() -> Vec<f32> {
     value
 }
 
+struct RecallResults {
+    by_source: Vec<String>,
+    composed_sources: Vec<String>,
+    fresh_only: Vec<String>,
+    max_age: Vec<String>,
+}
+
 /// A Product scope means "this Product's memories plus the shared pool", not
 /// "only rows tagged with this Product". The product filter matches rows
 /// tagged with the Product OR rows carrying no product claim at all, while a
@@ -332,7 +339,7 @@ async fn sources_and_max_age_filter_recall() {
     );
 
     // Cleanup runs before assertions can panic.
-    let result: anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> = async {
+    let result: anyhow::Result<RecallResults> = async {
         let a = hits(
             &store,
             &ns,
@@ -360,7 +367,21 @@ async fn sources_and_max_age_filter_recall() {
             }),
         )
         .await;
-        Ok((a, b, c))
+        let d = hits(
+            &store,
+            &ns,
+            Some(&RecallFilters {
+                max_age_days: Some(i32::MAX as u32),
+                ..Default::default()
+            }),
+        )
+        .await;
+        Ok(RecallResults {
+            by_source: a,
+            composed_sources: b,
+            fresh_only: c,
+            max_age: d,
+        })
     }
     .await;
     sqlx::query("DELETE FROM memories WHERE namespace = $1")
@@ -369,10 +390,16 @@ async fn sources_and_max_age_filter_recall() {
         .await
         .expect("cleanup");
 
-    let (mut by_source, mut composed_sources, mut fresh_only) = result.expect("filtered recalls");
+    let RecallResults {
+        mut by_source,
+        mut composed_sources,
+        mut fresh_only,
+        mut max_age,
+    } = result.expect("filtered recalls");
     by_source.sort();
     composed_sources.sort();
     fresh_only.sort();
+    max_age.sort();
     assert_eq!(
         by_source,
         vec!["wisdom-fresh".to_string(), "wisdom-old".to_string()],
@@ -395,5 +422,16 @@ async fn sources_and_max_age_filter_recall() {
             "wisdom-fresh".to_string(),
         ],
         "max_age_days excludes rows first captured before the cutoff"
+    );
+    assert_eq!(
+        max_age,
+        vec![
+            "manual-fresh".to_string(),
+            "manual-old".to_string(),
+            "reflection-fresh".to_string(),
+            "wisdom-fresh".to_string(),
+            "wisdom-old".to_string(),
+        ],
+        "the largest valid day count must not overflow timestamp arithmetic"
     );
 }
