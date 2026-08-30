@@ -29,7 +29,7 @@ Candidates stay visible in both modes: a candidate has not graduated, so episode
 - Transitions run in both directions. Demotion is the recovery path when a Concord target is deleted; without it a promoted memory would be excluded from recall permanently.
 - A transition asserts the state the memory is expected to be in. A mismatch, a wrong namespace, or an unknown id changes nothing and reports zero rows updated.
 - Transitions are **not** restricted by source. Ingested memories are promotable, and are the primary case: the row a human most needs to graduate came from ADV wisdom.
-- The precondition and the merge are one statement. A concurrent loser blocks on the row lock, re-evaluates against the committed row, and matches nothing.
+- The precondition and the merge are one statement. A concurrent writer blocks on the row lock and re-evaluates the expected kind against the committed row. A changed kind matches nothing. Two transitions from the same kind are last-writer-wins because the precondition carries no target or version.
 
 ## Ingest Contract
 
@@ -40,6 +40,7 @@ Ingestion is write-once per `source_id`: already-stored items are dropped before
 - Ingested promotions become candidates, never `promoted`. ADV records graduation as a timestamp and carries no manifest path or sha256, so no Concord target exists to name.
 - The raw `promoted_at` is removed from stored metadata. Retaining it would expose a second promotion field populated only on entries that arrived already-promoted, because dedup freezes metadata at first write.
 - A source-supplied `promotion_state` is removed at the ingest boundary. Wisdom metadata is a verbatim copy of an untrusted source object, and the key belongs to episode: reconcile and the transition tool are its only writers. Left in place, an entry could forge `promoted` and hide itself from recall on first ingest, or store a malformed value that no transition can address. Reflection metadata is constructed from named fields and cannot carry the key.
+- The ingestion conflict path preserves an existing `promotion_state`. Two reconciles can both classify a row as absent before either insert completes, and a transition can complete between their writes; the losing upsert must not replace that newer state with source metadata.
 - Both operations are scoped to the reconciled namespace and to ingested sources, so reconcile can never delete or alter a manual memory.
 
 ## Query and Index Safety
@@ -54,4 +55,4 @@ Automatic promotion heuristics remain separate; promotion is explicit. This capa
 
 ## Verification
 
-DB-free tests prove variant tags, schema closedness, target validation, bound SQL structure, the absence of a source restriction on transitions, and the stripping of source-supplied reserved keys. Model-free Postgres integration proves default exclusion, opt-in inclusion, candidate visibility, every transition including demotion, mismatch, and a present-but-malformed state rejected as non-episodic, promotion of ingested rows, removal of retracted rows and its namespace scoping, mapping of graduation recorded after first ingest, idempotency across repeated reconciles, removal of the raw `promoted_at` field, and rejection of a forged source-supplied promotion state.
+DB-free tests prove variant tags, schema closedness, target validation, bound SQL structure, the absence of a source restriction on transitions, and the stripping of source-supplied reserved keys. Model-free Postgres integration proves default exclusion, opt-in inclusion, candidate visibility, every transition including demotion, mismatch, and a present-but-malformed state rejected as non-episodic, promotion of ingested rows, preservation of a concurrent promotion across an ingestion conflict, removal of retracted rows and its namespace scoping, mapping of graduation recorded after first ingest, idempotency across repeated reconciles, removal of the raw `promoted_at` field, and rejection of a forged source-supplied promotion state.

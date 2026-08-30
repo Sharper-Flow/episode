@@ -185,7 +185,9 @@ impl Store {
     /// this via [`crate::scheduler::validate_batch_output`]; the length check here
     /// is defense-in-depth). On any error the transaction rolls back, so the whole
     /// partition either lands or none of it does; failed partitions remain eligible
-    /// for the next reconcile.
+    /// for the next reconcile. The conflict path preserves a stored promotion
+    /// state because another reconcile can insert first and an MCP transition can
+    /// complete before this statement acquires the row lock.
     ///
     /// Returns the number of rows affected (inserted or updated). An empty input
     /// returns `Ok(0)` without opening a transaction.
@@ -230,7 +232,19 @@ impl Store {
                  source_id = EXCLUDED.source_id, \
                  kind = EXCLUDED.kind, \
                  content = EXCLUDED.content, \
-                 metadata = EXCLUDED.metadata, \
+                 metadata = CASE WHEN memories.metadata ? ",
+        )
+        .push_bind(PROMOTION_STATE_KEY)
+        .push(
+            " THEN jsonb_set( \
+                     EXCLUDED.metadata, ARRAY[",
+        )
+        .push_bind(PROMOTION_STATE_KEY)
+        .push("], memories.metadata -> ")
+        .push_bind(PROMOTION_STATE_KEY)
+        .push(
+            ", true) \
+                 ELSE EXCLUDED.metadata END, \
                  embedding = EXCLUDED.embedding, \
                  updated_at = now()",
         );
@@ -399,9 +413,10 @@ impl Store {
     /// an unknown id all return `0` rather than erroring.
     ///
     /// Safe under READ COMMITTED because the merge stays in SQL: a concurrent
-    /// loser blocks on the row lock, re-evaluates the precondition against the
-    /// winner's committed row, and matches nothing. Reading the state into Rust
-    /// and writing it back would reintroduce the lost-update window.
+    /// writer blocks on the row lock and re-evaluates the kind precondition
+    /// against the committed row. A changed kind matches nothing. Two transitions
+    /// from the same kind are intentionally last-writer-wins because `from` does
+    /// not carry a target or version.
     pub async fn promote(
         &self,
         id: &str,

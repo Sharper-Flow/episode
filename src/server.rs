@@ -71,9 +71,9 @@ struct PromoteParams {
     namespace: String,
     /// State to move the memory into.
     to: PromotionState,
-    /// State the memory is expected to be in right now. A mismatch changes
-    /// nothing and returns `updated: 0`, so a stale view cannot overwrite a
-    /// concurrent transition.
+    /// State kind the memory is expected to have right now. A kind mismatch
+    /// changes nothing and returns `updated: 0`. Transitions from the same kind
+    /// are last-writer-wins.
     from: PromotionStateKind,
 }
 
@@ -179,7 +179,7 @@ impl EpisodeServer {
     }
 
     #[tool(
-        description = "Move a memory along the promotion path: flag it as a promotion candidate, record that it graduated into a durable Concord spec/decision, or demote it back. Promoted memories are excluded from `recall` by default, so the durable record and episode cannot serve conflicting copies. Works on ingested and manual memories alike. `from` is the state you expect the memory to be in; a mismatch changes nothing and returns `updated: 0`. Returns the `updated` count (0 or 1)."
+        description = "Move a memory along the promotion path: flag it as a promotion candidate, record that it graduated into a durable Concord spec/decision, or demote it back. Promoted memories are excluded from `recall` by default, so the durable record and episode cannot serve conflicting copies. Works on ingested and manual memories alike. `from` is the state kind you expect the memory to have; a kind mismatch changes nothing and returns `updated: 0`. Transitions from the same kind are last-writer-wins. Returns the `updated` count (0 or 1)."
     )]
     async fn promote(
         &self,

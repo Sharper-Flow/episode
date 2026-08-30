@@ -422,3 +422,60 @@ async fn promote_accepts_ingested_rows() {
         .await
         .expect("cleanup");
 }
+
+/// A reconcile can decide that a row is absent, then lose its insert race to
+/// another reconcile. A promotion between those writes must survive the losing
+/// reconcile's `ON CONFLICT` path.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn concurrent_ingest_conflict_preserves_promotion_state() {
+    let db = database_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_ingest_race_{}", uuid::Uuid::new_v4().simple());
+    let id = format!("{ns}-pw-1");
+    let input = MemoryInput {
+        id: id.clone(),
+        namespace: ns.clone(),
+        source: MemorySource::AdvWisdom,
+        source_id: Some(format!("{ns}-src-1")),
+        kind: Some("gotcha".into()),
+        content: "ingested".into(),
+        metadata: metadata_with(None),
+    };
+
+    store.upsert(&input, &vector()).await.expect("first ingest");
+    let target = "docs/specs/0011-promotion-state.md#sha256:race";
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::Promoted {
+                    target: target.into(),
+                },
+                PromotionStateKind::Episodic,
+            )
+            .await
+            .expect("promote between ingest writes"),
+        1
+    );
+
+    store
+        .upsert(&input, &vector())
+        .await
+        .expect("losing ingest conflict");
+    assert_eq!(
+        stored_state(&pool, &id).await,
+        Some(PromotionState::Promoted {
+            target: target.into(),
+        }),
+        "an ingest conflict must not overwrite a concurrent promotion"
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
