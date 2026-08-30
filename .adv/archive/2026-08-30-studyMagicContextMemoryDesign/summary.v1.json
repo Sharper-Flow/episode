@@ -1,0 +1,15 @@
+{
+  "archived_at": "2026-08-30T14:12:35.116Z",
+  "capabilities": [],
+  "change_hash": "832c5391195db86329ab26f6acae52b23ff695ef187897a0ca669bf76fbc09e7",
+  "change_id": "studyMagicContextMemoryDesign",
+  "completed_tasks": 6,
+  "created_at": "2026-08-29T17:51:34.897Z",
+  "current_gate": "done",
+  "last_activity_at": "2026-08-30T14:12:05.334Z",
+  "status": "archived",
+  "summary_hash": "5114419893f0906357e6f78d017b369ed8ca2de722a5b5059746bdf9b8d8ab42",
+  "task_count": 11,
+  "title": "Study magic-context memory design",
+  "version": "1"
+}

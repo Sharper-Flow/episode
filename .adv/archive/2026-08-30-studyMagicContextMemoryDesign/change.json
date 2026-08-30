@@ -1,0 +1,1373 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Sharper-Flow/Advance/trunk/plugin/schemas/change.schema.json",
+  "id": "studyMagicContextMemoryDesign",
+  "title": "Study magic-context memory design",
+  "status": "archived",
+  "created_at": "2026-08-29T17:51:34.897Z",
+  "tasks": [
+    {
+      "id": "tk-202b1c778569",
+      "title": "Route R1 storage evidence into decideStorageLanguageDirection",
+      "type": "docs",
+      "section": "Routing",
+      "status": "cancelled",
+      "priority": 0,
+      "created_at": "2026-08-30T03:13:41.721Z",
+      "completed_at": "2026-08-30T03:20:38.556Z",
+      "completedAt": "2026-08-30T03:20:38.556Z",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-2."
+      },
+      "evidence_plan": {
+        "policy": "source_citation",
+        "proof_target": "Source citation or reference",
+        "rationale": "Deliverable is a written evidence section on a sibling change artifact. The failure mode that matters is an inaccurate citation, not a runtime defect — design validation already caught one wrong source claim in this body of research. Proof is therefore citation accuracy, not a test.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "source_citation",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      },
+      "notes": "Restructured for artifact overwrite safety: re-created with read-verify-write protocol and a baseline-capture dependency."
+    },
+    {
+      "id": "tk-83ba9ade9ba3",
+      "title": "Route R2 consolidation evidence and model-pinning caveat into addPromotionStateMemories",
+      "type": "docs",
+      "section": "Routing",
+      "status": "cancelled",
+      "priority": 1,
+      "created_at": "2026-08-30T03:14:01.918Z",
+      "completed_at": "2026-08-30T03:20:38.556Z",
+      "completedAt": "2026-08-30T03:20:38.556Z",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-3."
+      },
+      "evidence_plan": {
+        "policy": "source_citation",
+        "proof_target": "Source citation or reference",
+        "rationale": "Deliverable is a written evidence section on a sibling change artifact. This task carries the claim design validation flagged as highest-risk (the historian-only narrowing), so proof is citation accuracy against named source files, not a test.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "source_citation",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      },
+      "notes": "Restructured for artifact overwrite safety: re-created with read-verify-write protocol and a baseline-capture dependency."
+    },
+    {
+      "id": "tk-01c5d2d959cb",
+      "title": "Route R3 hybrid-retrieval candidate into improveRecallQualityIngest",
+      "type": "docs",
+      "section": "Routing",
+      "status": "cancelled",
+      "priority": 2,
+      "created_at": "2026-08-30T03:14:22.619Z",
+      "completed_at": "2026-08-30T03:20:38.556Z",
+      "completedAt": "2026-08-30T03:20:38.556Z",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-4."
+      },
+      "evidence_plan": {
+        "policy": "source_citation",
+        "proof_target": "Source citation or reference",
+        "rationale": "Deliverable is a written evidence section on a sibling change artifact. This task must record a defect found in the upstream source (a tokenizer comment its own DDL contradicts), so proof is citation accuracy against the source DDL and the SQLite FTS5 documentation, not a test.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "source_citation",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      },
+      "notes": "Restructured for artifact overwrite safety: re-created with read-verify-write protocol and a baseline-capture dependency."
+    },
+    {
+      "id": "tk-e93b97c65476",
+      "title": "Record no-action dispositions in this change's executive summary",
+      "type": "docs",
+      "section": "Routing",
+      "status": "cancelled",
+      "priority": 3,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-202b1c778569"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-83ba9ade9ba3"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-01c5d2d959cb"
+        }
+      ],
+      "created_at": "2026-08-30T03:14:42.770Z",
+      "completed_at": "2026-08-30T03:22:07.472Z",
+      "completedAt": "2026-08-30T03:22:07.472Z",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-5."
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "rationale": "Deliverable is this change's own executive summary recording no-action dispositions. Proof is that the artifact exists and covers every idea, readable via adv_change_show.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      },
+      "notes": "Dependency repair, mechanical consequence of the approved R1-R3 restructure: this task blocked on the three cancelled routing task IDs and would no longer wait for their replacements. Re-created with deps pointing at the new routing tasks."
+    },
+    {
+      "id": "tk-5ab08129de57",
+      "title": "Verify no episode source file was modified",
+      "type": "verification",
+      "section": "Verification",
+      "status": "cancelled",
+      "priority": 4,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-e93b97c65476"
+        }
+      ],
+      "created_at": "2026-08-30T03:14:57.825Z",
+      "completed_at": "2026-08-30T03:22:07.472Z",
+      "completedAt": "2026-08-30T03:22:07.472Z",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task verifies Success-6, the no-source-modification constraint."
+      },
+      "evidence_plan": {
+        "policy": "static_check",
+        "proof_target": "Static analysis or check output",
+        "rationale": "Success-6 is a negative constraint (no episode source modified). It is provable by a deterministic git check, so a static check is the correct proof route rather than a behavioral test.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "static_check",
+      "metadata": {
+        "tdd_intent": "separate_verification",
+        "delegation_hint": "delegate_allowed",
+        "frontend": "false"
+      },
+      "notes": "Dependency repair, mechanical consequence of the approved R1-R3 restructure: this task blocks on tk-e93b97c65476, which is being re-created. Re-created with the corrected dependency."
+    },
+    {
+      "id": "tk-dffc2f1b754e",
+      "title": "Capture verified-complete baselines of the three sibling proposals",
+      "type": "verification",
+      "section": "Routing",
+      "status": "done",
+      "priority": 5,
+      "created_at": "2026-08-30T03:20:53.755Z",
+      "started_at": "2026-08-30T03:23:01.515Z",
+      "completed_at": "2026-08-30T03:23:59.670Z",
+      "verification": "Baselines captured for all three sibling proposals via adv_change_show include:{proposal:true, artifactOnly:true}. No _truncated flag or _meta budget marker in any response; all three terminate at a complete ## Epic context section.\n\nBASELINE 1 decideStorageLanguageDirection — first \"# Storage and language direction\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C8/probe/outcome coordination.\"; AC1-AC3 present.\n\nBASELINE 2 addPromotionStateMemories — first \"# Add promotion state to memories\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam. The Concord-side receiving contract is tracked in concord#46 Item 2.\"; AC1-AC7 present.\n\nBASELINE 3 improveRecallQualityIngest — first \"## Cross-Project Origin\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\"; AC1-AC6 present.\n\nNo hard stop triggered. No repo files touched; this task reads ADV artifacts only, so the tree is clean by design.",
+      "summary": "Baselines captured for all three sibling proposals via adv_change_show include:{proposal:true, artifactOnly:true}. No _truncated flag or _meta budget marker in any response; all three terminate at a complete ## Epic context section.\n\nBASELINE 1 decideStorageLanguageDirection — first \"# Storage and language direction\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C8/probe/outcome coordination.\"; AC1-AC3 present.\n\nBASELINE 2 addPromotionStateMemories — first \"# Add promotion state to memories\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam. The Concord-side receiving contract is tracked in concord#46 Item 2.\"; AC1-AC7 present.\n\nBASELINE 3 improveRecallQualityIngest — first \"## Cross-Project Origin\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\"; AC1-AC6 present.\n\nNo hard stop triggered. No repo files touched; this task reads ADV artifacts only, so the tree is clean by design.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "README.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "59f4dd724411664c789a7b8195e5f46178f0d6b1",
+      "completedAt": "2026-08-30T03:23:59.670Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change. This task is a structural safeguard protecting Success-2, Success-3, and Success-4 from destructive overwrite."
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "rationale": "Deliverable is a captured, completeness-verified baseline of three sibling artifacts. Proof is the recorded baselines plus their verified tail markers, not a behavioral test.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "separate_verification",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      }
+    },
+    {
+      "id": "tk-df3d80c92f28",
+      "title": "Route R1 storage evidence into decideStorageLanguageDirection",
+      "type": "docs",
+      "section": "Routing",
+      "status": "done",
+      "priority": 6,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-dffc2f1b754e"
+        }
+      ],
+      "created_at": "2026-08-30T03:21:13.948Z",
+      "started_at": "2026-08-30T03:24:15.303Z",
+      "completed_at": "2026-08-30T03:25:15.119Z",
+      "verification": "Appended \"## External evidence — magic-context\" to decideStorageLanguageDirection's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"# Storage and language direction\" matches baseline exactly.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C8/probe/outcome coordination.\" is present and now precedes the new section rather than ending the document.\n- Recommendation section, trigger source, Concord-side tracker, evidence bar, Decision outcome, and AC1-AC3 all intact and unmodified.\n- Document is strictly longer than baseline; new section appended at tail only.\n\nCITATIONS (all at cortexkit/magic-context HEAD a54f9c0, verified during design validation):\n- memory/cosine-similarity.ts, 19 lines, dot product + two norms, no ANN.\n- memory_embeddings DDL quoted verbatim.\n- MEMORY-DESIGN.md: ~79 memories/0.1s cached, ~10ms per query, 1000 memories ~= 1.5 MB.\n- Escape-hatch quote verbatim: \"At 1000+ memories, if full-scan latency is noticeable, add ANN index or per-project shard cache.\"\n- sqlite-vec rejection quoted from ARCHITECTURE.md and SPLIT into its two parts as required: extension-loading (runtime-specific, does not transfer; rusqlite load_extension_enable/LoadExtensionGuard, mattn/go-sqlite3 default-enabled, modernc.org/sqlite cgo caveat) and write-amplification (vec0 storage property, does transfer, remains a live objection).\n- Arithmetic stated: 1024d fp32 = 4096 bytes vs 1536, ~2.7x bytes per row, with the fairness basis named (both full fp32 scans).\n\nBOUNDARY: section header states explicitly that it is corroborating evidence only, adds no new option, and leaves the recommendation, trigger, and AC1-AC3 unchanged. Trigger-time measurement plan recorded as a first action for AC3 if the probe fires, explicitly not a reason to fire it.\n\nNo repo files touched; ADV artifact write only.",
+      "summary": "Appended \"## External evidence — magic-context\" to decideStorageLanguageDirection's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"# Storage and language direction\" matches baseline exactly.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C8/probe/outcome coordination.\" is present and now precedes the new section rather than ending the document.\n- Recommendation section, trigger source, Concord-side tracker, evidence bar, Decision outcome, and AC1-AC3 all intact and unmodified.\n- Document is strictly longer than baseline; new section appended at tail only.\n\nCITATIONS (all at cortexkit/magic-context HEAD a54f9c0, verified during design validation):\n- memory/cosine-similarity.ts, 19 lines, dot product + two norms, no ANN.\n- memory_embeddings DDL quoted verbatim.\n- MEMORY-DESIGN.md: ~79 memories/0.1s cached, ~10ms per query, 1000 memories ~= 1.5 MB.\n- Escape-hatch quote verbatim: \"At 1000+ memories, if full-scan latency is noticeable, add ANN index or per-project shard cache.\"\n- sqlite-vec rejection quoted from ARCHITECTURE.md and SPLIT into its two parts as required: extension-loading (runtime-specific, does not transfer; rusqlite load_extension_enable/LoadExtensionGuard, mattn/go-sqlite3 default-enabled, modernc.org/sqlite cgo caveat) and write-amplification (vec0 storage property, does transfer, remains a live objection).\n- Arithmetic stated: 1024d fp32 = 4096 bytes vs 1536, ~2.7x bytes per row, with the fairness basis named (both full fp32 scans).\n\nBOUNDARY: section header states explicitly that it is corroborating evidence only, adds no new option, and leaves the recommendation, trigger, and AC1-AC3 unchanged. Trigger-time measurement plan recorded as a first action for AC3 if the probe fires, explicitly not a reason to fire it.\n\nNo repo files touched; ADV artifact write only.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "README.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "59f4dd724411664c789a7b8195e5f46178f0d6b1",
+      "completedAt": "2026-08-30T03:25:15.119Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-2."
+      },
+      "evidence_plan": {
+        "policy": "source_citation",
+        "proof_target": "Source citation or reference",
+        "rationale": "Deliverable is a written evidence section on a sibling change artifact. The failure mode that matters is an inaccurate citation, not a runtime defect — design validation already caught one wrong source claim in this body of research. Proof is citation accuracy plus preservation of the sibling baseline.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "source_citation",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      }
+    },
+    {
+      "id": "tk-59ce9b7710b3",
+      "title": "Route R2 consolidation evidence and model-pinning caveat into addPromotionStateMemories",
+      "type": "docs",
+      "section": "Routing",
+      "status": "done",
+      "priority": 7,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-dffc2f1b754e"
+        }
+      ],
+      "created_at": "2026-08-30T03:21:33.642Z",
+      "started_at": "2026-08-30T03:25:18.506Z",
+      "completed_at": "2026-08-30T03:26:15.960Z",
+      "verification": "Appended \"## External evidence — magic-context\" to addPromotionStateMemories's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"# Add promotion state to memories\" matches baseline exactly.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam. The Concord-side receiving contract is tracked in concord#46 Item 2.\" present and now precedes the new section.\n- \"Out of scope (episode side) — Auto-promotion heuristics (manual flagging first; heuristic promotion is a later candidate)\" intact and unmodified.\n- PromotionState rust block, Storage, Recall semantics, Graduation flow, Scope, Out of scope (Concord side), Dependencies, and AC1-AC7 all intact.\n- Document strictly longer than baseline; append at tail only.\n\nCITATIONS (cortexkit/magic-context HEAD a54f9c0, verified during design validation):\n- primer-clustering.ts:5-8 — cosine >= 0.85, hysteresis 0.02, PRIMER_MIN_SPAN_DAYS = 7, PRIMER_PROMOTION_THRESHOLD = 2.\n- task-executor.ts ~L434, promotionThreshold ?? 3.\n- idx_memories_project_category_hash, normalized content hash per category, cross-category merges rejected.\n- verify task gated on backing-file change since verified_at.\n- lease.ts:8, conflict-domain lease memory:<project>, BEGIN IMMEDIATE.\n\nMODEL-PINNING CAVEAT stated with both halves as required:\n- CONFIRMED historian-only: runFallbackHistorianPass, compartment-runner-historian.ts:506-623, ARCHITECTURE.md label \"historian-only\".\n- REFUTED for dreamer and sidekick: resolve-fallbacks.ts, shared/model-resolution.ts, sidekick/agent.ts:29, model-suggestion-retry.ts.\n- Reader trap recorded: resolve-fallbacks.ts header comment overstates the fallback as general.\n- Caveat framed prospectively — \"if episode ever adds an LLM-backed consolidation pass\" — since this change is manual-flagging only.\n\nBOUNDARY: section header states it attaches to the already-deferred auto-promotion item, does not pull it into scope, and does not modify AC1-AC7.\n\nNo repo files touched; ADV artifact write only.",
+      "summary": "Appended \"## External evidence — magic-context\" to addPromotionStateMemories's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"# Add promotion state to memories\" matches baseline exactly.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam. The Concord-side receiving contract is tracked in concord#46 Item 2.\" present and now precedes the new section.\n- \"Out of scope (episode side) — Auto-promotion heuristics (manual flagging first; heuristic promotion is a later candidate)\" intact and unmodified.\n- PromotionState rust block, Storage, Recall semantics, Graduation flow, Scope, Out of scope (Concord side), Dependencies, and AC1-AC7 all intact.\n- Document strictly longer than baseline; append at tail only.\n\nCITATIONS (cortexkit/magic-context HEAD a54f9c0, verified during design validation):\n- primer-clustering.ts:5-8 — cosine >= 0.85, hysteresis 0.02, PRIMER_MIN_SPAN_DAYS = 7, PRIMER_PROMOTION_THRESHOLD = 2.\n- task-executor.ts ~L434, promotionThreshold ?? 3.\n- idx_memories_project_category_hash, normalized content hash per category, cross-category merges rejected.\n- verify task gated on backing-file change since verified_at.\n- lease.ts:8, conflict-domain lease memory:<project>, BEGIN IMMEDIATE.\n\nMODEL-PINNING CAVEAT stated with both halves as required:\n- CONFIRMED historian-only: runFallbackHistorianPass, compartment-runner-historian.ts:506-623, ARCHITECTURE.md label \"historian-only\".\n- REFUTED for dreamer and sidekick: resolve-fallbacks.ts, shared/model-resolution.ts, sidekick/agent.ts:29, model-suggestion-retry.ts.\n- Reader trap recorded: resolve-fallbacks.ts header comment overstates the fallback as general.\n- Caveat framed prospectively — \"if episode ever adds an LLM-backed consolidation pass\" — since this change is manual-flagging only.\n\nBOUNDARY: section header states it attaches to the already-deferred auto-promotion item, does not pull it into scope, and does not modify AC1-AC7.\n\nNo repo files touched; ADV artifact write only.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "README.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "59f4dd724411664c789a7b8195e5f46178f0d6b1",
+      "completedAt": "2026-08-30T03:26:15.960Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-3."
+      },
+      "evidence_plan": {
+        "policy": "source_citation",
+        "proof_target": "Source citation or reference",
+        "rationale": "Deliverable is a written evidence section on a sibling change artifact. This task carries the claim design validation flagged as highest-risk (the historian-only narrowing), so proof is citation accuracy against named source files plus preservation of the sibling baseline.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "source_citation",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      }
+    },
+    {
+      "id": "tk-b6a309860252",
+      "title": "Route R3 hybrid-retrieval candidate into improveRecallQualityIngest",
+      "type": "docs",
+      "section": "Routing",
+      "status": "done",
+      "priority": 8,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-dffc2f1b754e"
+        }
+      ],
+      "created_at": "2026-08-30T03:21:54.968Z",
+      "started_at": "2026-08-30T03:26:19.673Z",
+      "completed_at": "2026-08-30T03:27:05.897Z",
+      "verification": "Appended \"## External evidence — magic-context\" to improveRecallQualityIngest's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"## Cross-Project Origin\" matches baseline exactly; the full Cross-Project Origin table and note block are intact.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\" present and now precedes the new section.\n- Sub-parts 3a, 3b, 3c, Scope, Out of scope, Dependencies, and AC1-AC6 all intact and unmodified. AC3 verbatim: \"No score-blending weights introduced without calibration evidence.\"\n- Document strictly longer than baseline; append at tail only.\n\nSOURCE DEFECT RECORDED (the validator-required correction, and the substance of this task):\n- magic-context's code comment claims tokenizer preservation of . _ / - ; its actual DDL is tokenize='porter unicode61 categories \"L* N* Co\"'.\n- Per SQLite FTS5 documentation, L* N* Co is the unicode61 default, so the clause is a no-op and punctuation stays a separator. tokenchars appears nowhere in their repo.\n- Consequence 1 recorded: their implementation is weaker evidence than their prose; the idea transfers, their validation does not.\n- Consequence 2 recorded: Postgres default tsvector parsers carry the same trap, making pg_trgm the load-bearing half of any transfer rather than optional.\n\nAC3 BOUNDARY RESPECTED: section header declares this a candidate sub-part 3d, not an adoption. Body states explicitly that a hybrid ranker is a blended score falling under AC3, that it reduces calibration to one mixing weight without eliminating it, and that recording respects AC3 while adopting would violate it. Calibration tool named (embedding-baseline.ts / embedding-baseline-diff.ts, Kendall tau, no gold labels) with its honest limit stated — measures drift, not correctness.\n\nNo repo files touched; ADV artifact write only.",
+      "summary": "Appended \"## External evidence — magic-context\" to improveRecallQualityIngest's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"## Cross-Project Origin\" matches baseline exactly; the full Cross-Project Origin table and note block are intact.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\" present and now precedes the new section.\n- Sub-parts 3a, 3b, 3c, Scope, Out of scope, Dependencies, and AC1-AC6 all intact and unmodified. AC3 verbatim: \"No score-blending weights introduced without calibration evidence.\"\n- Document strictly longer than baseline; append at tail only.\n\nSOURCE DEFECT RECORDED (the validator-required correction, and the substance of this task):\n- magic-context's code comment claims tokenizer preservation of . _ / - ; its actual DDL is tokenize='porter unicode61 categories \"L* N* Co\"'.\n- Per SQLite FTS5 documentation, L* N* Co is the unicode61 default, so the clause is a no-op and punctuation stays a separator. tokenchars appears nowhere in their repo.\n- Consequence 1 recorded: their implementation is weaker evidence than their prose; the idea transfers, their validation does not.\n- Consequence 2 recorded: Postgres default tsvector parsers carry the same trap, making pg_trgm the load-bearing half of any transfer rather than optional.\n\nAC3 BOUNDARY RESPECTED: section header declares this a candidate sub-part 3d, not an adoption. Body states explicitly that a hybrid ranker is a blended score falling under AC3, that it reduces calibration to one mixing weight without eliminating it, and that recording respects AC3 while adopting would violate it. Calibration tool named (embedding-baseline.ts / embedding-baseline-diff.ts, Kendall tau, no gold labels) with its honest limit stated — measures drift, not correctness.\n\nNo repo files touched; ADV artifact write only.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "README.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "59f4dd724411664c789a7b8195e5f46178f0d6b1",
+      "completedAt": "2026-08-30T03:27:05.897Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-4."
+      },
+      "evidence_plan": {
+        "policy": "source_citation",
+        "proof_target": "Source citation or reference",
+        "rationale": "Deliverable is a written evidence section on a sibling change artifact. This task must record a defect found in the upstream source (a tokenizer comment its own DDL contradicts), so proof is citation accuracy against the source DDL and the SQLite FTS5 documentation, plus preservation of the sibling baseline.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "source_citation",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      }
+    },
+    {
+      "id": "tk-4b7360338149",
+      "title": "Record no-action dispositions in this change's executive summary",
+      "type": "docs",
+      "section": "Routing",
+      "status": "done",
+      "priority": 9,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-df3d80c92f28"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-59ce9b7710b3"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-b6a309860252"
+        }
+      ],
+      "created_at": "2026-08-30T03:22:28.924Z",
+      "started_at": "2026-08-30T03:27:10.824Z",
+      "completed_at": "2026-08-30T03:28:02.216Z",
+      "verification": "Wrote executive-summary.md via adv_change_update executiveSummary. This change had no prior executive summary, so the write creates rather than overwrites — no baseline preservation risk.\n\nCOVERAGE — all 7 ideas carry an explicit disposition:\n- Idea 1 SQLite: routed to decideStorageLanguageDirection as corroboration, not a third option; inversion from the proposal's \"highest-value input\" ranking stated plainly.\n- Idea 2 worktree fragmentation: RESOLVED NEGATIVE with src/config.rs:147-191 and src/server.rs evidence; no defect change opened; recorded so it is not re-raised.\n- Idea 3 tiered config: no action; episode has no project-local config, all env-driven.\n- Idea 4 consolidation: routed to addPromotionStateMemories as evidence for its deferred auto-promotion item.\n- Idea 5 embedding size: no action; coupled to idea 1.\n- Idea 6 harness column: known generalization path, not a recommendation.\n- Idea 7 hybrid retrieval: routed to improveRecallQualityIngest as candidate 3d bound by AC3.\n\nALSO RECORDED:\n- Anti-recommendation retained (prompt-prefix rewriting, toolbox ADR 0013, ~15 quota tokens per context token saved; N/A to episode as an MCP server).\n- Two no-target designs (saveEmbeddingIfHashMatches; never embed inside a write transaction).\n- Both corrections made before routing: the false FTS5 tokenizer claim with its two consequences, and the over-broad model-fallback claim narrowed to historian-only.\n- Process finding: the false claim was caught only by the independent design validator returning CONCERN.\n- Residual UNVERIFIED list, 4 items, each noted as non-blocking.\n- Explicit \"not done, deliberately\" section confirming no episode source modified and naming the one deferred item (mirroring corrections into episode wisdom).\n\nNo repo files touched; ADV artifact write only.",
+      "summary": "Wrote executive-summary.md via adv_change_update executiveSummary. This change had no prior executive summary, so the write creates rather than overwrites — no baseline preservation risk.\n\nCOVERAGE — all 7 ideas carry an explicit disposition:\n- Idea 1 SQLite: routed to decideStorageLanguageDirection as corroboration, not a third option; inversion from the proposal's \"highest-value input\" ranking stated plainly.\n- Idea 2 worktree fragmentation: RESOLVED NEGATIVE with src/config.rs:147-191 and src/server.rs evidence; no defect change opened; recorded so it is not re-raised.\n- Idea 3 tiered config: no action; episode has no project-local config, all env-driven.\n- Idea 4 consolidation: routed to addPromotionStateMemories as evidence for its deferred auto-promotion item.\n- Idea 5 embedding size: no action; coupled to idea 1.\n- Idea 6 harness column: known generalization path, not a recommendation.\n- Idea 7 hybrid retrieval: routed to improveRecallQualityIngest as candidate 3d bound by AC3.\n\nALSO RECORDED:\n- Anti-recommendation retained (prompt-prefix rewriting, toolbox ADR 0013, ~15 quota tokens per context token saved; N/A to episode as an MCP server).\n- Two no-target designs (saveEmbeddingIfHashMatches; never embed inside a write transaction).\n- Both corrections made before routing: the false FTS5 tokenizer claim with its two consequences, and the over-broad model-fallback claim narrowed to historian-only.\n- Process finding: the false claim was caught only by the independent design validator returning CONCERN.\n- Residual UNVERIFIED list, 4 items, each noted as non-blocking.\n- Explicit \"not done, deliberately\" section confirming no episode source modified and naming the one deferred item (mirroring corrections into episode wisdom).\n\nNo repo files touched; ADV artifact write only.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "README.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "59f4dd724411664c789a7b8195e5f46178f0d6b1",
+      "completedAt": "2026-08-30T03:28:02.216Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task satisfies Success-5."
+      },
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "rationale": "Deliverable is this change's own executive summary recording no-action dispositions. Proof is that the artifact exists and covers every idea, readable via adv_change_show.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable",
+        "delegation_hint": "inline_required",
+        "frontend": "false"
+      }
+    },
+    {
+      "id": "tk-d64c9255eb92",
+      "title": "Verify no episode source file was modified and sibling baselines survived",
+      "type": "verification",
+      "section": "Verification",
+      "status": "done",
+      "priority": 10,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-4b7360338149"
+        }
+      ],
+      "created_at": "2026-08-30T03:22:43.071Z",
+      "started_at": "2026-08-30T03:28:10.745Z",
+      "completed_at": "2026-08-30T03:28:26.638Z",
+      "verification": "Both negative checks pass.\n\nCHECK 1 — no repo file touched. Durable evidence runId tr_mtf91w8w_3456b934, exit code 0:\n  git status --porcelain -> empty\n  git diff --stat main...HEAD -> empty\n  \"PASS: tree clean, no diff vs main\"\nSuccess-6 proven: this change modified no episode source file, and no repo file at all.\n\nCHECK 2 — sibling proposals grew, and only at the tail. Each verified by readback immediately after its write:\n\ndecideStorageLanguageDirection — first line \"# Storage and language direction\" matches baseline; baseline terminal line (\"Member of Epic ... concord#46 for the C8/probe/outcome coordination.\") present and now precedes the new section; Recommendation, trigger source, evidence bar, Decision outcome, and AC1-AC3 intact; strictly longer.\n\naddPromotionStateMemories — first line \"# Add promotion state to memories\" matches baseline; baseline terminal line (\"Member of Epic ... concord#46 Item 2.\") present and now precedes the new section; \"Out of scope (episode side) — Auto-promotion heuristics\" intact; PromotionState rust block and AC1-AC7 intact; strictly longer.\n\nimproveRecallQualityIngest — first line \"## Cross-Project Origin\" matches baseline; Cross-Project Origin table and note block intact; baseline terminal line (\"Member of Epic ... Polish and future-proofing tier.\") present and now precedes the new section; sub-parts 3a/3b/3c and AC1-AC6 intact, with AC3 verbatim; strictly longer.\n\nNo sibling lost content. The overwrite risk the baseline task existed to prevent did not materialize.",
+      "summary": "Both negative checks pass.\n\nCHECK 1 — no repo file touched. Durable evidence runId tr_mtf91w8w_3456b934, exit code 0:\n  git status --porcelain -> empty\n  git diff --stat main...HEAD -> empty\n  \"PASS: tree clean, no diff vs main\"\nSuccess-6 proven: this change modified no episode source file, and no repo file at all.\n\nCHECK 2 — sibling proposals grew, and only at the tail. Each verified by readback immediately after its write:\n\ndecideStorageLanguageDirection — first line \"# Storage and language direction\" matches baseline; baseline terminal line (\"Member of Epic ... concord#46 for the C8/probe/outcome coordination.\") present and now precedes the new section; Recommendation, trigger source, evidence bar, Decision outcome, and AC1-AC3 intact; strictly longer.\n\naddPromotionStateMemories — first line \"# Add promotion state to memories\" matches baseline; baseline terminal line (\"Member of Epic ... concord#46 Item 2.\") present and now precedes the new section; \"Out of scope (episode side) — Auto-promotion heuristics\" intact; PromotionState rust block and AC1-AC7 intact; strictly longer.\n\nimproveRecallQualityIngest — first line \"## Cross-Project Origin\" matches baseline; Cross-Project Origin table and note block intact; baseline terminal line (\"Member of Epic ... Polish and future-proofing tier.\") present and now precedes the new section; sub-parts 3a/3b/3c and AC1-AC6 intact, with AC3 verbatim; strictly longer.\n\nNo sibling lost content. The overwrite risk the baseline task existed to prevent did not materialize.",
+      "filesTouched": [
+        ".adv/specs/0010-recall-metadata-filters.md",
+        "README.md",
+        "docs/specs/0010-recall-metadata-filters.md",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "59f4dd724411664c789a7b8195e5f46178f0d6b1",
+      "completedAt": "2026-08-30T03:28:26.638Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "not_applicable_reason": "No ChangeContract exists on this change; success criteria live in problem-statement.md. This task verifies Success-6, the no-source-modification constraint."
+      },
+      "evidence_plan": {
+        "policy": "static_check",
+        "proof_target": "Static analysis or check output",
+        "rationale": "Success-6 is a negative constraint (no episode source modified). It is provable by a deterministic git check, so a static check is the correct proof route rather than a behavioral test.",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "static_check",
+      "metadata": {
+        "tdd_intent": "separate_verification",
+        "delegation_hint": "delegate_allowed",
+        "frontend": "false"
+      }
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "studyMagicContextMemoryDesign",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:discovery-architecture-md"
+      },
+      "agent": "adv-researcher",
+      "topic": "magic-context ARCHITECTURE.md verification: SQLite vector storage + dreamer consolidation",
+      "sources": [
+        {
+          "label": "ARCHITECTURE.md at requested commit a32a839 (raw)",
+          "locator": "https://raw.githubusercontent.com/cortexkit/magic-context/a32a839/ARCHITECTURE.md",
+          "summary": "Pinned-commit copy; Memory/Dreamer/Historian sections extracted and compared against HEAD — substantively identical."
+        },
+        {
+          "label": "ARCHITECTURE.md at HEAD a54f9c0 (searchcode)",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/ARCHITECTURE.md",
+          "summary": "Full 180-line read: Memory/search/embeddings (L111), Dreamer (L118), Historian flow (L94), Storage & migrations (L146), Error handling (L171)."
+        },
+        {
+          "label": "MEMORY-DESIGN.md",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/docs/MEMORY-DESIGN.md",
+          "summary": "Schema (memory_embeddings BLOB side table, L108-111), MiniLM 384d model + known weakness + hybrid FTS5 mitigation (L256-262), 1536B/vector, 1000 memories ≈ 1.5MB (L265-267), ANN-at-1000+ degradation note (L277), alternative providers incl. fastembed bge-small (L279-286)."
+        },
+        {
+          "label": "cosine-similarity.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/features/magic-context/memory/cosine-similarity.ts",
+          "summary": "Entire file is one 23-line exact cosine loop over Float32Array — no index, no quantization."
+        },
+        {
+          "label": "task-registry.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/features/magic-context/dreamer/task-registry.ts",
+          "summary": "CANONICAL_DREAM_TASKS = 12 tasks (L11-24); MEMORY_DOMAIN_TASKS share one memory lease (L94); lease kinds (L113)."
+        },
+        {
+          "label": "resolve-fallbacks.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/shared/resolve-fallbacks.ts",
+          "summary": "L3-14 policy: ONLY user-configured fallback_models; session-model last resort belongs to the runner."
+        },
+        {
+          "label": "compartment-runner-historian.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/features/magic-context/compartment-runner-historian.ts",
+          "summary": "L526-584: configured chain tried in order before session-model last resort; empty config = session model alone."
+        },
+        {
+          "label": "model-suggestion-retry.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/shared/model-suggestion-retry.ts",
+          "summary": "L336-400: promptSyncWithModelSuggestionRetry iterates configured fallbacks only; abort/timeout/context-overflow short-circuit; no session-model append."
+        },
+        {
+          "label": "sidekick/agent.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/features/magic-context/sidekick/agent.ts",
+          "summary": "L29: fallbackModels = resolveFallbackChain(config.fallback_models) — no session-model last resort."
+        },
+        {
+          "label": "primer-clustering.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/src/features/magic-context/primer-clustering.ts",
+          "summary": "L5-7: PRIMER_CLUSTER_THRESHOLD=0.85 cosine, HYSTERESIS=0.02, PRIMER_PROMOTION_THRESHOLD=2, MIN_SPAN_DAYS gate."
+        },
+        {
+          "label": "embedding-baseline.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/main/packages/plugin/scripts/embedding-baseline.ts",
+          "summary": "L1-24: model-comparison methodology (top-K ranking diff, Kendall tau) for MiniLM vs larger models; no precision/recall gold labels."
+        }
+      ],
+      "architecture_assessment": "magic-context's memory subsystem is an existence proof for SQLite-only semantic memory at small scale, and its own docs name the wall: brute-force exact cosine over in-memory Float32Array BLOBs, ~10ms/query on a 79-memory pool, ANN named only as a 1000+ contingency. episode already runs the growth path magic-context defers (pgvector HNSW, 1024d). For consolidation, magic-context supplies a mature, directly transferable pattern set: conflict-domain leases with BEGIN IMMEDIATE guarded writes, non-agentic LLM tasks emitting one fail-closed-parsed XML manifest applied host-side, exact-hash dedup at promotion, per-memory verify gates on backing-file change with sticky partial progress, cluster+span+occurrence promotion thresholds, and provider-output-failure detection. Code citations are from searchcode index HEAD a54f9c0; ARCHITECTURE.md was also diffed against the requested a32a839 via raw.githubusercontent (sections Memory/Dreamer/Historian substantively identical; a32a839 is 51.7KB vs HEAD 62.5KB, deltas additive in Overview/Pi-parity prose).",
+      "validation": {
+        "status": "pass",
+        "blockers": [],
+        "notes": "Full document read at both the requested commit (a32a839, via raw GitHub) and searchcode HEAD (a54f9c0). No blockers; commit-drift caveat recorded in follow_ups."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "medium",
+        "risk": "medium",
+        "tradeoffs": [
+          "Exact cosine search is simple and dependency-free but caps pool size (~1000 rows is their own stated ANN trigger); episode's pgvector/HNSW already owns that growth path at 1024d.",
+          "Non-agentic manifest tasks trade LLM autonomy for host-enforced, fail-closed, idempotent writes — safer but requires manifest schemas and refusal accounting.",
+          "Lease serialization of memory-mutating tasks reduces concurrency; manual runs must poll-wait (60s) or exit."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Adopt SQLite brute-force cosine for episode",
+            "disposition": "rejected",
+            "rationale": "episode already has HNSW; magic-context's own design names ANN as the 1000+ migration path."
+          },
+          {
+            "option": "Numeric decay formula for memories",
+            "disposition": "rejected",
+            "rationale": "magic-context uses verify/curate/archive for memories; the decay curve governs summary compartments, a different object."
+          },
+          {
+            "option": "Lease + non-agentic manifest consolidation",
+            "disposition": "preferred",
+            "rationale": "Proven against live readers; maps cleanly to Postgres advisory locks and JSON manifests."
+          }
+        ],
+        "recommendation": "Keep pgvector+HNSW storage direction; do not trade it for SQLite brute force. Greenlight a consolidation design importing magic-context's lease/manifest/verify/promotion mechanics."
+      },
+      "recommendation": "Route idea 1 (SQLite direction) as WEAKENED for episode: magic-context's own design doc plans ANN adoption at 1000+ memories — episode already has HNSW/pgvector at 1024d, and its 384d perf figures do not transfer (4x vector bytes, episode pools grow past their stated wall). Route idea 4 (consolidation) as STRENGTHENED: adopt the concrete mechanics — conflict-domain leases (Postgres advisory-lock analog), non-agentic host-applied manifest tasks, exact-dedup promotion, per-target verify gates with sticky partial progress, and repeated-confirmation promotion thresholds.",
+      "follow_ups": [
+        "Spawn prompt lacked explicit TASK_SCOPE/IN_SCOPE/OUT_OF_SCOPE/DONE_WHEN/STOP_WHEN/VERIFICATION anchor blocks; scope was taken from the Goal/Questions/Output sections (warning per packet contract).",
+        "Spawn SCOPE KEY 'discovery-architecture-md' lacked the lane prefix required by the report schema; submitted as researcher:discovery-architecture-md.",
+        "If exact a32a839 line numbers are needed for code files, re-fetch via raw.githubusercontent at that SHA; searchcode serves HEAD a54f9c0 only."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "studyMagicContextMemoryDesign",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-validation"
+      },
+      "agent": "adv-researcher",
+      "topic": "Independent design validation: magic-context research-routing into three sibling changes",
+      "sources": [
+        {
+          "label": "magic-context ARCHITECTURE.md @ a54f9c0",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/ARCHITECTURE.md",
+          "summary": "sqlite-vec rejection quote ('bun:sqlite can't load extensions + write-amplification'); 'session-model last resort, historian-only' label; Float32Array cosine scan."
+        },
+        {
+          "label": "magic-context MEMORY-DESIGN.md @ a54f9c0",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/packages/plugin/docs/MEMORY-DESIGN.md",
+          "summary": "memory_embeddings DDL verbatim; memories_fts DDL tokenize='porter unicode61 categories \"L* N* Co\"' with preservation comment; 79-mem/0.1s, 1536B/vector, 1.5MB/1000, escape-hatch quote; model weakness + bge benchmark rec; no-inference-in-transaction note."
+        },
+        {
+          "label": "primer-clustering.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/packages/plugin/src/features/magic-context/primer-clustering.ts",
+          "summary": "L5 0.85, L6 0.02, L7 PROMOTION_THRESHOLD=2, L8 MIN_SPAN_DAYS=7."
+        },
+        {
+          "label": "compartment-runner-historian.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/packages/plugin/src/hooks/magic-context/compartment-runner-historian.ts",
+          "summary": "runFallbackHistorianPass L506-623: fallbackModelId appended after configured chain as 'absolute last resort'; isSessionModelLastResort label."
+        },
+        {
+          "label": "sidekick/agent.ts + model-suggestion-retry.ts + resolve-fallbacks.ts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/packages/plugin/src/features/magic-context/sidekick/agent.ts",
+          "summary": "agent.ts:29 resolveFallbackChain(config.fallback_models); promptSyncWithValidatedOutputRetry throws when fallbacks exhausted, no session-model resort; resolve-fallbacks header comment is loosely worded but only the historian runner implements the session-model resort."
+        },
+        {
+          "label": "SQLite FTS5 docs — unicode61",
+          "locator": "https://www.sqlite.org/fts5.html#unicode61_tokenizer",
+          "summary": "Punctuation is separators by default; categories default IS 'L* N* Co' (magic-context's setting is a no-op); preserving -/_ requires tokenchars."
+        },
+        {
+          "label": "rusqlite docs",
+          "locator": "https://docs.rs/rusqlite/latest/rusqlite/struct.LoadExtensionGuard.html",
+          "summary": "load_extension_enable / LoadExtensionGuard / load_extension — Rust can load SQLite extensions."
+        },
+        {
+          "label": "mattn/go-sqlite3 Features wiki",
+          "locator": "https://github.com/mattn/go-sqlite3/wiki/Features",
+          "summary": "'Loading external extensions is enabled by default' (opt-out build tag only). modernc.org/sqlite (pure Go) cannot dlopen C extensions but offers pure-Go vtab; ncruces/go-sqlite3 loads sqlite-vec via WASM."
+        },
+        {
+          "label": "episode src (local)",
+          "locator": "/home/jon/dev/episode/src/config.rs and src/server.rs",
+          "summary": "config.rs:147+ strict namespace=path parsing; server.rs caller-supplied namespace defaulting to 'global' — idea-2 negative result confirmed; no cwd derivation."
+        },
+        {
+          "label": "dreamer task-executor.ts + lease.ts + embedding-baseline scripts",
+          "locator": "https://github.com/cortexkit/magic-context/blob/a54f9c06e91407119c20f39dd89c08f9b2bad5ac/packages/plugin/src/features/magic-context/dreamer/task-executor.ts",
+          "summary": "promotionThreshold ?? 3 (~L434); lease.ts:8 'memory:<project>' conflict domain; scripts/embedding-baseline{,-diff}.ts exist."
+        }
+      ],
+      "architecture_assessment": "All five priority source claims were checked against magic-context @ a54f9c0. Four verify (brute-force 19-line cosine; promotion constants 0.85/0.02/2/7 at L5-8; historian-only session-model fallback — the highest-risk narrowing is CORRECT; sqlite-vec rejection quote verbatim). The fifth (FTS5 tokenizer preserving . _ / -) is the source's documented intent, not its actual behavior: their config equals the unicode61 default and 'tokenchars' appears nowhere in the repo. Two author inferences: the 4KB/2.7x arithmetic is sound; the sqlite-vec transfer correction is right about extension loading (rusqlite and mattn/go-sqlite3 both load extensions) but overreaches by also disposing of the write-amplification half, which is runtime-independent. All three sibling boundaries are respected; one internal inconsistency exists between this change's problem statement/success criteria (SQLite option + measurement plan) and the design's inverted R1 routing (corroborate, no new option, no plan included).",
+      "validation": {
+        "status": "caution",
+        "blockers": [],
+        "notes": "No fabricated claims; the riskiest claim (model-fallback narrowing) verifies against code and ARCHITECTURE.md. Three edits required before routing executes: (1) R3 tokenizer claim must be corrected — the shipped config does not preserve . _ / -, which if routed as fact would seed a false mechanism into episode's hybrid-retrieval candidate (and materially strengthens the pg_trgm point, since Postgres default tsvector parsers split path/symbol tokens the same way); (2) R1 sqlite-vec correction must be scoped — 'Their rejection is therefore not evidence against sqlite-vec' is valid only for the bun:sqlite extension-loading half; write-amplification is a sqlite-vec storage property and remains live, workload-dependent evidence; note also pure-Go modernc cannot dlopen extensions while mattn (cgo, default-enabled) can; (3) reconcile problem-statement Success-2 ('carries the SQLite option with a stated measurement plan') with R1's 'adds no new option / net effect none' inversion, or add the one-line measurement plan. Minor citation nits: cosine file is 19 lines not 23; primer constants span L5-8 not L5-7; historian function is L506-623 (cited window covers the load-bearing part)."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "medium",
+        "tradeoffs": [
+          "Appending evidence sections to sibling proposals gains locality (evidence travels with each decision) at the cost of third-party content inside authored artifacts; the provenance header mitigates but does not eliminate framing drift risk.",
+          "Recording hybrid retrieval as a bound candidate respects AC3 and preserves optionality, but a pre-loaded design anchors any future implementer toward magic-context's shape.",
+          "The sqlite-vec correction as written removes a mis-citation hazard but currently also discards genuine (workload-dependent) write-amplification evidence."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Standalone decision record referenced by siblings instead of appended sections",
+            "disposition": "deferred",
+            "rationale": "Preserves authorship purity, but loses locality and risks evidence decay — the exact problem this change exists to fix. Appending with provenance headers is acceptable; optionally mirror the correction and anti-recommendation into episode wisdom for cross-epic recall."
+          },
+          {
+            "option": "Route R3 hybrid retrieval as an adopted sub-part",
+            "disposition": "rejected",
+            "rationale": "Would violate sibling AC3 (score-blending without calibration evidence); candidate framing with a named calibration method is the correct bar."
+          },
+          {
+            "option": "Treat write-amplification as fully runtime-specific alongside bun:sqlite",
+            "disposition": "rejected",
+            "rationale": "Write-amplification stems from sqlite-vec vec0 storage behavior, not the host runtime; the correction's conclusion must not cover it."
+          }
+        ],
+        "recommendation": "Proceed with routing after the three edits: fix the R3 tokenizer claim, scope the R1 correction to the extension-loading reason, and reconcile Success-2 with the inverted R1 routing."
+      },
+      "recommendation": "CONCERN verdict for the orchestrator: design is factually solid on the four load-bearing claims and respects all three sibling boundaries; require the three edits above before executing the routing appends. The historian-only model-fallback narrowing — the claim flagged as most likely wrong — is verified correct.",
+      "follow_ups": [
+        "Spawn-packet aux anchors (TASK_SCOPE/IN_SCOPE/OUT_OF_SCOPE/DONE_WHEN/STOP_WHEN/VERIFICATION blocks) were not present in verbatim form; scope was taken from the prompt's 'What to validate' sections. Identity anchors were all present.",
+        "Residual unverified details (non-load-bearing): exact production migrations.ts memories_fts DDL variant (tests use plain 'porter unicode61'; docs use categories variant — no variant preserves . _ / - since 'tokenchars' is absent repo-wide); dreamer verify-task file-gating internals (verify-gate.ts exists with matching function names); 'memory:<project>' BEGIN IMMEDIATE atomicity wording corroborated by lease.ts:8 only; committed ctx-search-benchmark output; bge-small provider aspirational-vs-implemented (already listed in the design's residual UNVERIFIED)."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "studyMagicContextMemoryDesign",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "BLOCKED",
+      "blocking_findings": [
+        {
+          "id": "citation-1",
+          "label": "blocker",
+          "file": "decideStorageLanguageDirection",
+          "line": 1,
+          "what": "The routed memory_embeddings DDL omits model_id and quotes the wrong primary key.",
+          "why": "At a54f9c0, storage-db.ts defines model_id TEXT NOT NULL and PRIMARY KEY(memory_id, model_id). This is a second false source claim in a sibling decision record.",
+          "fix": "Replace the quoted DDL in the sibling, design, and executive summary with the schema at a54f9c0. Recheck all conclusions that depend on one embedding per memory."
+        },
+        {
+          "id": "citation-2",
+          "label": "blocker",
+          "file": "addPromotionStateMemories",
+          "line": 1,
+          "what": "The promotion rule says the cluster must span seven distinct days.",
+          "why": "primer-clustering.ts requires at least two distinct-day supports and at least seven elapsed days between first and last. It does not require seven distinct days.",
+          "fix": "State the two axes as support >= 2 distinct occurrence-day records and elapsed span >= 7 days. Update the design and executive summary too."
+        },
+        {
+          "id": "citation-3",
+          "label": "blocker",
+          "file": "improveRecallQualityIngest",
+          "line": 1,
+          "what": "The corrected tokenizer section quotes DDL that is not present at a54f9c0.",
+          "why": "storage-db.ts uses tokenize='porter unicode61'. It does not include categories \"L* N* Co\". The no-op conclusion remains correct because unicode61 uses those categories by default, but the asserted source text is false.",
+          "fix": "Quote the actual DDL and explain that porter wraps the default unicode61 tokenizer. Keep the SQLite documentation citation for punctuation and tokenchars behavior."
+        },
+        {
+          "id": "citation-4",
+          "label": "issue",
+          "file": "addPromotionStateMemories",
+          "line": 1,
+          "what": "The lease key pattern is cited to lease.ts:8, but that file does not define memory:<project>.",
+          "why": "task-registry.ts leaseKeyFor returns `${kind}:${projectIdentity}` and assigns memory tasks to kind memory. lease.ts only implements generic keyed leases.",
+          "fix": "Cite task-registry.ts leaseKindFor and leaseKeyFor. Cite lease.ts only for BEGIN IMMEDIATE and lease mechanics."
+        },
+        {
+          "id": "accuracy-1",
+          "label": "issue",
+          "file": "decideStorageLanguageDirection",
+          "line": 1,
+          "what": "The routed section says both systems perform full fp32 scans.",
+          "why": "The same section states that episode uses pgvector HNSW. HNSW query execution is not a full row scan, so the sentence contradicts the stated architecture.",
+          "fix": "Limit the byte-width comparison to vector representation. Do not call episode query execution a full scan."
+        }
+      ],
+      "nonblocking_findings": [],
+      "changes_made": [],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "For source-routed research, verify quoted DDL and threshold semantics against the pinned commit. A correct conclusion does not make an incorrect source quote acceptable."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "adv_change_show studyMagicContextMemoryDesign with problemStatement, design, and executiveSummary",
+          "adv_change_show for decideStorageLanguageDirection, addPromotionStateMemories, and improveRecallQualityIngest",
+          "Pinned raw-source checks at cortexkit/magic-context a54f9c0",
+          "SQLite FTS5 unicode61 documentation check"
+        ],
+        "results": "fail",
+        "evidence": "Artifact reads completed. Pinned source verified cosine-similarity.ts, storage-db.ts, primer-clustering.ts, compartment-runner-historian.ts, task-registry.ts, lease.ts, sidekick/agent.ts, task-executor.ts, and SQLite FTS5 docs. Three load-bearing source claims were false as written."
+      },
+      "scope_drift": null,
+      "risks": [
+        "The current ADV projection shows each section appended after Epic context, but no artifact revision view was available for byte-for-byte historical comparison.",
+        "Other routed claims outside the requested spot checks may contain the same source-versus-comment error pattern."
+      ],
+      "required_main_agent_actions": [
+        "Do not complete acceptance while citation-1, citation-2, and citation-3 remain.",
+        "Correct the three sibling sections and the matching design and executive-summary claims through the owning ADV workflow.",
+        "Correct the lease citation and the full-scan overstatement.",
+        "Run another pinned-commit citation review after the artifact corrections."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "studyMagicContextMemoryDesign",
+      "attempt": 2,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [],
+      "changes_made": [],
+      "wisdom_candidates": [],
+      "verification": {
+        "tests_run": [
+          "git status --porcelain && git diff --stat",
+          "git -C /tmp/opencode/magic-context-a54f9c0-review2 rev-parse --short=7 HEAD"
+        ],
+        "results": "pass",
+        "evidence": "Reviewed all four artifact-only projections and source at a54f9c0. memory_embeddings includes model_id and PRIMARY KEY(memory_id, model_id) at storage-db.ts:1094-1102. Promotion constants and summary logic confirm support >=2 distinct UTC days and spanDays >=7 elapsed days at primer-clustering.ts:7-8,143-180. memories_fts uses tokenize='porter unicode61' with no categories or tokenchars at storage-db.ts:1359-1365. task-registry.ts:7-8 and 94-140 assigns lease domains and derives lease keys. Episode migrations/0001_init.sql:35-37 stores one embedding in each memory row, while lines 49-51 define the HNSW index. The three sibling artifacts retain their opening content, complete AC blocks, and Epic context before appended evidence. The process-finding table matches the established review history. Episode working tree stayed clean."
+      },
+      "scope_drift": null,
+      "risks": [
+        "The context omitted the generated BRIEFING PACKET. The explicit review scope and ground truth supplied the required analysis boundaries."
+      ],
+      "required_main_agent_actions": [
+        "Use this READY report as acceptance-review evidence. No artifact remediation remains."
+      ]
+    }
+  ],
+  "test_runs": {
+    "tk-d64c9255eb92": [
+      {
+        "runId": "tr_mtf91w8w_3456b934",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "echo \"--- git status --porcelain ---\"; git status --porcelain; echo \"--- git diff --stat main...HEAD ---\"; git diff --stat main...HEAD; echo \"--- exit clean if both empty ---\"; test -z \"$(git status --porcelain)\" && test -z \"$(git diff --stat main...HEAD)\" && echo \"PASS: tree clean, no diff vs main\" || { echo \"FAIL: repo files modified\"; exit 1; }",
+        "durationMs": 57.8998239999637,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T03:28:15.549Z"
+      }
+    ]
+  },
+  "deltas": {},
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-08-30T02:44:24.904Z",
+      "completed_by": "user",
+      "approval_evidence": "User confirmed problem statement. Scope: research-routing only, no episode source changes. Idea 2 resolved negative pre-gate with source evidence (src/config.rs:152-191, src/server.rs namespace params) — no cwd-derived scope key, no worktree fragmentation, contingent defect change not opened."
+    },
+    "discovery": {
+      "status": "done",
+      "completed_at": "2026-08-30T02:52:55.081Z",
+      "completed_by": "agent",
+      "approval_evidence": "ARCHITECTURE.md read at HEAD a54f9c0 with a32a839 cross-fetch diff; the three relevant sections are substantively identical across commits. UNVERIFIED item cleared.\n\nHeadline inversion: idea 1 (SQLite) WEAKENS, idea 4 (consolidation) STRENGTHENS. The proposal ranked idea 1 as \"the single highest-value input\"; discovery refutes that.\n\nIdea 1 evidence: magic-context uses exact brute-force fp32 cosine over SQLite BLOBs (memory/cosine-similarity.ts, 23 lines), no ANN. Designed for hundreds-to-~1000 memories at 384d; their own MEMORY-DESIGN.md names ANN as the escape hatch past 1000. episode already occupies that escape path at 1024d. Their ~10ms figures do not transfer to 4KB vectors. Critically, their sqlite-vec rejection is runtime-specific (bun:sqlite cannot load extensions) and does NOT transfer to Rust or Go, both of which load SQLite extensions.\n\nIdea 4 evidence: dreamer = 15-min cron, 12 CANONICAL_DREAM_TASKS. Promotion by cosine>=0.85 clustering with 0.02 hysteresis, requiring >=MIN_SPAN_DAYS distinct days and >=2 distinct occurrence keys. Exact-dedup via normalized content hash. Change-gated verify with sticky partial progress. Conflict-domain leases (memory:<project>) with BEGIN IMMEDIATE.\n\nModel-fallback caveat REFINED: session-model fallback CONFIRMED for historian only (compartment-runner-historian.ts:526-584), REFUTED for dreamer and sidekick. The proposal stated it too broadly.\n\nNEW finding not in the proposal: hybrid FTS5 + cosine retrieval with a technical-token tokenizer preserving . _ / - , mitigating a documented dense-embedding weakness on exact symbols, file paths, and config keys. Directly relevant to improveRecallQualityIngest, a fourth routing target the proposal did not anticipate."
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-08-30T03:08:34.751Z",
+      "completed_by": "agent",
+      "approval_evidence": "Independent validator (adv-researcher, scope design-validation) returned CONCERN with 3 required changes. All 3 applied; no CONFLICT.\n\nValidator VERIFIED 4 of 5 load-bearing source claims, including the highest-risk one: the historian-only narrowing of the session-model fallback is correct (runFallbackHistorianPass, compartment-runner-historian.ts:506-623; refuted for dreamer/sidekick).\n\nFix 1 (source error): the FTS5 tokenizer claim was WRONG. magic-context's comment claims it preserves . _ / - but its DDL uses tokenize='porter unicode61 categories \"L* N* Co\"', which is the unicode61 default and a no-op; tokenchars appears nowhere in the repo. Design now records this as a source defect and states the consequence: Postgres default tsvector parsers have the same trap, which makes pg_trgm the load-bearing half of the transfer rather than optional.\n\nFix 2 (over-broad inference): the sqlite-vec correction disposed of both rejection reasons. Now split — extension-loading is runtime-specific and does not transfer (rusqlite LoadExtensionGuard, mattn/go-sqlite3; caveat that pure-Go modernc.org/sqlite cannot load C extensions), while write-amplification is a vec0 storage property that remains live for any Rust/Go evaluation.\n\nFix 3 (internal inconsistency): problem-statement Success-2 promised \"the SQLite option with a measurement plan\" but design R1 delivers corroboration with no new option. Success-2 rewritten to state the inversion explicitly; R1 gained a trigger-time measurement plan so the rewrite trigger has a concrete first action.\n\nCitation nits corrected: cosine-similarity.ts is 19 lines not 23; primer constants span L5-8 with PRIMER_MIN_SPAN_DAYS=7 at L8; historian function is L506-623; config.rs range is 147-191."
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-08-30T03:22:56.040Z",
+      "completed_by": "user",
+      "approval_evidence": "User replied \"continue\" at the prep approval gate, approving the vision banner and the offered restructure.\n\nTask graph: 6 active, 5 cancelled during restructure. Baseline capture (tk-dffc2f1b754e) → 3 parallel routing tasks → executive summary → verification.\n\nMUST gap found and closed: adv_change_update overwrites rather than appends (its schema states \"overwrites existing\"), so each routing task performs read-then-write-whole-document. A truncated read would silently destroy a sibling's proposal — a real risk, since the full adv_change_show on this change hit a 21000-char budget and truncated. Fix is structural, not prose: tk-dffc2f1b754e captures completeness-verified baselines (first line, last line, char count, expected terminal section) and blocks all three routing tasks; each routing task re-verifies against that baseline before writing and reads back after; tk-d64c9255eb92 proves each sibling grew strictly and kept its acceptance criteria intact.\n\nRestructure detail: R1-R3 were cancelled and re-created because blockedBy cannot be added retroactively. Their dependents (executive summary, verification) were then cancelled and re-created to repair orphaned dependency edges — mechanical consequence of the approved cancellation, no scope change.\n\nEvidence routes are all non-test, correctly: source_citation for the three citation-bearing routing tasks (design validation already caught one false source claim in this research, so citation accuracy is the real failure mode), artifact_reference for the executive summary, static_check for the two negative verification checks. No ChangeContract exists on this change; success criteria live in problem-statement.md and each task names the criterion it satisfies.\n\nCross-cutting: 11 of 12 concerns N/A — this change touches no runtime, no schema, no dependency, no user-facing surface. Persistence was the live one and is the gap closed above.\n\nDeferred, not added: the design validator suggested mirroring the corrections into episode wisdom for cross-epic recall. Beyond approved scope; surfaced to the user at the gate and left out."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-08-30T03:28:50.008Z",
+      "completed_by": "agent",
+      "approval_evidence": "All 6 active tasks done. 5 tasks cancelled during the user-approved prep restructure.\n\nDelivered: evidence sections appended to three sibling proposals (decideStorageLanguageDirection, addPromotionStateMemories, improveRecallQualityIngest), plus this change's executive summary. No episode source modified.\n\nOverwrite safety held. adv_change_update overwrites rather than appends, so each routing task wrote a full concatenated document built on the tk-dffc2f1b754e baseline and verified by readback. All three siblings kept their first line, their original terminal line (now preceding the new section), and their full acceptance criteria blocks: AC1-AC3, AC1-AC7, AC1-AC6 respectively. No content lost.\n\nSuccess-6 proven by durable evidence runId tr_mtf91w8w_3456b934, exit 0: git status --porcelain empty, git diff --stat main...HEAD empty.\n\nDATA-QUALITY FINDING, not a scope violation: completed tasks carry a filesTouched projection listing .adv/specs/0010-recall-metadata-filters.md, README.md, docs/specs/0010-recall-metadata-filters.md, src/store.rs, src/types.rs, tests/recall_filters_it.rs. This change wrote none of them. Git is authoritative and contradicts the projection: HEAD is still 59f4dd724411664c789a7b8195e5f46178f0d6b1, the worktree base sha, with zero commits and an empty diff against main. Every checkpoint returned status \"clean\". The filesTouched values appear inherited from unrelated state rather than derived from this change's writes. Surfaced for the Advance project; it does not affect this change's correctness."
+    },
+    "acceptance": {
+      "status": "done",
+      "completed_at": "2026-08-30T14:10:31.382Z",
+      "completed_by": "user",
+      "approval_evidence": "User replied \"continue\" at the acceptance checkpoint after reviewing the REVIEW_FINDINGS block.\n\nReview cycle: adv-reviewer attempt 1 returned BLOCKED (3 blockers, 2 issues). All five confirmed against source at a54f9c0 by the orchestrator directly, because the design validator and acceptance reviewer contradicted each other on the FTS5 tokenizer DDL. The validator's \"verbatim\" quote (tokenize='porter unicode61 categories \"L* N* Co\"') does not exist in the repository; the real DDL is tokenize='porter unicode61'.\n\nFixes applied:\n1. decideStorageLanguageDirection — memory_embeddings DDL corrected to include model_id TEXT NOT NULL and PRIMARY KEY(memory_id, model_id).\n2. addPromotionStateMemories — promotion rule corrected from \">=7 distinct days AND >=2 occurrence keys\" to \"support >= 2 distinct UTC days AND spanDays >= 7 elapsed\", with an explicit note that the constant names mislead.\n3. improveRecallQualityIngest — real tokenizer DDL quoted; conclusion unchanged and better supported.\n4. addPromotionStateMemories — lease key re-attributed from lease.ts:8 to dreamer/task-registry.ts.\n5. decideStorageLanguageDirection — removed the self-contradicting \"both sides perform full fp32 scans\" claim; HNSW is an ANN index, so the ~10ms full-scan figure is not comparable.\n\nadv-reviewer attempt 2 returned APPROVED: all 5 FIXED, all three siblings CLEAN with opening content / full AC blocks / Epic context intact, and the three new remediation claims independently verified.\n\nSuccess criteria: 1, 3, 4, 5, 6 MET; 2 was PARTIAL on the bad DDL and is now MET.\n\nPROCESS EXCEPTION, user-authorized: the acceptance phase directive was never readable. adv_change_show include:{phasePlan:true} truncates deterministically because _phasePlan is 47921 chars against a 52017 budget, and the ~7900-char gates block pushes the total to 56468. adv_tool_catalog confirms no alternate directive route and the Tier-4 adv namespace is not exposed this session. Two attempts, then halt and surface per the Directive Read Protocol. User selected option 1, explicitly authorizing acceptance from artifacts and evidence without the directive.\n\nOPEN DEFECTS in ADV, neither affecting this change's correctness:\n- Phase-plan budget starvation: thorough gate approval evidence crowds out _phasePlan in the same response, making the directive unreadable at precisely the late gates where it matters.\n- filesTouched projection lists six repo files this change never wrote; git is authoritative and shows zero commits and an empty diff against main."
+    },
+    "release": {
+      "status": "done",
+      "completed_at": "2026-08-30T14:12:05.334Z",
+      "completed_by": "agent",
+      "approval_evidence": "Harden pass complete. One finding, self-detected and fixed; no code to harden since the change produces no repo delta.\n\nFINDING (fixed): the executive summary's process table claimed \"four factual claims were wrong\" and listed four. The true count is six citation errors plus one internal contradiction. Missing were the lease.ts:8 misattribution and the \"both sides perform full fp32 scans\" self-contradiction. A document arguing for citation discipline was itself imprecise about its own error count. Corrected to six, with the contradiction called out separately and the undercount itself recorded as the third standout observation.\n\nThe corrected table also now names a finding the acceptance review surfaced but the summary had not: the design validator introduced an error while fixing one. Its \"verbatim\" replacement tokenizer DDL quoted a string absent from the source and survived until the acceptance reviewer disagreed and the orchestrator fetched the file. That is the sharpest lesson in the change — a verification result arrived carrying more confidence than the original error, and would have shipped invented SQL into a decision record.\n\nGIT VERIFICATION: git status --porcelain empty; git diff --stat main...HEAD empty; HEAD 59f4dd724411664c789a7b8195e5f46178f0d6b1 identical to main. Zero commits on change/studyMagicContextMemoryDesign. Consistent with runId tr_mtf91w8w_3456b934 from execution. There is no branch to merge and no PR to open; all deliverables are ADV artifacts.\n\nFOLLOW-UPS RECORDED, NOT FILED: two Advance-project defects (phase-plan budget starvation making the acceptance directive unreadable; spurious filesTouched on every completed task) are documented in the executive summary with their evidence. They were not filed as changes: adv_change_create in this deployment exposes no status parameter so no backlog-status record can be created, and filing into the Advance project requires cross-project write approval that was not sought. Surfaced to the user at archive sign-off instead.\n\nArtifact consistency verified: problem-statement Success-1 through Success-6 all met, with Success-2's wording already reconciled at the design gate to state the ranking inversion rather than the original \"add SQLite as a third option\" framing.; Phase 9 finalization shipped; defaultBranch=main; repoRoot=/home/jon/dev/episode; pushStatus=verified; proof=pr_merged; releasedCommitSha=59f4dd724411664c789a7b8195e5f46178f0d6b1; route=direct; mergeCommitOid=59f4dd724411664c789a7b8195e5f46178f0d6b1"
+    }
+  },
+  "documents": {
+    "proposal": "## Cross-Project Origin\n\nThis change was created as a follow-up from **toolbox**.\n\n| Field | Value |\n|-------|-------|\n| Source project | toolbox |\n| Source path | `/home/jon/toolbox` |\n\n> **Note:** The originating project should be consulted for context on why this change is needed.\n\n\n## Why this exists\n\nWhile researching the OpenCode plugin ecosystem from the `toolbox` project (2026-08-29), one adjacent system turned out to be a close design analogue to `episode`: **`cortexkit/magic-context`** (npm `@cortexkit/opencode-magic-context`). It solves durable cross-session memory for coding agents, the same problem `episode` solves, but with materially different architectural choices.\n\nIt is MIT licensed, so its approaches are legally reusable with attribution.\n\nThis change exists to capture that research while it is fresh and to route the transferable ideas into the changes they actually affect. It is a research/decision change, not an implementation commitment.\n\n- Repo: https://github.com/cortexkit/magic-context\n- npm: `@cortexkit/opencode-magic-context` v0.38.0 (2026-08-17), ~4.3K weekly downloads\n- Created 2026-03-26, author `ualtinok`. License MIT.\n- Source evidence below cites commit `a32a839`.\n\n## Side-by-side\n\n| Dimension | episode | magic-context |\n|---|---|---|\n| Language | Rust (edition 2024) | TypeScript, with an optional Rust transform twin (`crates/`, `rust-mode-transform.ts`) |\n| Store | PostgreSQL + pgvector, HNSW cosine, `vector(1024)` | Single SQLite file, `bun:sqlite` / `node:sqlite`, **no native module** |\n| Store location | Docker compose service (`docker compose up -d`) | `~/.local/share/cortexkit/magic-context/context.db` |\n| Embeddings | Local `fastembed`, BGE-large, 1024d | Local `Xenova/all-MiniLM-L6-v2`, 384d, ~90 MB one-time |\n| Scope key | Project root; product scoping in flight | `project_path` = resolved git root, plus a `harness` column |\n| Ingestion | Periodic reconcile of ADV wisdom/reflection files | Hidden background subagents doing LLM summarization |\n| Surface | MCP stdio server (`recall`/`remember`/`forget`/`stats`) | OpenCode plugin hooks + slash commands |\n| Deployment cost | Requires a running Postgres | Zero external services |\n\n## Transferable ideas, ranked\n\n### 1. SQLite with no native module — feeds `decideStorageLanguageDirection`\n\nThe single highest-value input. magic-context stores everything in one SQLite file through `bun:sqlite`/`node:sqlite` and ships **no native module**. `episode` currently requires the operator to run `docker compose up -d` before it works at all, which is the main adoption friction — it is why `episode` sits declared-but-disabled in the toolbox MCP inventory today.\n\nThis is not a straight swap. `episode` depends on pgvector's HNSW cosine index over `vector(1024)`; SQLite has no native equivalent, so the honest comparison is against `sqlite-vec` or brute-force cosine over a bounded row count. Worth measuring: at realistic memory counts (thousands, not millions), brute-force cosine in Rust may be entirely adequate, which would remove the Postgres dependency without losing recall quality.\n\n**Action:** feed this into `decideStorageLanguageDirection` as a third option alongside whatever is already under consideration. Do not decide it here.\n\n### 2. Stable project identity across worktrees, clones, and forks — feeds `addProductScopingRecall`\n\nmagic-context keys project data on the **resolved git root**, and its docs claim the identity survives worktrees, clones, and forks. That matters directly for this machine: ADV creates per-change worktrees under `$ADV_WORKTREE_HOME`, so a naive `cwd`-based key would fragment one project's memory across every worktree it ever had.\n\nWorth confirming how they resolve it (`git rev-parse --git-common-dir` is the likely mechanism, since that is what collapses a worktree to its parent) and whether `episode` currently has the same fragmentation bug.\n\n**Action:** check `episode`'s current scope-key derivation against the worktree case. If it fragments, that is a defect worth its own change.\n\n### 3. Tiered config with unsafe-field stripping — a security pattern\n\nProject-tier config in magic-context is stripped of unsafe fields before it is honored: a project cannot set the hidden-agent models, cannot toggle compaction, and cannot supply profile content. The stated reason is that a project must not be able to reprogram cost or disable the safety layer.\n\nThis generalizes to any system that reads project-local config. If `episode` ever grows per-project configuration, adopt the same split: a trusted user tier and an untrusted project tier with an explicit allowlist. Untrusted input normalized at the boundary is P33.\n\n### 4. Background consolidation as a first-class role\n\nmagic-context runs three named background roles as hidden child sessions: a **historian** (summarizes old history into compartments), a **dreamer** (overnight memory maintenance, ~11 manifest tasks), and a **sidekick** (retrieval augmentation). `episode` currently does a periodic reconcile of ADV wisdom and reflection files, which is ingestion, not consolidation.\n\nThe \"dreamer\" idea is the interesting one for memory quality: an offline pass that merges duplicates, decays stale entries, and promotes repeatedly-confirmed memories. That is adjacent to `addPromotionStateMemories`, which already contemplates promotion state.\n\n**Caveat worth recording:** their historian falls back to the **active session model** on primary failure. On a metered subscription that silently bills the user's scarce quota. Any consolidation pass in `episode` must pin its model explicitly and fail closed rather than fall back to the caller's model.\n\n### 5. Embedding size tradeoff\n\nThey use a 384d model at ~90 MB; `episode` uses BGE-large at 1024d. Theirs is cheaper to store and faster to compare; `episode`'s is more accurate. Not a defect on either side, but if the SQLite direction is pursued, the smaller vector materially changes what brute-force cosine costs.\n\n### 6. Cross-harness scoping\n\nA `harness` column lets one store serve OpenCode, Pi, and OMP simultaneously. `episode` is ADV/OpenCode-specific by design. Recording as a known generalization path, not a recommendation.\n\n## Explicitly NOT recommended for adoption\n\nmagic-context's core context-management mechanism is **prompt-prefix rewriting** via the `experimental.chat.messages.transform` hook — `messages-transform.ts:51-53` performs `output.messages.splice(0, len, ...next)`, a full-array replacement. It compresses old text, strips reasoning blocks, and substitutes history with summaries.\n\nThe toolbox has a recorded ADR (0013) establishing that rewriting already-cached prompt-prefix content forces Anthropic to re-bill the entire prefix as `cache_creation` — the token class Claude Max meters — measured at roughly 15 quota tokens burned per context token saved.\n\nTo its credit, magic-context is the only context plugin found that models provider cache TTL in its scheduler at all, with a per-model `cache_ttl` map (`30s|5m|1h|never`). But its default is `\"5m\"`, which matches Claude **Pro**; Max is a 1-hour window. It also forces `compaction.auto: false`.\n\nNone of this applies to `episode` directly — `episode` is an MCP server and never touches the prompt array. It is recorded here so nobody later mistakes prefix rewriting for a validated technique worth copying.\n\n## Acceptance for this change\n\nThis change is complete when the ideas above are routed, not when anything is built:\n\n1. Idea 1 is attached to `decideStorageLanguageDirection` as an evaluated option with a measurement plan.\n2. Idea 2 is checked against `episode`'s current scope-key derivation, and a defect change is opened if it fragments across worktrees.\n3. Idea 4's caveat (pin the model, never fall back to the caller's) is recorded wherever consolidation is specified.\n4. Ideas 3, 5, and 6 are recorded as known options with no action required.\n\n## Provenance\n\nResearched from `toolbox` on 2026-08-29 via `adv-researcher` against the repo at commit `a32a839`, the npm registry metadata, and the project's `CONFIGURATION.md` and README. One item is **UNVERIFIED**: `ARCHITECTURE.md` (58 KB, repo root) documents the internal transform pass taxonomy and byte-identical replay guarantees; the fetch was dropped mid-session. Read it before acting on idea 1 or 4.\n",
+    "problemStatement": "## Problem\n\nResearch done from `toolbox` on 2026-08-29 identified `cortexkit/magic-context` (MIT, npm `@cortexkit/opencode-magic-context`) as a close design analogue to `episode`. The findings are recorded in this change's proposal, but they are not attached to the sibling changes whose decisions they affect. Research that is not routed decays: `decideStorageLanguageDirection` will be decided without this evidence, and `addPromotionStateMemories` will be specified without the model-pinning caveat.\n\n## Scope\n\nThis is a research-routing change. It produces artifact edits on sibling ADV changes and one verification result. It commits to no implementation in `episode` and touches no `episode` source.\n\n**In scope**\n- Read the UNVERIFIED `ARCHITECTURE.md` from `cortexkit/magic-context`, since the proposal blocks ideas 1 and 4 on it.\n- Route evidence bearing on the storage direction into `decideStorageLanguageDirection`.\n- Record the consolidation caveat on `addPromotionStateMemories`: a consolidation pass must pin its model and fail closed, never fall back to the caller's session model.\n- Route the hybrid lexical/dense retrieval finding into `improveRecallQualityIngest` as a bound candidate.\n- Record ideas 3 (tiered config with unsafe-field stripping), 5 (384d vs 1024d embedding tradeoff), and 6 (`harness` column) as known options requiring no action.\n- Record the negative result for idea 2 so it is not re-investigated.\n- Record the anti-recommendation: prompt-prefix rewriting is not a technique to copy.\n\n**Out of scope**\n- Deciding the storage direction. That decision belongs to `decideStorageLanguageDirection`.\n- Any change to `episode` source, schema, or dependencies.\n- Building a consolidation pass or adopting hybrid retrieval.\n\n## Resolved before the proposal gate\n\nIdea 2 hypothesized that `episode` fragments one project's memory across ADV per-change worktrees. It does not. `src/config.rs:147-191` parses `EPISODE_PROJECT_ROOTS` as explicit operator-declared `namespace=path` entries. `src/server.rs` takes `namespace` as a caller-supplied parameter defaulting to `global`. No `cwd` or git-root derivation exists anywhere in the scope path. The contingent defect change is not opened. The negative result is itself worth recording.\n\n## Success\n\n1. `ARCHITECTURE.md` is read, and any finding that changes idea 1 or 4 is folded in before routing.\n2. `decideStorageLanguageDirection` carries the magic-context storage evidence with its correct disposition, plus a concrete measurement plan bound to the existing rewrite trigger. Discovery inverted the original expectation here: the evidence corroborates the sibling's standing \"stay Rust + Postgres\" recommendation rather than adding a competing option, so the routed content is corroboration plus a trigger-time measurement plan, not a new option.\n3. `addPromotionStateMemories` carries the pinned-model, fail-closed caveat, scoped to the roles that actually exhibit the fallback.\n4. `improveRecallQualityIngest` carries the hybrid-retrieval candidate, bound by its own AC3 calibration bar.\n5. Ideas 2, 3, 5, and 6 are recorded with their dispositions, including the idea-2 negative result.\n6. No `episode` source file is modified by this change.\n",
+    "design": "## Design — routing plan\n\nThis change writes to sibling ADV change artifacts. It writes no `episode` source. Each routing action below names its target change, the insertion, and the evidence that justifies it.\n\n### Mechanism\n\nEach target receives an appended `## External evidence — magic-context` section in its proposal, via `adv_change_update`. Appending rather than rewriting preserves each sibling's authored argument and keeps the provenance of the addition legible. No sibling's acceptance criteria, scope, or recommendation is edited: this change supplies evidence, it does not re-decide sibling decisions.\n\nSource basis for every citation: `cortexkit/magic-context`, MIT, read at HEAD `a54f9c0` with a cross-fetch diff against `a32a839`. The Memory, Dreamer, and Historian sections are substantively identical between the two commits. Every load-bearing claim below was independently re-verified against the repo at `a54f9c0` during design validation.\n\n---\n\n### R1 → `decideStorageLanguageDirection`\n\n**Disposition: corroborates the existing recommendation. Adds no new option.**\n\nThe sibling already recommends staying Rust + Postgres and conditioning a Go + SQLite rewrite on the `addProductScopingRecall` probe. The proposal for this change asked for SQLite to be added \"as a third option\". Discovery refutes that framing, so the routing is inverted: magic-context is evidence *for* the existing recommendation.\n\nContent to append:\n\n- magic-context runs exact brute-force fp32 cosine over SQLite BLOBs (`memory/cosine-similarity.ts`, 19 lines: dot product plus two norms). No ANN index. Vectors live in a side table `memory_embeddings(memory_id INTEGER PRIMARY KEY REFERENCES memories(id) ON DELETE CASCADE, embedding BLOB NOT NULL)`, and all embeddings are loaded into memory for the scan.\n- Their design target is hundreds to ~1000 memories per project at 384d. `MEMORY-DESIGN.md` states ~79 memories in 0.1s cached, ~10ms per query, and 1000 memories ≈ 1.5 MB.\n- Their own escape hatch: \"At 1000+ memories, if full-scan latency is noticeable, add ANN index or per-project shard cache.\" `episode` already runs that escape path via pgvector HNSW.\n- Their throughput figures do not transfer. At 1024d fp32 an `episode` vector is 4096 bytes against their 1536, roughly 2.7x the bytes scanned per row. Both sides are full fp32 scans, so bytes-per-row is a fair cost proxy.\n\n**Correction that must travel with the citation, scoped precisely.** The sibling's \"case for\" lists \"sqlite-vec exists for Go\" as a rewrite argument. magic-context rejected sqlite-vec for two stated reasons: \"`bun:sqlite` can't load extensions + write-amplification\". These transfer differently and must not be collapsed.\n\n- The **extension-loading** reason is runtime-specific and does not transfer. Rust's `rusqlite` provides `load_extension_enable` and `LoadExtensionGuard`; Go's `mattn/go-sqlite3` enables extension loading by default. One caveat for a future Go choice: the pure-Go `modernc.org/sqlite` driver cannot load C extensions, so a Go rewrite that wanted sqlite-vec would be constrained to the cgo driver.\n- The **write-amplification** reason does transfer. It is a property of sqlite-vec's `vec0` storage, not of `bun:sqlite`, and remains live workload-dependent evidence in any Rust or Go evaluation.\n\nSo magic-context is not evidence against sqlite-vec's *availability* outside Bun, but it does leave one substantive objection standing. Recording both halves separately prevents a later reader from over- or under-reading the same source.\n\nNet effect on the decision: none. The direction and the trigger stand unchanged. AC3's conditioned follow-up remains bound to the probe outcome, not to this evidence.\n\n**Measurement plan, recorded for the trigger.** If the `addProductScopingRecall` probe ever fires the rewrite, the storage comparison to run is: brute-force fp32 cosine in Rust, sqlite-vec `vec0`, and pgvector HNSW, measured at realistic `episode` row counts at 1024d, with write-amplification measured for `vec0` under the ingest cadence rather than assumed. This is recorded so the trigger has a concrete first action, not so it fires now.\n\n---\n\n### R2 → `addPromotionStateMemories`\n\n**Disposition: evidence for an already-deferred item. Adds no scope.**\n\nThe sibling puts \"auto-promotion heuristics\" out of scope, keeping manual flagging first and naming heuristic promotion \"a later candidate\". magic-context has a working implementation of exactly that later candidate, so the routing supplies design evidence for the deferred item without pulling it forward.\n\nContent to append:\n\n- Promotion by repeated confirmation: candidates cluster at cosine ≥ 0.85 with 0.02 hysteresis, and promote when they span ≥ `PRIMER_MIN_SPAN_DAYS` (= 7) distinct days **and** ≥ `PRIMER_PROMOTION_THRESHOLD` (= 2) distinct occurrence keys (`primer-clustering.ts:5-8`). The two-axis threshold — distinct days *and* distinct occurrences — is the transferable part: it resists both a single chatty session and a single stale repetition.\n- A second, simpler path: user-memory observations promote after ≥ 3 observations (`task-executor.ts` ~L434, `promotionThreshold ?? 3`).\n- Deduplication before promotion is exact, not fuzzy: normalized content hash per category, backed by `idx_memories_project_category_hash`. Cross-category merges are structurally rejected.\n- Keep-versus-discard is verified against reality rather than inferred: their `verify` task gates each memory on whether its backing file changed since `verified_at`. Partial progress persists, and refusals count as non-failing skips. `episode` ingests from ADV wisdom and reflection files, so the same file-backed verification is available to it.\n- Concurrency, if a background pass is ever added: memory-mutating tasks share one conflict-domain lease keyed `memory:<project>` (`lease.ts:8`), and read-then-write runs atomically under `BEGIN IMMEDIATE`. The Postgres analogue is an advisory lock. The design point is that a consolidation pass must not race live `recall`/`remember` traffic.\n\n**Model-pinning caveat, stated precisely.** The proposal for this change asserted that their historian \"falls back to the active session model\", and implied the pattern was general. It is confirmed for the historian only: `runFallbackHistorianPass` (`compartment-runner-historian.ts:506-623`) appends the live session provider/model as an absolute last resort *after* the configured chain, and `ARCHITECTURE.md` labels this \"historian-only\". It is **refuted** for `dreamer` and `sidekick`: both resolve through configured `fallback_models` only and throw when that list is exhausted (`resolve-fallbacks.ts`, `shared/model-resolution.ts`, `sidekick/agent.ts:29`, `model-suggestion-retry.ts`).\n\nOne trap worth recording with the citation: `resolve-fallbacks.ts`'s header comment loosely describes \"the runner's session-model last resort\" as if it applied to all hidden agents. Only the historian runner implements it. The code-level reading is the correct one, and a future reader consulting only that comment would draw the broader, wrong conclusion.\n\nThe caveat that lands in the sibling is therefore forward-looking and narrow: if `episode` ever adds an LLM-backed consolidation pass, pin its model explicitly and fail closed. Never fall back to the caller's session model, because on a metered subscription that silently bills the user's scarce quota. This is recorded now because the sibling's current design is manual-flagging only and has no LLM pass to constrain yet.\n\n---\n\n### R3 → `improveRecallQualityIngest`\n\n**Disposition: new finding, approved at the discovery checkpoint. Recorded as a candidate sub-part, not adopted.**\n\nThe sibling covers kind/source filters (3a), recency (3b), and ingest abstraction (3c). It has no retrieval-mechanism sub-part. This finding is a candidate 3d.\n\nContent to append:\n\n- magic-context pairs dense cosine with an FTS5 side table `memories_fts`, kept in sync by triggers. Scores are hybrid-combined, and FTS serves as a standalone fallback when embeddings are unavailable.\n- The stated reason is a documented weakness of their embedding model: weaker on exact symbols, file paths, and config keys than on prose. `MEMORY-DESIGN.md` recommends benchmarking `bge-small-en-v1.5` if symbol and path lookups stay weak.\n- Relevance to `episode`: its memories are ADV wisdom and reflection entries, saturated with file paths, config keys, and symbol names. The weakness class is inherent to dense retrieval and is reduced, not removed, by `episode`'s larger BGE-large model.\n\n**A defect in the source, recorded because it changes what transfers.** magic-context's own comment claims its tokenizer preserves `.`, `_`, `/`, and `-`. Its actual DDL is `tokenize='porter unicode61 categories \"L* N* Co\"'`. Per the SQLite FTS5 documentation, `L* N* Co` is the unicode61 default and is therefore a no-op, and punctuation remains a separator. Preserving those characters requires `tokenchars`, which appears nowhere in their repo. Their configuration does not do what their comment says it does.\n\nThis matters in two ways. First, their hybrid retrieval is not actually tuned for technical tokens, so their implementation is weaker evidence for the technique than their prose suggests — the *idea* transfers, their *validation* of it does not. Second, Postgres has the same trap: the default `tsvector` parsers split path and symbol tokens much as unicode61 does, so a naive `tsvector` addition in `episode` would reproduce the same gap. That makes `pg_trgm` trigram matching the more load-bearing half of the transfer, not the optional half it appeared to be before this check.\n\nTransfer cost remains low — `tsvector`/`tsquery` and `pg_trgm` are native to Postgres, so no new dependency is required — but the tokenizer configuration is the part that must be got right, and the source cannot be copied for it.\n\n**Constraint inherited from the sibling.** Its AC3 forbids score-blending weights without calibration evidence. A hybrid ranker is a blended score, so it falls under that bar and must not be adopted without calibration. The honest framing is that hybrid retrieval reduces the calibration problem to a single mixing weight but does not eliminate it. Recording it as a candidate respects AC3; adopting it here would violate it.\n\nA related tool worth naming: their `embedding-baseline.ts` and `embedding-baseline-diff.ts` snapshot top-K rankings per model and diff them by Kendall tau, with no gold labels. That is a cheap comparison method available to `episode` for the same calibration question, and it is honest about what it does not measure — it detects ranking drift between models, not correctness.\n\n---\n\n### R4 → this change's executive summary\n\nIdeas with no action required, recorded so they are not re-investigated:\n\n- **Idea 2 — resolved negative.** `episode` does not derive scope from `cwd` and does not fragment memory across ADV per-change worktrees. Namespaces are operator-declared `namespace=path` entries (`src/config.rs:147-191`), and `recall`/`remember` take `namespace` as a caller-supplied parameter defaulting to `global` (`src/server.rs`). No defect change opened. The negative result is recorded because the hypothesis was plausible enough to re-raise.\n- **Idea 3 — tiered config with unsafe-field stripping.** Applies only if `episode` grows project-local configuration. It has none today: all configuration is environment-driven (`src/config.rs`), and environment variables are already a trusted-operator surface. No action.\n- **Idea 5 — embedding size.** 384d at ~22 MB q8 against BGE-large at 1024d. Not a defect on either side. Coupled to R1: it matters only if a brute-force direction is ever revisited, and R1 argues it should not be.\n- **Idea 6 — cross-harness `harness` column.** `episode` is ADV/OpenCode-specific by design. Recorded as a known generalization path, not a recommendation.\n- **Anti-recommendation, retained.** magic-context's prompt-prefix rewriting via `experimental.chat.messages.transform` is not a technique to copy. Toolbox ADR 0013 measured roughly 15 quota tokens burned per context token saved, because rewriting cached prefix content forces re-billing as `cache_creation`. This does not apply to `episode`, which is an MCP server and never touches the prompt array. It is recorded so nobody later mistakes it for a validated technique.\n- **Two designs worth naming, no target.** Persist an embedding only if content hash still matches after the provider call (`saveEmbeddingIfHashMatches`), and never run embedding inference inside a write transaction. Both are cheap correctness properties if `episode` ever moves embedding off the synchronous path.\n\n---\n\n### What this change does not do\n\n- It does not decide the storage direction. R1 supplies evidence to a decision the sibling owns.\n- It does not adopt hybrid retrieval. R3 records a candidate bound by the sibling's calibration bar.\n- It does not pull auto-promotion into scope. R2 supplies evidence to an item the sibling deferred.\n- It modifies no `episode` source file.\n\n### Residual UNVERIFIED\n\nCarried forward without blocking, since none of it changes a routing decision: the full line-level diff between `a32a839` and `a54f9c0` outside the three checked sections; `render-mural` task registration; any committed benchmark output from `ctx-search-benchmark.ts`; and whether the `bge-small-en-v1.5` provider in `MEMORY-DESIGN.md` is implemented or aspirational.\n",
+    "executiveSummary": "# Outcome — magic-context research, routed\n\nResearch on [`cortexkit/magic-context`](https://github.com/cortexkit/magic-context) (MIT), originally captured from `toolbox` on 2026-08-29, has been verified and routed into the sibling changes it affects. Nothing was built. Source basis: HEAD `a54f9c0`.\n\n## What changed about the research itself\n\nThe originating proposal ranked its seven ideas. Verification inverted the top two, so the routing does not match the proposal's own priority order.\n\n| Idea | Proposal's expectation | Verified disposition |\n|---|---|---|\n| 1. SQLite, no native module | \"the single highest-value input\" | **Weakened.** Corroborates staying on pgvector. |\n| 4. Background consolidation | Adjacent, worth recording | **Strengthened.** Concrete validated mechanics. |\n| 7. Hybrid lexical/dense retrieval | Not present | **New.** Found during verification. |\n\n## Where each idea landed\n\n**Idea 1 — SQLite storage → `decideStorageLanguageDirection`.** Routed as corroboration, not as a third option. magic-context runs exact brute-force fp32 cosine over SQLite BLOBs with no ANN index, designed for hundreds to ~1000 memories at 384 dimensions. Their own `MEMORY-DESIGN.md` names ANN as the escape hatch past that point — the path `episode` already occupies. Their ~10 ms figure is a full-scan number and is not comparable to an HNSW lookup.\n\nCorrection carried with it: their sqlite-vec rejection has two parts that transfer differently. \"`bun:sqlite` can't load extensions\" is runtime-specific and does not transfer (`rusqlite` and `mattn/go-sqlite3` both load extensions; pure-Go `modernc.org/sqlite` does not). \"Write-amplification\" is a `vec0` storage property and remains a live objection. A trigger-time measurement plan was recorded so AC3's conditioned follow-up has a concrete first action.\n\n**Idea 4 — consolidation → `addPromotionStateMemories`.** Routed as evidence for that change's already-deferred auto-promotion item, without pulling it into scope. Transferable mechanics: two-axis promotion (cosine ≥ 0.85 clustering with 0.02 hysteresis, promoting when a cluster is confirmed on ≥ 2 distinct days *and* those confirmations span ≥ 7 elapsed days); exact content-hash dedup rather than semantic dedup; keep-versus-discard gated on whether a memory's backing file changed since `verified_at`, which `episode` can adopt directly since every ingested memory has one; lease domains so a background pass cannot race live traffic.\n\n**Idea 7 — hybrid retrieval → `improveRecallQualityIngest`.** New finding, approved at the discovery checkpoint. Recorded as candidate sub-part 3d, bound by that change's AC3 calibration bar — a hybrid ranker is a blended score, so recording it respects AC3 while adopting it would not.\n\n## Dispositions requiring no action\n\n**Idea 2 — worktree memory fragmentation: RESOLVED NEGATIVE.** The research hypothesized that `episode` fragments a project's memory across ADV per-change worktrees. It does not. Namespaces are operator-declared `namespace=path` entries (`src/config.rs:147-191`), and `recall`/`remember` take `namespace` as a caller-supplied parameter defaulting to `global` (`src/server.rs`). No `cwd` or git-root derivation exists in the scope path. No defect change was opened. Recorded explicitly because the hypothesis was plausible enough to be raised again otherwise.\n\n**Idea 3 — tiered config with unsafe-field stripping.** Applies only if `episode` grows project-local configuration. It has none: all configuration is environment-driven (`src/config.rs`), and environment variables are already a trusted-operator surface.\n\n**Idea 5 — embedding size.** 384 dimensions against BGE-large at 1024. Not a defect on either side. Coupled to idea 1: it matters only if a brute-force direction is revisited, which idea 1's routing argues against.\n\n**Idea 6 — cross-harness `harness` column.** `episode` is ADV/OpenCode-specific by design. A known generalization path, not a recommendation.\n\n**Anti-recommendation, retained.** magic-context's prompt-prefix rewriting via `experimental.chat.messages.transform` is not a technique to copy. Toolbox ADR 0013 measured roughly 15 quota tokens burned per context token saved, because rewriting cached prefix content forces re-billing as `cache_creation`. This does not apply to `episode`, which is an MCP server and never touches the prompt array. Recorded so nobody later mistakes it for a validated technique.\n\n**Two designs worth naming, no target.** Persist an embedding only if the content hash still matches after the provider call (`saveEmbeddingIfHashMatches`), and never run embedding inference inside a write transaction. Both are cheap correctness properties if `episode` ever moves embedding off the synchronous path.\n\nOne schema detail worth keeping: their `memory_embeddings` table has `PRIMARY KEY(memory_id, model_id)`, storing one vector per memory per embedding model. A model change adds vectors alongside the old ones instead of destroying them. That is the shape that makes an embedding-model migration survivable, and `episode`'s single-vector-per-row schema does not have it.\n\n## The process finding, which is the durable one\n\nSix factual errors entered this research. All six were corrected before the artifacts were accepted, but the pattern of how they were caught is the finding.\n\n| Error | Nature | Caught by |\n|---|---|---|\n| FTS5 tokenizer preserves `. _ / -` | False claim from an upstream code comment | Design validator |\n| Session-model fallback is general | True for `historian` only | Design validator |\n| Replacement tokenizer DDL quote | The validator's own \"verbatim\" fix quoted a string absent from the source | Acceptance reviewer, then the source |\n| `memory_embeddings` DDL | Omitted `model_id` and the composite key | Acceptance reviewer |\n| Promotion thresholds | Swapped: 2 is distinct-day support, 7 is elapsed span | Acceptance reviewer |\n| Lease key attribution | Cited `lease.ts:8`; assignment is in `dreamer/task-registry.ts` | Acceptance reviewer |\n\nA seventh defect was internal rather than a citation: the storage section called both systems \"full fp32 scans\" while the same section stated `episode` occupies the ANN escape path. The acceptance reviewer caught the contradiction.\n\nThree things stand out.\n\nFirst, no error was caught by the agent that wrote it. Every one required an independent reader.\n\nSecond, the design validator introduced an error while fixing one. Its corrected tokenizer DDL was itself fabricated, and survived until the acceptance reviewer disagreed and the orchestrator fetched the file. A single reviewing pass would have shipped invented SQL into a decision record with higher confidence than the original error carried, because it arrived labelled as a verification result.\n\nThird, this summary undercounted its own errors at four until the harden pass recounted them at six. The document about citation discipline was itself imprecise.\n\nThe operative lesson for a project building a memory system: a citation asserted by an agent is not evidence, whether that agent is writing or reviewing. Only fetching the source is. Where two agents disagree, neither verdict is authoritative.\n\n## Residual UNVERIFIED\n\nNone of this blocks a routing decision.\n\n- Full line-level diff between `a32a839` and `a54f9c0` outside the Memory, Dreamer, and Historian sections. Deltas elsewhere appeared additive.\n- `render-mural` task registration — present in the documentation's lease list, absent from the `CANONICAL_DREAM_TASKS` array.\n- Any committed benchmark output from `ctx-search-benchmark.ts`. The script exists; no results are committed.\n- Whether the `bge-small-en-v1.5` provider named in `MEMORY-DESIGN.md` is implemented or aspirational.\n\n## Follow-ups, not actioned here\n\nTwo ADV defects were observed during this change and belong to the Advance project, not `episode`:\n\n- **Phase-plan budget starvation.** `adv_change_show include:{phasePlan:true}` truncates deterministically once gate approval evidence grows. On this change `_phasePlan` was 47921 chars against a 52017 budget, with the gates block pushing the total to 56468. The acceptance directive was unreadable, and no alternate route exists — `adv_tool_catalog` lists no directive tool. Thorough gate notes make the phase directive unreadable at exactly the late gates where it matters.\n- **Spurious `filesTouched`.** Every completed task on this change lists six repo files it never wrote. Git is authoritative: zero commits, empty diff against `main`.\n\nNeither was filed. `adv_change_create` in this deployment exposes no `status` parameter, so a backlog-status record cannot be created, and filing into the Advance project requires cross-project write approval that was not sought.\n\nOne further item was surfaced and left out of scope: mirroring these corrections into `episode` wisdom for cross-epic recall.\n\n## Not done, deliberately\n\nNo `episode` source file was modified, proven by `runId tr_mtf91w8w_3456b934`: empty `git status --porcelain`, empty `git diff --stat main...HEAD`. This change commits to no implementation. The storage direction remains `decideStorageLanguageDirection`'s to decide, auto-promotion remains deferred, and hybrid retrieval remains a candidate.\n"
+  },
+  "cross_project_origin": {
+    "source_project": "toolbox",
+    "source_path": "/home/jon/toolbox",
+    "linked_at": "2026-08-29T17:51:34.504Z"
+  },
+  "same_project_dependencies": [],
+  "projection_revision": 47,
+  "projection_commits": [
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:studyMagicContextMemoryDesign:20f86989-a833-47dc-8520-6430cb38d7c2",
+      "payload_hash": "4d7b154b29e437d066298778872c66c03d531a5fd4d4e30ba3220c2f7c2e377f",
+      "prior_revision": 0,
+      "new_revision": 1,
+      "committed_at": "2026-08-30T02:43:43.207Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User confirmed problem statement. Scope: research-routing only, no episode source changes. Idea 2 resolved negative pre-gate with source evidence (src/config.rs:152-191, src/server.rs namespace params) — no cwd-derived scope key, no worktree fragmentation, contingent defect change not opened.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:302b3370-4880-446c-9881-1b7398a946f0",
+      "payload_hash": "116b4a744f036043dcbb2b1eb951ed850c60c690e2bd366e5cfc96b65b5252a6",
+      "prior_revision": 1,
+      "new_revision": 2,
+      "committed_at": "2026-08-30T02:44:25.016Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "studyMagicContextMemoryDesign|change:researcher:discovery-architecture-md|adv-researcher|1",
+      "operation_id": "mutation:subagent_report_submitted:studyMagicContextMemoryDesign:876064dc-191a-4ac1-80a9-426d037315c8",
+      "payload_hash": "74a37310d82604af653ff28f5804498de61d33ce7125118cd42c6765cf06f718",
+      "prior_revision": 2,
+      "new_revision": 3,
+      "committed_at": "2026-08-30T02:51:35.602Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "ARCHITECTURE.md read at HEAD a54f9c0 with a32a839 cross-fetch diff; the three relevant sections are substantively identical across commits. UNVERIFIED item cleared.\n\nHeadline inversion: idea 1 (SQLite) WEAKENS, idea 4 (consolidation) STRENGTHENS. The proposal ranked idea 1 as \"the single highest-value input\"; discovery refutes that.\n\nIdea 1 evidence: magic-context uses exact brute-force fp32 cosine over SQLite BLOBs (memory/cosine-similarity.ts, 23 lines), no ANN. Designed for hundreds-to-~1000 memories at 384d; their own MEMORY-DESIGN.md names ANN as the escape hatch past 1000. episode already occupies that escape path at 1024d. Their ~10ms figures do not transfer to 4KB vectors. Critically, their sqlite-vec rejection is runtime-specific (bun:sqlite cannot load extensions) and does NOT transfer to Rust or Go, both of which load SQLite extensions.\n\nIdea 4 evidence: dreamer = 15-min cron, 12 CANONICAL_DREAM_TASKS. Promotion by cosine>=0.85 clustering with 0.02 hysteresis, requiring >=MIN_SPAN_DAYS distinct days and >=2 distinct occurrence keys. Exact-dedup via normalized content hash. Change-gated verify with sticky partial progress. Conflict-domain leases (memory:<project>) with BEGIN IMMEDIATE.\n\nModel-fallback caveat REFINED: session-model fallback CONFIRMED for historian only (compartment-runner-historian.ts:526-584), REFUTED for dreamer and sidekick. The proposal stated it too broadly.\n\nNEW finding not in the proposal: hybrid FTS5 + cosine retrieval with a technical-token tokenizer preserving . _ / - , mitigating a documented dense-embedding weakness on exact symbols, file paths, and config keys. Directly relevant to improveRecallQualityIngest, a fourth routing target the proposal did not anticipate.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:a7f6ecf6-184d-443a-8034-41079dd40125",
+      "payload_hash": "6f123bb7e521e39fc0c55d46d96d6aea53635d3112893ad4a7a800238d45fd1f",
+      "prior_revision": 3,
+      "new_revision": 4,
+      "committed_at": "2026-08-30T02:52:55.134Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:studyMagicContextMemoryDesign:0ac0e32e-2192-4946-8544-8354ca60b852",
+      "payload_hash": "d2b54a520482f3e85fabc023365cdb066c6a67dfa6895959be3900f9a8843950",
+      "prior_revision": 4,
+      "new_revision": 5,
+      "committed_at": "2026-08-30T02:56:41.271Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "studyMagicContextMemoryDesign|change:researcher:design-validation|adv-researcher|1",
+      "operation_id": "mutation:subagent_report_submitted:studyMagicContextMemoryDesign:bcc8b4b5-89c4-4f45-93d0-254a265a7a9b",
+      "payload_hash": "383ec9631584c1d2b6d4e101c9f417951659ffe9b6c05b87e9cdf176c2a53c1b",
+      "prior_revision": 5,
+      "new_revision": 6,
+      "committed_at": "2026-08-30T03:06:50.614Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:studyMagicContextMemoryDesign:5578ea60-2b5f-4065-beb7-baa8a2eba03e",
+      "payload_hash": "6ca312d6a12dfbcad0ae45b7116c6e14c40a1f80f576ee51f80a305dfba5bcc0",
+      "prior_revision": 6,
+      "new_revision": 7,
+      "committed_at": "2026-08-30T03:08:22.434Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Independent validator (adv-researcher, scope design-validation) returned CONCERN with 3 required changes. All 3 applied; no CONFLICT.\n\nValidator VERIFIED 4 of 5 load-bearing source claims, including the highest-risk one: the historian-only narrowing of the session-model fallback is correct (runFallbackHistorianPass, compartment-runner-historian.ts:506-623; refuted for dreamer/sidekick).\n\nFix 1 (source error): the FTS5 tokenizer claim was WRONG. magic-context's comment claims it preserves . _ / - but its DDL uses tokenize='porter unicode61 categories \"L* N* Co\"', which is the unicode61 default and a no-op; tokenchars appears nowhere in the repo. Design now records this as a source defect and states the consequence: Postgres default tsvector parsers have the same trap, which makes pg_trgm the load-bearing half of the transfer rather than optional.\n\nFix 2 (over-broad inference): the sqlite-vec correction disposed of both rejection reasons. Now split — extension-loading is runtime-specific and does not transfer (rusqlite LoadExtensionGuard, mattn/go-sqlite3; caveat that pure-Go modernc.org/sqlite cannot load C extensions), while write-amplification is a vec0 storage property that remains live for any Rust/Go evaluation.\n\nFix 3 (internal inconsistency): problem-statement Success-2 promised \"the SQLite option with a measurement plan\" but design R1 delivers corroboration with no new option. Success-2 rewritten to state the inversion explicitly; R1 gained a trigger-time measurement plan so the rewrite trigger has a concrete first action.\n\nCitation nits corrected: cosine-similarity.ts is 19 lines not 23; primer constants span L5-8 with PRIMER_MIN_SPAN_DAYS=7 at L8; historian function is L506-623; config.rs range is 147-191.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:7f5ae2a9-8d9e-43cb-82d1-1bbd69b222a2",
+      "payload_hash": "7622e3442ac39a87b461a6dac67d31cca3a914877c5b27e672814124e065bda2",
+      "prior_revision": 7,
+      "new_revision": 8,
+      "committed_at": "2026-08-30T03:08:34.853Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-202b1c778569",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:f4c3188c-a36e-4b7c-9192-a3fde99d112f",
+      "payload_hash": "35ea6b14fb661b0ec5c2bedefc4b6ea3511b76e33509186323a479c66cb8d5c5",
+      "prior_revision": 8,
+      "new_revision": 9,
+      "committed_at": "2026-08-30T03:13:41.801Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-83ba9ade9ba3",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:52d96052-ef40-49b7-babd-e360c5444537",
+      "payload_hash": "17a9cf3671bc1bdd025bb59fd66e837bb1509b095d2e13f71f8e305e824c9ec1",
+      "prior_revision": 9,
+      "new_revision": 10,
+      "committed_at": "2026-08-30T03:14:01.923Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-01c5d2d959cb",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:3fdb5276-3800-426b-be29-65592efc7340",
+      "payload_hash": "e1ef50655782d23dd0b4cb5965736bd1210774e66d89a3c5cd26ec2a2ae41d56",
+      "prior_revision": 10,
+      "new_revision": 11,
+      "committed_at": "2026-08-30T03:14:22.626Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-e93b97c65476",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:5204fa0c-a0c5-40a3-8cd0-e1272134164d",
+      "payload_hash": "b644e0804af72b25fd46a90a8b31289eb240d2ba3664b65b09d6309f1c641ba9",
+      "prior_revision": 11,
+      "new_revision": 12,
+      "committed_at": "2026-08-30T03:14:42.773Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-5ab08129de57",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:c4620dd5-306a-4521-8c3e-5a3fbbae800b",
+      "payload_hash": "db524eb2ef05dd26cfd63fac89a6ea5f893edde260f4369715d5b79a8ab4a0b1",
+      "prior_revision": 12,
+      "new_revision": 13,
+      "committed_at": "2026-08-30T03:14:57.835Z"
+    },
+    {
+      "mutation_kind": "task_cancelled",
+      "authority_kind": "mutation",
+      "authority_reason": "task_cancelled",
+      "authority_evidence": "User replied 'continue' to the prep approval gate, approving the restructure explicitly offered in the vision banner: 'To close the open gap I need to cancel and re-add R1-R3 with the read-verify-write protocol embedded and a baseline-capture task blocking them. Cancellation requires your approval.'",
+      "operation_id": "mutation:task_cancelled:studyMagicContextMemoryDesign:e57dd2bf-4b23-4e52-a5e6-b05c2a4da6fd",
+      "payload_hash": "6ec70d85a8f569f5b45a24232f2c65034d4b84ced1eb4a94252cdee22fb98e8a",
+      "prior_revision": 13,
+      "new_revision": 14,
+      "committed_at": "2026-08-30T03:20:38.595Z"
+    },
+    {
+      "mutation_kind": "task_cancelled",
+      "authority_kind": "mutation",
+      "authority_reason": "task_cancelled",
+      "authority_evidence": "User replied 'continue' to the prep approval gate, approving the restructure explicitly offered in the vision banner: 'To close the open gap I need to cancel and re-add R1-R3 with the read-verify-write protocol embedded and a baseline-capture task blocking them. Cancellation requires your approval.'",
+      "operation_id": "mutation:task_cancelled:studyMagicContextMemoryDesign:a16a60cd-1810-4ee8-add3-728e7ddb5e19",
+      "payload_hash": "5a7d49707759e6eb25817589b593b7632dc05e7214b05d2564ac0e24ae6f5c0f",
+      "prior_revision": 14,
+      "new_revision": 15,
+      "committed_at": "2026-08-30T03:20:38.972Z"
+    },
+    {
+      "mutation_kind": "task_cancelled",
+      "authority_kind": "mutation",
+      "authority_reason": "task_cancelled",
+      "authority_evidence": "User replied 'continue' to the prep approval gate, approving the restructure explicitly offered in the vision banner: 'To close the open gap I need to cancel and re-add R1-R3 with the read-verify-write protocol embedded and a baseline-capture task blocking them. Cancellation requires your approval.'",
+      "operation_id": "mutation:task_cancelled:studyMagicContextMemoryDesign:38d82d11-2157-4ac9-938c-3d522eb0daf0",
+      "payload_hash": "b7341d2cd2c3ce3ee556af61fea3964ce1a93560f68b1abe6bc1b620e5d395b2",
+      "prior_revision": 15,
+      "new_revision": 16,
+      "committed_at": "2026-08-30T03:20:39.213Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-dffc2f1b754e",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:8e16d5db-db9d-4cb4-9173-883da56d549a",
+      "payload_hash": "c8b37f750876b304d89a4a1718a76af11bde0f60872bc5fde14543f563a33ad5",
+      "prior_revision": 16,
+      "new_revision": 17,
+      "committed_at": "2026-08-30T03:20:53.758Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-df3d80c92f28",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:6a354a27-1574-4d74-9b92-fa5b74faa801",
+      "payload_hash": "d9bf061b417047e42867db398f3e2232258826780f4f6055229841a477959a51",
+      "prior_revision": 17,
+      "new_revision": 18,
+      "committed_at": "2026-08-30T03:21:13.974Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-59ce9b7710b3",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:786ebf18-6695-49dc-9057-7a2a499115b1",
+      "payload_hash": "ee01b89540823c7c2759a2421f0a96413234d9a4e5e32ecd90cdc32478d77a4f",
+      "prior_revision": 18,
+      "new_revision": 19,
+      "committed_at": "2026-08-30T03:21:33.801Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-b6a309860252",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:84ecca04-e106-4726-9c9a-24cd879fe414",
+      "payload_hash": "edaad141a82240d688a3c8c6398b8ea804b43de1c2d266083f2a82d364b7c1a9",
+      "prior_revision": 19,
+      "new_revision": 20,
+      "committed_at": "2026-08-30T03:21:54.972Z"
+    },
+    {
+      "mutation_kind": "task_cancelled",
+      "authority_kind": "mutation",
+      "authority_reason": "task_cancelled",
+      "authority_evidence": "User replied 'continue' to the prep approval gate, approving the restructure offered in the vision banner. Cancelling and re-adding these two tasks is the mechanical completion of that same restructure: the approved cancellation of R1-R3 orphaned their blockedBy edges, and dependency-graph coherence cannot be restored without re-creating the dependents. No scope change.",
+      "operation_id": "mutation:task_cancelled:studyMagicContextMemoryDesign:b88c54b8-055f-489b-9fa3-43d1695ceb5e",
+      "payload_hash": "6ecf830489b91d75f7c43912a92e7c21c3e4bf4cba650baf8ef994f14e20f40a",
+      "prior_revision": 20,
+      "new_revision": 21,
+      "committed_at": "2026-08-30T03:22:07.646Z"
+    },
+    {
+      "mutation_kind": "task_cancelled",
+      "authority_kind": "mutation",
+      "authority_reason": "task_cancelled",
+      "authority_evidence": "User replied 'continue' to the prep approval gate, approving the restructure offered in the vision banner. Cancelling and re-adding these two tasks is the mechanical completion of that same restructure: the approved cancellation of R1-R3 orphaned their blockedBy edges, and dependency-graph coherence cannot be restored without re-creating the dependents. No scope change.",
+      "operation_id": "mutation:task_cancelled:studyMagicContextMemoryDesign:99819fa3-c792-41f8-841b-5f0d07afc6c6",
+      "payload_hash": "2ac5b96b6ac0a88ec63c99c48eb8dfd20b2f5a7226811dc236367aae115b2eeb",
+      "prior_revision": 21,
+      "new_revision": 22,
+      "committed_at": "2026-08-30T03:22:08.092Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-4b7360338149",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:8fc42a4f-1157-43ea-a9d0-26405cc88f44",
+      "payload_hash": "3f43b9ce3cf3cf7c097fc824aed6eb67895f0320d9f17cfbe54a0f83d765624f",
+      "prior_revision": 22,
+      "new_revision": 23,
+      "committed_at": "2026-08-30T03:22:28.930Z"
+    },
+    {
+      "mutation_kind": "task_add",
+      "authority_kind": "mutation",
+      "authority_reason": "add task",
+      "authority_evidence": "tk-d64c9255eb92",
+      "operation_id": "mutation:task_add:studyMagicContextMemoryDesign:078e83fe-4bdc-4c46-8b4e-e9c23ed49413",
+      "payload_hash": "32aa22ed13039fb586c2de2cc12738154125a4107eace1b667f4c590f5cc2f4c",
+      "prior_revision": 23,
+      "new_revision": 24,
+      "committed_at": "2026-08-30T03:22:43.241Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User replied \"continue\" at the prep approval gate, approving the vision banner and the offered restructure.\n\nTask graph: 6 active, 5 cancelled during restructure. Baseline capture (tk-dffc2f1b754e) → 3 parallel routing tasks → executive summary → verification.\n\nMUST gap found and closed: adv_change_update overwrites rather than appends (its schema states \"overwrites existing\"), so each routing task performs read-then-write-whole-document. A truncated read would silently destroy a sibling's proposal — a real risk, since the full adv_change_show on this change hit a 21000-char budget and truncated. Fix is structural, not prose: tk-dffc2f1b754e captures completeness-verified baselines (first line, last line, char count, expected terminal section) and blocks all three routing tasks; each routing task re-verifies against that baseline before writing and reads back after; tk-d64c9255eb92 proves each sibling grew strictly and kept its acceptance criteria intact.\n\nRestructure detail: R1-R3 were cancelled and re-created because blockedBy cannot be added retroactively. Their dependents (executive summary, verification) were then cancelled and re-created to repair orphaned dependency edges — mechanical consequence of the approved cancellation, no scope change.\n\nEvidence routes are all non-test, correctly: source_citation for the three citation-bearing routing tasks (design validation already caught one false source claim in this research, so citation accuracy is the real failure mode), artifact_reference for the executive summary, static_check for the two negative verification checks. No ChangeContract exists on this change; success criteria live in problem-statement.md and each task names the criterion it satisfies.\n\nCross-cutting: 11 of 12 concerns N/A — this change touches no runtime, no schema, no dependency, no user-facing surface. Persistence was the live one and is the gap closed above.\n\nDeferred, not added: the design validator suggested mirroring the corrections into episode wisdom for cross-epic recall. Beyond approved scope; surfaced to the user at the gate and left out.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:e65669a8-604c-4db2-ac72-b700b91190b4",
+      "payload_hash": "5cd1821c06e9c2615b22ccf8089047166112d6caad6b9d1cd958da502bc5176e",
+      "prior_revision": 24,
+      "new_revision": 25,
+      "committed_at": "2026-08-30T03:22:56.046Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:studyMagicContextMemoryDesign:e1454d02-d8d2-42db-a0ef-1cae586e2e57",
+      "payload_hash": "da80ad6c5e6797955323f31744b012683066eab68a169a7a52f5e25bd55cadec",
+      "prior_revision": 25,
+      "new_revision": 26,
+      "committed_at": "2026-08-30T03:23:01.610Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Baselines captured for all three sibling proposals via adv_change_show include:{proposal:true, artifactOnly:true}. No _truncated flag or _meta budget marker in any response. All three terminate at their ## Epic context section with a complete sentence. No repo files touched — this task reads ADV artifacts only.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:2a017f4f-204f-4522-aa65-30bcd74d3bd0",
+      "payload_hash": "9f8b6bfbed3f6465dbb765d2b26307e65b5e08a27ef2e7216d89a546a8f6a070",
+      "prior_revision": 26,
+      "new_revision": 27,
+      "committed_at": "2026-08-30T03:23:39.999Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Baselines captured for all three sibling proposals via adv_change_show include:{proposal:true, artifactOnly:true}. No _truncated flag or _meta budget marker in any response; all three terminate at a complete ## Epic context section.\n\nBASELINE 1 decideStorageLanguageDirection — first \"# Storage and language direction\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C8/probe/outcome coordination.\"; AC1-AC3 present.\n\nBASELINE 2 addPromotionStateMemories — first \"# Add promotion state to memories\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam. The Concord-side receiving contract is tracked in concord#46 Item 2.\"; AC1-AC7 present.\n\nBASELINE 3 improveRecallQualityIngest — first \"## Cross-Project Origin\"; last \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\"; AC1-AC6 present.\n\nNo hard stop triggered. No repo files touched; this task reads ADV artifacts only, so the tree is clean by design.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:2e5618fa-9bb8-45a3-a602-ce5981b76361",
+      "payload_hash": "5caad7e3697f080aafcac99a95927048d23cc7b413359b25e30d11fd50293935",
+      "prior_revision": 27,
+      "new_revision": 28,
+      "committed_at": "2026-08-30T03:23:59.677Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:studyMagicContextMemoryDesign:ee565168-a7a2-4bc6-bed2-2b0658fa0d69",
+      "payload_hash": "8b9f6e34db5a30a2d1e314068586c741ca6ded9e1a3fd8c472675bed8a79774b",
+      "prior_revision": 28,
+      "new_revision": 29,
+      "committed_at": "2026-08-30T03:24:15.390Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Appended \"## External evidence — magic-context\" to decideStorageLanguageDirection's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"# Storage and language direction\" matches baseline exactly.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 1 of 6). Sequenced first because it gates the implementation language of every downstream change. Bidirectionally linked to concord#46 for the C8/probe/outcome coordination.\" is present and now precedes the new section rather than ending the document.\n- Recommendation section, trigger source, Concord-side tracker, evidence bar, Decision outcome, and AC1-AC3 all intact and unmodified.\n- Document is strictly longer than baseline; new section appended at tail only.\n\nCITATIONS (all at cortexkit/magic-context HEAD a54f9c0, verified during design validation):\n- memory/cosine-similarity.ts, 19 lines, dot product + two norms, no ANN.\n- memory_embeddings DDL quoted verbatim.\n- MEMORY-DESIGN.md: ~79 memories/0.1s cached, ~10ms per query, 1000 memories ~= 1.5 MB.\n- Escape-hatch quote verbatim: \"At 1000+ memories, if full-scan latency is noticeable, add ANN index or per-project shard cache.\"\n- sqlite-vec rejection quoted from ARCHITECTURE.md and SPLIT into its two parts as required: extension-loading (runtime-specific, does not transfer; rusqlite load_extension_enable/LoadExtensionGuard, mattn/go-sqlite3 default-enabled, modernc.org/sqlite cgo caveat) and write-amplification (vec0 storage property, does transfer, remains a live objection).\n- Arithmetic stated: 1024d fp32 = 4096 bytes vs 1536, ~2.7x bytes per row, with the fairness basis named (both full fp32 scans).\n\nBOUNDARY: section header states explicitly that it is corroborating evidence only, adds no new option, and leaves the recommendation, trigger, and AC1-AC3 unchanged. Trigger-time measurement plan recorded as a first action for AC3 if the probe fires, explicitly not a reason to fire it.\n\nNo repo files touched; ADV artifact write only.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:3d7ce138-e287-4d72-ab37-8b2125c2d5a7",
+      "payload_hash": "b2276fa95452b963a4344404ed4a0711621d789a9f1abe0e2d434530c6794d9d",
+      "prior_revision": 29,
+      "new_revision": 30,
+      "committed_at": "2026-08-30T03:25:15.140Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:studyMagicContextMemoryDesign:dbb5371e-f324-48e7-abef-7eab0e268b24",
+      "payload_hash": "4dbb1d5ff27f7501ee4d0093867abc31682fa00da7b403c742a42e6104e3c05b",
+      "prior_revision": 30,
+      "new_revision": 31,
+      "committed_at": "2026-08-30T03:25:18.578Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Appended \"## External evidence — magic-context\" to addPromotionStateMemories's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"# Add promotion state to memories\" matches baseline exactly.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam. The Concord-side receiving contract is tracked in concord#46 Item 2.\" present and now precedes the new section.\n- \"Out of scope (episode side) — Auto-promotion heuristics (manual flagging first; heuristic promotion is a later candidate)\" intact and unmodified.\n- PromotionState rust block, Storage, Recall semantics, Graduation flow, Scope, Out of scope (Concord side), Dependencies, and AC1-AC7 all intact.\n- Document strictly longer than baseline; append at tail only.\n\nCITATIONS (cortexkit/magic-context HEAD a54f9c0, verified during design validation):\n- primer-clustering.ts:5-8 — cosine >= 0.85, hysteresis 0.02, PRIMER_MIN_SPAN_DAYS = 7, PRIMER_PROMOTION_THRESHOLD = 2.\n- task-executor.ts ~L434, promotionThreshold ?? 3.\n- idx_memories_project_category_hash, normalized content hash per category, cross-category merges rejected.\n- verify task gated on backing-file change since verified_at.\n- lease.ts:8, conflict-domain lease memory:<project>, BEGIN IMMEDIATE.\n\nMODEL-PINNING CAVEAT stated with both halves as required:\n- CONFIRMED historian-only: runFallbackHistorianPass, compartment-runner-historian.ts:506-623, ARCHITECTURE.md label \"historian-only\".\n- REFUTED for dreamer and sidekick: resolve-fallbacks.ts, shared/model-resolution.ts, sidekick/agent.ts:29, model-suggestion-retry.ts.\n- Reader trap recorded: resolve-fallbacks.ts header comment overstates the fallback as general.\n- Caveat framed prospectively — \"if episode ever adds an LLM-backed consolidation pass\" — since this change is manual-flagging only.\n\nBOUNDARY: section header states it attaches to the already-deferred auto-promotion item, does not pull it into scope, and does not modify AC1-AC7.\n\nNo repo files touched; ADV artifact write only.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:e8c0a5ab-8e01-4607-ab03-d4bdc2822d77",
+      "payload_hash": "427ab4099230903c7b127e24a3d3a77513954d385e873295533f501f9ba04c68",
+      "prior_revision": 31,
+      "new_revision": 32,
+      "committed_at": "2026-08-30T03:26:15.997Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:studyMagicContextMemoryDesign:be07d10e-ceb5-4ef3-800e-86407876ea9c",
+      "payload_hash": "80c3e8c2d3053e708edbe7e05cd8c6774700ec7c804e0dfab31e1185c5555ef8",
+      "prior_revision": 32,
+      "new_revision": 33,
+      "committed_at": "2026-08-30T03:26:19.753Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Appended \"## External evidence — magic-context\" to improveRecallQualityIngest's proposal via adv_change_update.\n\nBASELINE PRESERVATION (readback via adv_change_show include:{proposal:true, artifactOnly:true}):\n- First line \"## Cross-Project Origin\" matches baseline exactly; the full Cross-Project Origin table and note block are intact.\n- Baseline terminal line \"Member of Epic `shapeEpisodeStructuredMemory` (advisory order 6 of 6). Polish and future-proofing tier.\" present and now precedes the new section.\n- Sub-parts 3a, 3b, 3c, Scope, Out of scope, Dependencies, and AC1-AC6 all intact and unmodified. AC3 verbatim: \"No score-blending weights introduced without calibration evidence.\"\n- Document strictly longer than baseline; append at tail only.\n\nSOURCE DEFECT RECORDED (the validator-required correction, and the substance of this task):\n- magic-context's code comment claims tokenizer preservation of . _ / - ; its actual DDL is tokenize='porter unicode61 categories \"L* N* Co\"'.\n- Per SQLite FTS5 documentation, L* N* Co is the unicode61 default, so the clause is a no-op and punctuation stays a separator. tokenchars appears nowhere in their repo.\n- Consequence 1 recorded: their implementation is weaker evidence than their prose; the idea transfers, their validation does not.\n- Consequence 2 recorded: Postgres default tsvector parsers carry the same trap, making pg_trgm the load-bearing half of any transfer rather than optional.\n\nAC3 BOUNDARY RESPECTED: section header declares this a candidate sub-part 3d, not an adoption. Body states explicitly that a hybrid ranker is a blended score falling under AC3, that it reduces calibration to one mixing weight without eliminating it, and that recording respects AC3 while adopting would violate it. Calibration tool named (embedding-baseline.ts / embedding-baseline-diff.ts, Kendall tau, no gold labels) with its honest limit stated — measures drift, not correctness.\n\nNo repo files touched; ADV artifact write only.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:d9317ff4-1a7f-4474-b86d-5fe642c1ad70",
+      "payload_hash": "c66def2cdd8c39837b5d5b93a9d28ef9a66931546327315959468912cb29042c",
+      "prior_revision": 33,
+      "new_revision": 34,
+      "committed_at": "2026-08-30T03:27:05.903Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:studyMagicContextMemoryDesign:ee83cc98-4e98-40cc-888f-7f75166fdfcf",
+      "payload_hash": "a086b66107f0bcde9f2d46a5ddafd77995934c49f53059c37b0ee802f9a629ce",
+      "prior_revision": 34,
+      "new_revision": 35,
+      "committed_at": "2026-08-30T03:27:10.878Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:studyMagicContextMemoryDesign:31af12b6-936a-4fb0-a19d-f133a2689c66",
+      "payload_hash": "8a25d58e34b6fbbb708beaa3a68a1c7161dd60c9f6216abeac13a116070ab78c",
+      "prior_revision": 35,
+      "new_revision": 36,
+      "committed_at": "2026-08-30T03:27:48.492Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Wrote executive-summary.md via adv_change_update executiveSummary. This change had no prior executive summary, so the write creates rather than overwrites — no baseline preservation risk.\n\nCOVERAGE — all 7 ideas carry an explicit disposition:\n- Idea 1 SQLite: routed to decideStorageLanguageDirection as corroboration, not a third option; inversion from the proposal's \"highest-value input\" ranking stated plainly.\n- Idea 2 worktree fragmentation: RESOLVED NEGATIVE with src/config.rs:147-191 and src/server.rs evidence; no defect change opened; recorded so it is not re-raised.\n- Idea 3 tiered config: no action; episode has no project-local config, all env-driven.\n- Idea 4 consolidation: routed to addPromotionStateMemories as evidence for its deferred auto-promotion item.\n- Idea 5 embedding size: no action; coupled to idea 1.\n- Idea 6 harness column: known generalization path, not a recommendation.\n- Idea 7 hybrid retrieval: routed to improveRecallQualityIngest as candidate 3d bound by AC3.\n\nALSO RECORDED:\n- Anti-recommendation retained (prompt-prefix rewriting, toolbox ADR 0013, ~15 quota tokens per context token saved; N/A to episode as an MCP server).\n- Two no-target designs (saveEmbeddingIfHashMatches; never embed inside a write transaction).\n- Both corrections made before routing: the false FTS5 tokenizer claim with its two consequences, and the over-broad model-fallback claim narrowed to historian-only.\n- Process finding: the false claim was caught only by the independent design validator returning CONCERN.\n- Residual UNVERIFIED list, 4 items, each noted as non-blocking.\n- Explicit \"not done, deliberately\" section confirming no episode source modified and naming the one deferred item (mirroring corrections into episode wisdom).\n\nNo repo files touched; ADV artifact write only.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:e44c546a-aa55-46aa-8f29-39960abfa23b",
+      "payload_hash": "050628f8480cfd1aca1e8f154985f91ba75c93a6d5f1675f75634079d35cd901",
+      "prior_revision": 36,
+      "new_revision": 37,
+      "committed_at": "2026-08-30T03:28:02.223Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:studyMagicContextMemoryDesign:e3117b87-ee03-4283-a814-c741fd70ed6f",
+      "payload_hash": "ccc479c862df13f4ed31caaf5980fa12aa580104902a5d112c58436794b3c696",
+      "prior_revision": 37,
+      "new_revision": 38,
+      "committed_at": "2026-08-30T03:28:10.776Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "echo \"--- git status --porcelain ---\"; git status --porcelain; echo \"--- git diff --stat main...HEAD ---\"; git diff --stat main...HEAD; echo \"--- exit clean if both empty ---\"; test -z \"$(git status --porcelain)\" && test -z \"$(git diff --stat main...HEAD)\" && echo \"PASS: tree clean, no diff vs main\" || { echo \"FAIL: repo files modified\"; exit 1; }",
+      "operation_id": "mutation:test_run_recorded:studyMagicContextMemoryDesign:92a5ad39-a6e1-4f1d-b551-eb1546a248c5",
+      "payload_hash": "a1fce63f4dc0a9fc7950999d89595d1c50a7e3ef75513287ac52d50b5493a842",
+      "prior_revision": 38,
+      "new_revision": 39,
+      "committed_at": "2026-08-30T03:28:15.557Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "59f4dd724411664c789a7b8195e5f46178f0d6b1:Both negative checks pass.\n\nCHECK 1 — no repo file touched. Durable evidence runId tr_mtf91w8w_3456b934, exit code 0:\n  git status --porcelain -> empty\n  git diff --stat main...HEAD -> empty\n  \"PASS: tree clean, no diff vs main\"\nSuccess-6 proven: this change modified no episode source file, and no repo file at all.\n\nCHECK 2 — sibling proposals grew, and only at the tail. Each verified by readback immediately after its write:\n\ndecideStorageLanguageDirection — first line \"# Storage and language direction\" matches baseline; baseline terminal line (\"Member of Epic ... concord#46 for the C8/probe/outcome coordination.\") present and now precedes the new section; Recommendation, trigger source, evidence bar, Decision outcome, and AC1-AC3 intact; strictly longer.\n\naddPromotionStateMemories — first line \"# Add promotion state to memories\" matches baseline; baseline terminal line (\"Member of Epic ... concord#46 Item 2.\") present and now precedes the new section; \"Out of scope (episode side) — Auto-promotion heuristics\" intact; PromotionState rust block and AC1-AC7 intact; strictly longer.\n\nimproveRecallQualityIngest — first line \"## Cross-Project Origin\" matches baseline; Cross-Project Origin table and note block intact; baseline terminal line (\"Member of Epic ... Polish and future-proofing tier.\") present and now precedes the new section; sub-parts 3a/3b/3c and AC1-AC6 intact, with AC3 verbatim; strictly longer.\n\nNo sibling lost content. The overwrite risk the baseline task existed to prevent did not materialize.",
+      "operation_id": "mutation:task_checkpoint_completed:studyMagicContextMemoryDesign:8a520287-b7dd-4e0c-bf8b-d1aa6e2896cb",
+      "payload_hash": "c35e4c7e6d744c036f094f2f376203c4ca511bdb304278d5c30208da17148464",
+      "prior_revision": 39,
+      "new_revision": 40,
+      "committed_at": "2026-08-30T03:28:26.643Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "All 6 active tasks done. 5 tasks cancelled during the user-approved prep restructure.\n\nDelivered: evidence sections appended to three sibling proposals (decideStorageLanguageDirection, addPromotionStateMemories, improveRecallQualityIngest), plus this change's executive summary. No episode source modified.\n\nOverwrite safety held. adv_change_update overwrites rather than appends, so each routing task wrote a full concatenated document built on the tk-dffc2f1b754e baseline and verified by readback. All three siblings kept their first line, their original terminal line (now preceding the new section), and their full acceptance criteria blocks: AC1-AC3, AC1-AC7, AC1-AC6 respectively. No content lost.\n\nSuccess-6 proven by durable evidence runId tr_mtf91w8w_3456b934, exit 0: git status --porcelain empty, git diff --stat main...HEAD empty.\n\nDATA-QUALITY FINDING, not a scope violation: completed tasks carry a filesTouched projection listing .adv/specs/0010-recall-metadata-filters.md, README.md, docs/specs/0010-recall-metadata-filters.md, src/store.rs, src/types.rs, tests/recall_filters_it.rs. This change wrote none of them. Git is authoritative and contradicts the projection: HEAD is still 59f4dd724411664c789a7b8195e5f46178f0d6b1, the worktree base sha, with zero commits and an empty diff against main. Every checkpoint returned status \"clean\". The filesTouched values appear inherited from unrelated state rather than derived from this change's writes. Surfaced for the Advance project; it does not affect this change's correctness.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:78626cdd-137b-4b7d-ab9e-c15d72bf0a4b",
+      "payload_hash": "8a76f4148fcc9a3a7566660fa194c3c76bbfb071f3eeba296e86c38723ffdddd",
+      "prior_revision": 40,
+      "new_revision": 41,
+      "committed_at": "2026-08-30T03:28:50.017Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "studyMagicContextMemoryDesign|change:review:acceptance|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:studyMagicContextMemoryDesign:9d3cc89c-8cd4-4481-90fe-ea4d54752542",
+      "payload_hash": "1f0b9ad560bb4b250e6333fd75852dbcea4eda6286f971b167bd3ff0cbe10849",
+      "prior_revision": 41,
+      "new_revision": 42,
+      "committed_at": "2026-08-30T14:01:58.425Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:studyMagicContextMemoryDesign:60d50ff6-a699-4619-be46-293c899efaf4",
+      "payload_hash": "4cbda4db6e836aad5d3a79fdbf3bba4424d63b10b12f11db4e792c8554629203",
+      "prior_revision": 42,
+      "new_revision": 43,
+      "committed_at": "2026-08-30T14:06:05.052Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "studyMagicContextMemoryDesign|change:review:acceptance|adv-reviewer|2",
+      "operation_id": "mutation:subagent_report_submitted:studyMagicContextMemoryDesign:69997277-f1be-4ee2-9664-5382ab3783ab",
+      "payload_hash": "def19e0634f310a9574c2f36b9bf1960e8978a025b3e4fb7fdf13f5d4fe1ed1c",
+      "prior_revision": 43,
+      "new_revision": 44,
+      "committed_at": "2026-08-30T14:09:13.988Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User replied \"continue\" at the acceptance checkpoint after reviewing the REVIEW_FINDINGS block.\n\nReview cycle: adv-reviewer attempt 1 returned BLOCKED (3 blockers, 2 issues). All five confirmed against source at a54f9c0 by the orchestrator directly, because the design validator and acceptance reviewer contradicted each other on the FTS5 tokenizer DDL. The validator's \"verbatim\" quote (tokenize='porter unicode61 categories \"L* N* Co\"') does not exist in the repository; the real DDL is tokenize='porter unicode61'.\n\nFixes applied:\n1. decideStorageLanguageDirection — memory_embeddings DDL corrected to include model_id TEXT NOT NULL and PRIMARY KEY(memory_id, model_id).\n2. addPromotionStateMemories — promotion rule corrected from \">=7 distinct days AND >=2 occurrence keys\" to \"support >= 2 distinct UTC days AND spanDays >= 7 elapsed\", with an explicit note that the constant names mislead.\n3. improveRecallQualityIngest — real tokenizer DDL quoted; conclusion unchanged and better supported.\n4. addPromotionStateMemories — lease key re-attributed from lease.ts:8 to dreamer/task-registry.ts.\n5. decideStorageLanguageDirection — removed the self-contradicting \"both sides perform full fp32 scans\" claim; HNSW is an ANN index, so the ~10ms full-scan figure is not comparable.\n\nadv-reviewer attempt 2 returned APPROVED: all 5 FIXED, all three siblings CLEAN with opening content / full AC blocks / Epic context intact, and the three new remediation claims independently verified.\n\nSuccess criteria: 1, 3, 4, 5, 6 MET; 2 was PARTIAL on the bad DDL and is now MET.\n\nPROCESS EXCEPTION, user-authorized: the acceptance phase directive was never readable. adv_change_show include:{phasePlan:true} truncates deterministically because _phasePlan is 47921 chars against a 52017 budget, and the ~7900-char gates block pushes the total to 56468. adv_tool_catalog confirms no alternate directive route and the Tier-4 adv namespace is not exposed this session. Two attempts, then halt and surface per the Directive Read Protocol. User selected option 1, explicitly authorizing acceptance from artifacts and evidence without the directive.\n\nOPEN DEFECTS in ADV, neither affecting this change's correctness:\n- Phase-plan budget starvation: thorough gate approval evidence crowds out _phasePlan in the same response, making the directive unreadable at precisely the late gates where it matters.\n- filesTouched projection lists six repo files this change never wrote; git is authoritative and shows zero commits and an empty diff against main.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:0298fecd-3a28-4558-9a6f-eb4415093cf1",
+      "payload_hash": "c6c99ef715df84bbf1c2132c2caef2c61823a3becb23d13a7f34c116c57e7211",
+      "prior_revision": 44,
+      "new_revision": 45,
+      "committed_at": "2026-08-30T14:10:31.468Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:studyMagicContextMemoryDesign:8eb51fe1-ec3d-44e9-ad67-d98a65acf2ea",
+      "payload_hash": "3b68210fd7203cf743fe451c125bbb10d6ac25b4d604d3c3bc9cd280c474bb54",
+      "prior_revision": 45,
+      "new_revision": 46,
+      "committed_at": "2026-08-30T14:11:33.929Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "Harden pass complete. One finding, self-detected and fixed; no code to harden since the change produces no repo delta.\n\nFINDING (fixed): the executive summary's process table claimed \"four factual claims were wrong\" and listed four. The true count is six citation errors plus one internal contradiction. Missing were the lease.ts:8 misattribution and the \"both sides perform full fp32 scans\" self-contradiction. A document arguing for citation discipline was itself imprecise about its own error count. Corrected to six, with the contradiction called out separately and the undercount itself recorded as the third standout observation.\n\nThe corrected table also now names a finding the acceptance review surfaced but the summary had not: the design validator introduced an error while fixing one. Its \"verbatim\" replacement tokenizer DDL quoted a string absent from the source and survived until the acceptance reviewer disagreed and the orchestrator fetched the file. That is the sharpest lesson in the change — a verification result arrived carrying more confidence than the original error, and would have shipped invented SQL into a decision record.\n\nGIT VERIFICATION: git status --porcelain empty; git diff --stat main...HEAD empty; HEAD 59f4dd724411664c789a7b8195e5f46178f0d6b1 identical to main. Zero commits on change/studyMagicContextMemoryDesign. Consistent with runId tr_mtf91w8w_3456b934 from execution. There is no branch to merge and no PR to open; all deliverables are ADV artifacts.\n\nFOLLOW-UPS RECORDED, NOT FILED: two Advance-project defects (phase-plan budget starvation making the acceptance directive unreadable; spurious filesTouched on every completed task) are documented in the executive summary with their evidence. They were not filed as changes: adv_change_create in this deployment exposes no status parameter so no backlog-status record can be created, and filing into the Advance project requires cross-project write approval that was not sought. Surfaced to the user at archive sign-off instead.\n\nArtifact consistency verified: problem-statement Success-1 through Success-6 all met, with Success-2's wording already reconciled at the design gate to state the ranking inversion rather than the original \"add SQLite as a third option\" framing.",
+      "operation_id": "mutation:gate_completion:studyMagicContextMemoryDesign:82457c51-e777-4d36-b879-d4e5afd95e0a",
+      "payload_hash": "04251bbfe16fe2a4708c285da69fc9cb4ae375529c0531b3197f4d494fe0f116",
+      "prior_revision": 46,
+      "new_revision": 47,
+      "committed_at": "2026-08-30T14:12:05.375Z"
+    }
+  ]
+}
