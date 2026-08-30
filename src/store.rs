@@ -163,7 +163,8 @@ impl Store {
         Ok(Self { pool })
     }
 
-    /// Idempotent upsert keyed on stable `id`. Returns `Ok(())` on success.
+    /// Idempotent upsert keyed on the stable `(namespace, id)` pair. Returns
+    /// `Ok(())` on success.
     ///
     /// Delegates to [`Self::upsert_batch`] so the single-row and batch persistence
     /// paths share one SQL statement and transactional semantics. The acknowledged
@@ -178,7 +179,8 @@ impl Store {
     /// Transactional batch upsert for the ingestion path (AC4 / DONT3 / design §4).
     ///
     /// Persists one bounded ingestion partition in a single
-    /// `INSERT ... ON CONFLICT (id) DO UPDATE` statement wrapped in a transaction.
+    /// `INSERT ... ON CONFLICT (namespace, id) DO UPDATE` statement wrapped in a
+    /// transaction.
     /// The statement is built with `sqlx::QueryBuilder` value binds — never
     /// `format!` — so mutation SQL is never string-constructed from input. `items`
     /// and `embeddings` are parallel, equal-length slices (the caller validates
@@ -226,8 +228,7 @@ impl Store {
             },
         );
         qb.push(
-            " ON CONFLICT (id) DO UPDATE SET \
-                 namespace = EXCLUDED.namespace, \
+            " ON CONFLICT (namespace, id) DO UPDATE SET \
                  source = EXCLUDED.source, \
                  source_id = EXCLUDED.source_id, \
                  kind = EXCLUDED.kind, \

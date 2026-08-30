@@ -485,10 +485,14 @@ async fn same_adv_id_in_two_namespaces_survives_independently() {
     reconcile_once(&store, &tmp_b.root(&ns_b)).await;
 
     // Both rows survive under the same id, each in its own namespace with its
-    // own content.
+    // own content. Scoped to this run's namespaces: the database is shared,
+    // and an earlier failing run can have leaked its rows past cleanup.
     let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT namespace, content FROM memories WHERE id = 'pw-1' ORDER BY namespace",
+        "SELECT namespace, content FROM memories \
+         WHERE id = 'pw-1' AND namespace IN ($1, $2) ORDER BY namespace",
     )
+    .bind(&ns_a)
+    .bind(&ns_b)
     .fetch_all(&pool)
     .await
     .expect("read rows");
