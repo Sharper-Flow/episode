@@ -28,8 +28,9 @@ const _: () = assert!(HNSW_M == 16);
 const _: () = assert!(HNSW_EF_CONSTRUCTION == 64);
 
 /// Provenance of a memory row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+#[schemars(crate = "rmcp::schemars")]
 pub enum MemorySource {
     /// Ingested from `{project}/.adv/wisdom.jsonl`.
     AdvWisdom,
@@ -245,6 +246,15 @@ pub struct RecallFilters {
     pub work_id: Option<String>,
     pub tags: Option<Vec<String>>,
     pub kinds: Option<Vec<String>>,
+    /// Narrow recall to rows from these provenances. Closed set: `manual`,
+    /// `adv_wisdom`, `adv_reflection`. Unknown values reject at
+    /// deserialization; an empty list rejects validation.
+    pub sources: Option<Vec<MemorySource>>,
+    /// Exclude rows first captured longer ago than this many days. The basis
+    /// is `created_at` — first-capture time, which write-once ingest and
+    /// promotion transitions never move. Pure filter: ranking and scores are
+    /// untouched. Must be positive.
+    pub max_age_days: Option<u32>,
     pub include_open_followups: bool,
     /// Return rows already graduated to a durable Concord record.
     ///
@@ -293,6 +303,20 @@ impl RecallFilters {
         {
             return Err(RecallFilterValidationError(
                 "kinds filter must contain non-blank values",
+            ));
+        }
+        if self
+            .sources
+            .as_ref()
+            .is_some_and(|values| values.is_empty())
+        {
+            return Err(RecallFilterValidationError(
+                "sources filter must not be empty",
+            ));
+        }
+        if self.max_age_days.is_some_and(|days| days == 0) {
+            return Err(RecallFilterValidationError(
+                "max_age_days filter must be positive",
             ));
         }
         Ok(())

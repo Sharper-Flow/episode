@@ -447,7 +447,9 @@ mod tests {
             "product": "episode",
             "work_id": "change-1",
             "tags": ["memory", "recall"],
-            "kinds": ["gotcha", "decision"]
+            "kinds": ["gotcha", "decision"],
+            "sources": ["manual", "adv_wisdom"],
+            "max_age_days": 90
         }))
         .expect("valid filters deserialize");
         assert!(!valid.include_open_followups);
@@ -463,10 +465,15 @@ mod tests {
             json!({"tags": ["ok", " "]}),
             json!({"kinds": []}),
             json!({"kinds": [""]}),
+            json!({"sources": []}),
+            json!({"max_age_days": 0}),
         ] {
             let filters: RecallFilters = serde_json::from_value(invalid).unwrap();
             assert!(filters.validate().is_err());
         }
+        // The sources set is closed: unknown provenance names reject at
+        // deserialization, before validation runs.
+        assert!(serde_json::from_value::<RecallFilters>(json!({"sources": ["concord"]})).is_err());
         assert!(serde_json::from_value::<RecallFilters>(json!({"unknown": true})).is_err());
     }
 

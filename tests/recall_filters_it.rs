@@ -180,6 +180,8 @@ async fn recall_filters_compose_and_use_metadata_gin() {
         work_id: Some("w".into()),
         tags: Some(vec!["a".into(), "b".into()]),
         kinds: Some(vec!["gotcha".into()]),
+        sources: None,
+        max_age_days: None,
         include_open_followups: false,
         include_promoted: false,
     };
@@ -250,4 +252,131 @@ async fn recall_filters_compose_and_use_metadata_gin() {
         .execute(&pool)
         .await
         .expect("cleanup");
+}
+
+/// Provenance and recency narrow recall on the typed columns: `sources`
+/// filters the source column, `max_age_days` excludes rows whose first-capture
+/// time is older than the cutoff. Both are pure filters — ranking is
+/// untouched. Seed uses direct `created_at` backdating because the store's
+/// upsert always stamps `now()`.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn sources_and_max_age_filter_recall() {
+    let db = std::env::var("EPISODE_TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://episode:episode@localhost:5434/episode".to_string());
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_prov_{}", uuid::Uuid::new_v4().simple());
+
+    let seed = [
+        (MemorySource::Manual, "manual-fresh"),
+        (MemorySource::AdvWisdom, "wisdom-fresh"),
+        (MemorySource::AdvReflection, "reflection-fresh"),
+        (MemorySource::AdvWisdom, "wisdom-old"),
+        (MemorySource::Manual, "manual-old"),
+    ];
+    for (source, content) in seed {
+        store
+            .upsert(
+                &MemoryInput {
+                    id: format!("{ns}-{content}"),
+                    namespace: ns.clone(),
+                    source,
+                    source_id: (source != MemorySource::Manual)
+                        .then(|| format!("{ns}-src-{content}")),
+                    kind: Some("gotcha".into()),
+                    content: content.into(),
+                    metadata: serde_json::json!({}),
+                },
+                &vector(),
+            )
+            .await
+            .expect("seed");
+    }
+    // Backdate the two `-old` rows 100 days; `upsert` stamps now().
+    sqlx::query(
+        "UPDATE memories SET created_at = now() - interval '100 days' \
+                 WHERE namespace = $1 AND id LIKE '%-old'",
+    )
+    .bind(&ns)
+    .execute(&pool)
+    .await
+    .expect("backdate");
+
+    async fn hits(store: &Store, ns: &str, filters: Option<&RecallFilters>) -> Vec<String> {
+        let namespaces = [ns.to_string()];
+        store
+            .recall(&vector(), &namespaces, 20, filters)
+            .await
+            .expect("recall")
+            .into_iter()
+            .map(|h| h.content)
+            .collect()
+    }
+
+    // Cleanup runs before assertions can panic.
+    let result: anyhow::Result<(Vec<String>, Vec<String>, Vec<String>)> = async {
+        let a = hits(
+            &store,
+            &ns,
+            Some(&RecallFilters {
+                sources: Some(vec![MemorySource::AdvWisdom]),
+                ..Default::default()
+            }),
+        )
+        .await;
+        let b = hits(
+            &store,
+            &ns,
+            Some(&RecallFilters {
+                sources: Some(vec![MemorySource::Manual, MemorySource::AdvReflection]),
+                ..Default::default()
+            }),
+        )
+        .await;
+        let c = hits(
+            &store,
+            &ns,
+            Some(&RecallFilters {
+                max_age_days: Some(30),
+                ..Default::default()
+            }),
+        )
+        .await;
+        Ok((a, b, c))
+    }
+    .await;
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+
+    let (mut by_source, mut composed_sources, mut fresh_only) = result.expect("filtered recalls");
+    by_source.sort();
+    composed_sources.sort();
+    fresh_only.sort();
+    assert_eq!(
+        by_source,
+        vec!["wisdom-fresh".to_string(), "wisdom-old".to_string()],
+        "sources filters the typed source column"
+    );
+    assert_eq!(
+        composed_sources,
+        vec![
+            "manual-fresh".to_string(),
+            "manual-old".to_string(),
+            "reflection-fresh".to_string()
+        ],
+        "multiple sources union within the filter"
+    );
+    assert_eq!(
+        fresh_only,
+        vec![
+            "manual-fresh".to_string(),
+            "reflection-fresh".to_string(),
+            "wisdom-fresh".to_string(),
+        ],
+        "max_age_days excludes rows first captured before the cutoff"
+    );
 }

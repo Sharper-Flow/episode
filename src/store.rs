@@ -76,6 +76,25 @@ fn build_recall_query(
                 .push_bind(kinds.clone())
                 .push(")");
         }
+        if let Some(sources) = filters.sources.as_ref() {
+            push_and(&mut builder, &mut has_where);
+            builder
+                .push("source = ANY(")
+                .push_bind(
+                    sources
+                        .iter()
+                        .map(|s| s.as_str().to_string())
+                        .collect::<Vec<_>>(),
+                )
+                .push(")");
+        }
+        if let Some(max_age_days) = filters.max_age_days {
+            push_and(&mut builder, &mut has_where);
+            builder
+                .push("created_at >= now() - make_interval(days => ")
+                .push_bind(i32::try_from(max_age_days).expect("day count fits i32"))
+                .push(")");
+        }
     }
     if !filters.is_some_and(|value| value.include_open_followups) {
         push_and(&mut builder, &mut has_where);
@@ -502,6 +521,8 @@ mod tests {
             work_id: Some("secret-work".into()),
             tags: Some(vec!["secret-tag".into()]),
             kinds: Some(vec!["secret-kind".into()]),
+            sources: None,
+            max_age_days: None,
             include_open_followups: false,
             include_promoted: false,
         };
