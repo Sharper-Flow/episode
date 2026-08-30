@@ -1,0 +1,1540 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Sharper-Flow/Advance/trunk/plugin/schemas/change.schema.json",
+  "id": "addPromotionStateMemories",
+  "title": "Add promotion state to memories",
+  "status": "archived",
+  "created_at": "2026-08-11T00:04:21.817Z",
+  "tasks": [
+    {
+      "id": "tk-1cd68ba98a0b",
+      "title": "Add PromotionState type with validation",
+      "type": "code",
+      "status": "done",
+      "priority": 0,
+      "created_at": "2026-08-30T16:43:16.989Z",
+      "started_at": "2026-08-30T16:47:19.647Z",
+      "completed_at": "2026-08-30T16:51:17.663Z",
+      "verification": "RED tr_mtg1o3n7_ecf5d724 exit 101, unresolved imports PromotionState and PromotionStateValidationError. GREEN tr_mtg1oznw_30434a44 exit 0, 7 of 7 promotion_state tests pass. VERIFY tr_mtg1qb1k_2a099cc1 exit 0: 58 of 58 lib tests pass, clippy --all-targets -D warnings clean, cargo fmt --check clean.\n\nAdded PromotionState to src/types.rs following the ActionState precedent at :57-67 exactly — serde tag = \"kind\", rename_all snake_case, deny_unknown_fields, and the mandatory schemars(crate = \"rmcp::schemars\") since rmcp re-exports schemars.\n\nTwo stored variants only. Episodic is deliberately not a variant; a dedicated test asserts kind: \"episodic\" fails to deserialize, pinning the absent-key default so nobody later adds a stored literal that would require a backfill over every row.\n\nThe schema closedness test confirms PromotionCandidate {} stays closed under schemars with additionalProperties false, matching the LinkedWork {} and OpenFollowup {} precedent that server.rs:489-499 already verifies. This was the one derive risk in the task and it holds.\n\nValidation is non-blank on target and nothing more. The accepts-test deliberately feeds unparseable shapes including a JSON literal and a path#sha256 form to pin that episode never infers structure from an opaque target.\n\nAlso added PROMOTION_STATE_KEY as the reserved metadata key so the store and ingest tasks bind to one constant rather than three string literals.",
+      "summary": "RED tr_mtg1o3n7_ecf5d724 exit 101, unresolved imports PromotionState and PromotionStateValidationError. GREEN tr_mtg1oznw_30434a44 exit 0, 7 of 7 promotion_state tests pass. VERIFY tr_mtg1qb1k_2a099cc1 exit 0: 58 of 58 lib tests pass, clippy --all-targets -D warnings clean, cargo fmt --check clean.\n\nAdded PromotionState to src/types.rs following the ActionState precedent at :57-67 exactly — serde tag = \"kind\", rename_all snake_case, deny_unknown_fields, and the mandatory schemars(crate = \"rmcp::schemars\") since rmcp re-exports schemars.\n\nTwo stored variants only. Episodic is deliberately not a variant; a dedicated test asserts kind: \"episodic\" fails to deserialize, pinning the absent-key default so nobody later adds a stored literal that would require a backfill over every row.\n\nThe schema closedness test confirms PromotionCandidate {} stays closed under schemars with additionalProperties false, matching the LinkedWork {} and OpenFollowup {} precedent that server.rs:489-499 already verifies. This was the one derive risk in the task and it holds.\n\nValidation is non-blank on target and nothing more. The accepts-test deliberately feeds unparseable shapes including a JSON literal and a path#sha256 form to pin that episode never infers structure from an opaque target.\n\nAlso added PROMOTION_STATE_KEY as the reserved metadata key so the store and ingest tasks bind to one constant rather than three string literals.",
+      "filesTouched": [
+        "src/types.rs"
+      ],
+      "checkpointSha": "c556bd4b427c13e1e20a0751a6bafbbf1da6ea2d",
+      "completedAt": "2026-08-30T16:51:17.663Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC1",
+          "AC2",
+          "AC8"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-3b0d19ec2e80",
+      "title": "Add recall filtering that excludes Promoted by default",
+      "type": "code",
+      "status": "done",
+      "priority": 1,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-1cd68ba98a0b"
+        }
+      ],
+      "created_at": "2026-08-30T16:43:28.484Z",
+      "started_at": "2026-08-30T16:51:25.299Z",
+      "completed_at": "2026-08-30T16:55:06.606Z",
+      "verification": "RED tr_mtg1sgpx_38951b24 exit 101, RecallFilters has no field named include_promoted. GREEN tr_mtg1ugf7_f561bc0c exit 0, 61 of 61 lib tests pass, up from 58. VERIFY tr_mtg1usa1_a3068249 exit 0, DB-backed promotion_state_it passes against the live store at localhost:5434. VERIFY tr_mtg1v4rd_1504164c exit 0, clippy --all-targets -D warnings clean, fmt clean, and the pre-existing recall_filters_it still passes.\n\nMirrored include_open_followups end to end. New RecallFilters.include_promoted bool defaults to false, so every existing caller stops receiving graduated knowledge without changing its request. The struct derives Deserialize but not Serialize and is never persisted, so the addition is backward-compatible by construction.\n\nThe predicate lives beside the open-followup exclusion in build_recall_query and binds the JSON value rather than inlining it. Three DB-free tests pin the structure: default emits two NOT (metadata @> $n) clauses, opt-in leaves exactly one so the open-followup exclusion is provably independent, and neither promotion_state nor promoted ever appears in SQL text. The counting assertion is what makes the two exclusions distinguishable in a DB-free test, since both compile to the same syntax with different bound values.\n\nThe GIN caveat is recorded as a comment at the predicate: this is a negative match and does not use memories_metadata_gin, exactly as the open-followup exclusion does not. Task 6 carries it into spec 0011.\n\nPromotionCandidate stays visible in both modes. The integration test seeds all three shapes and asserts default recall returns candidate and plain but not promoted, then that opt-in returns all three. That is the AC3/AC4 pair proven against real Postgres rather than SQL text.\n\nOne self-inflicted compile error along the way: my test helper wrote QueryBuilder<'static, Postgres>, but this sqlx version parameterizes QueryBuilder by DB alone. Corrected to match the existing build_recall_query signature. Also adopted the file's existing sql()/as_str() borrow pattern after SqlStr turned out not to implement Display.\n\nCampsite: added an include_promoted default assertion to the existing recall_filters_validate_closed_optional_input test in server.rs, so the omitted-flag default is pinned at the deserialization boundary as well as in the query builder.",
+      "summary": "RED tr_mtg1sgpx_38951b24 exit 101, RecallFilters has no field named include_promoted. GREEN tr_mtg1ugf7_f561bc0c exit 0, 61 of 61 lib tests pass, up from 58. VERIFY tr_mtg1usa1_a3068249 exit 0, DB-backed promotion_state_it passes against the live store at localhost:5434. VERIFY tr_mtg1v4rd_1504164c exit 0, clippy --all-targets -D warnings clean, fmt clean, and the pre-existing recall_filters_it still passes.\n\nMirrored include_open_followups end to end. New RecallFilters.include_promoted bool defaults to false, so every existing caller stops receiving graduated knowledge without changing its request. The struct derives Deserialize but not Serialize and is never persisted, so the addition is backward-compatible by construction.\n\nThe predicate lives beside the open-followup exclusion in build_recall_query and binds the JSON value rather than inlining it. Three DB-free tests pin the structure: default emits two NOT (metadata @> $n) clauses, opt-in leaves exactly one so the open-followup exclusion is provably independent, and neither promotion_state nor promoted ever appears in SQL text. The counting assertion is what makes the two exclusions distinguishable in a DB-free test, since both compile to the same syntax with different bound values.\n\nThe GIN caveat is recorded as a comment at the predicate: this is a negative match and does not use memories_metadata_gin, exactly as the open-followup exclusion does not. Task 6 carries it into spec 0011.\n\nPromotionCandidate stays visible in both modes. The integration test seeds all three shapes and asserts default recall returns candidate and plain but not promoted, then that opt-in returns all three. That is the AC3/AC4 pair proven against real Postgres rather than SQL text.\n\nOne self-inflicted compile error along the way: my test helper wrote QueryBuilder<'static, Postgres>, but this sqlx version parameterizes QueryBuilder by DB alone. Corrected to match the existing build_recall_query signature. Also adopted the file's existing sql()/as_str() borrow pattern after SqlStr turned out not to implement Display.\n\nCampsite: added an include_promoted default assertion to the existing recall_filters_validate_closed_optional_input test in server.rs, so the omitted-flag default is pinned at the deserialization boundary as well as in the query builder.",
+      "filesTouched": [
+        "src/server.rs",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/promotion_state_it.rs",
+        "tests/recall_filters_it.rs"
+      ],
+      "checkpointSha": "6b6347005219644a2a904217b8d662aa8870a10b",
+      "completedAt": "2026-08-30T16:55:06.606Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC3",
+          "AC4"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-cb1e6043527e",
+      "title": "Add Store::promote and the promote MCP tool",
+      "type": "code",
+      "status": "done",
+      "priority": 2,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-1cd68ba98a0b"
+        }
+      ],
+      "created_at": "2026-08-30T16:44:29.065Z",
+      "started_at": "2026-08-30T16:55:12.865Z",
+      "completed_at": "2026-08-30T16:59:26.267Z",
+      "verification": "RED tr_mtg1xx1w_fdf90ab5 exit 101, unresolved import PromotionStateKind and no method named promote on Store, five call sites. GREEN tr_mtg202ec_c07d64f8 exit 0, 63 of 63 lib tests pass, up from 61. VERIFY tr_mtg20gts_aa2efa0b exit 0, all 4 DB-backed promotion tests pass against the live store. VERIFY tr_mtg20ofm_6cc263df exit 0, clippy --all-targets -D warnings clean, fmt clean.\n\nThe transition is one statement covering every path, including the episodic start state, with no branching:\n\nUPDATE memories SET metadata = jsonb_set(metadata, ARRAY[$3], $4::jsonb, true), updated_at = now() WHERE id = $1 AND namespace = $2 AND metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5\n\nIS NOT DISTINCT FROM rather than = is the load-bearing choice. A NULL $5 matches an absent key, so \"the row is episodic\" is expressible as a bound parameter instead of a structurally different predicate. Without it the statement would have to branch on the expected kind, which would put a state literal into SQL text and defeat the DB-free test.\n\nThe merge stays in SQL, so the precondition is safe under READ COMMITTED: a concurrent loser blocks on the row lock, re-evaluates against the winner's committed row, and matches nothing. Reading state into Rust and writing it back would reintroduce the lost-update window the design warned about.\n\nNo source restriction, and a DB-free test asserts the word source never appears in the statement. promote_accepts_ingested_rows proves it against a real adv_wisdom row. This is the self-contradiction the design validator caught: the primary use case is a human promoting an ingested wisdom entry, which forget_manual's manual-only predicate would have forbidden.\n\nAdded PromotionStateKind rather than passing the tag as a string. The from-side needs kind-level identity, not a full value: demoting a promoted row must not require the caller to already know its target. Episodic carries no tag because the absent key is the default, and as_tag returning Option is what feeds the NULL-safe comparison.\n\nBidirectionality is proven end to end in one test: episodic to candidate to promoted, retarget promoted to promoted with a new sha, then demote back to candidate, finishing with an assertion that the demoted row is visible in default recall again. That last assertion is the recovery path for the accepted failure mode where a Concord target is deleted.\n\nThe mismatch test asserts both wrong-direction claims return 0 and, importantly, that the stored state is untouched afterward. Wrong namespace also returns 0.\n\nMCP promote tool mirrors ForgetParams and validates the target state before touching the store, so a blank target is rejected as invalid_params rather than reaching SQL.",
+      "summary": "RED tr_mtg1xx1w_fdf90ab5 exit 101, unresolved import PromotionStateKind and no method named promote on Store, five call sites. GREEN tr_mtg202ec_c07d64f8 exit 0, 63 of 63 lib tests pass, up from 61. VERIFY tr_mtg20gts_aa2efa0b exit 0, all 4 DB-backed promotion tests pass against the live store. VERIFY tr_mtg20ofm_6cc263df exit 0, clippy --all-targets -D warnings clean, fmt clean.\n\nThe transition is one statement covering every path, including the episodic start state, with no branching:\n\nUPDATE memories SET metadata = jsonb_set(metadata, ARRAY[$3], $4::jsonb, true), updated_at = now() WHERE id = $1 AND namespace = $2 AND metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5\n\nIS NOT DISTINCT FROM rather than = is the load-bearing choice. A NULL $5 matches an absent key, so \"the row is episodic\" is expressible as a bound parameter instead of a structurally different predicate. Without it the statement would have to branch on the expected kind, which would put a state literal into SQL text and defeat the DB-free test.\n\nThe merge stays in SQL, so the precondition is safe under READ COMMITTED: a concurrent loser blocks on the row lock, re-evaluates against the winner's committed row, and matches nothing. Reading state into Rust and writing it back would reintroduce the lost-update window the design warned about.\n\nNo source restriction, and a DB-free test asserts the word source never appears in the statement. promote_accepts_ingested_rows proves it against a real adv_wisdom row. This is the self-contradiction the design validator caught: the primary use case is a human promoting an ingested wisdom entry, which forget_manual's manual-only predicate would have forbidden.\n\nAdded PromotionStateKind rather than passing the tag as a string. The from-side needs kind-level identity, not a full value: demoting a promoted row must not require the caller to already know its target. Episodic carries no tag because the absent key is the default, and as_tag returning Option is what feeds the NULL-safe comparison.\n\nBidirectionality is proven end to end in one test: episodic to candidate to promoted, retarget promoted to promoted with a new sha, then demote back to candidate, finishing with an assertion that the demoted row is visible in default recall again. That last assertion is the recovery path for the accepted failure mode where a Concord target is deleted.\n\nThe mismatch test asserts both wrong-direction claims return 0 and, importantly, that the stored state is untouched afterward. Wrong namespace also returns 0.\n\nMCP promote tool mirrors ForgetParams and validates the target state before touching the store, so a blank target is rejected as invalid_params rather than reaching SQL.",
+      "filesTouched": [
+        "src/server.rs",
+        "src/store.rs",
+        "src/types.rs",
+        "tests/promotion_state_it.rs"
+      ],
+      "checkpointSha": "e0a6eea7163eac228b814eaaf3d58330ea2c9e72",
+      "completedAt": "2026-08-30T16:59:26.267Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC5"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-76bb0834b5e5",
+      "title": "Add post-ingest reconciliation plumbing and remove invalidated rows",
+      "type": "code",
+      "status": "done",
+      "priority": 3,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-1cd68ba98a0b"
+        }
+      ],
+      "created_at": "2026-08-30T16:44:41.922Z",
+      "started_at": "2026-08-30T16:59:32.313Z",
+      "completed_at": "2026-08-30T17:05:47.675Z",
+      "verification": "RED tr_mtg25kw0_10acbc03 exit 101, no field items or invalidated on Vec<MemoryInput>. GREEN tr_mtg27bfx_9ad3a55e exit 0, 63 of 63 lib tests pass. VERIFY tr_mtg27m0f_261d211e exit 0, both DB-backed reconciliation tests pass. VERIFY tr_mtg28qug_498c5b39 exit 0, reconcile_state_it plus promotion_state_it, recall_filters_it and ingest_batch_it all green, clippy --all-targets -D warnings clean, fmt clean.\n\nThe confirmed defect is fixed. parse_wisdom now returns WisdomParse carrying items plus the source ids of retracted entries, Store::forget_ingested deletes them within the namespace restricted to adv_wisdom and adv_reflection, and reconcile_root applies them.\n\nPROVED THE TESTS ARE NOT VACUOUS. I neutered the reconcile call by passing an empty slice instead of the collected ids and re-ran: both tests failed, reconcile_removes_rows_retracted_after_ingest and retraction_is_scoped_to_the_reconciled_namespace, the latter at the is_empty assertion. Restored and re-ran green. The regression is therefore load-bearing rather than incidentally satisfied.\n\nDEPARTED FROM THE TASK NOTE ON ORDERING, deliberately. The note said apply retractions after upsert_batch. I placed them before the dedup lookup instead. Retraction is independent of dedup, since an invalidated entry is skipped at parse and never appears in items, so the two touch disjoint rows and correctness does not depend on order. But an embed or upsert failure inside the batch loop hits continue, and a shutdown hits an early return, either of which would skip a trailing removal step. Knowledge ADV has explicitly withdrawn should not survive a failed embed, so the deletion runs first where no downstream early return can bypass it.\n\nforget_ingested is restricted to ingested sources, the mirror image of forget_manual's source = 'manual'. That asymmetry is intentional: reconcile gains the power to retract ingested knowledge without gaining the power to delete a human's manual memories. Empty input short-circuits without a database call, matching existing_source_ids.\n\nDeletion rather than a tombstone is self-healing, and the test proves it: after removing pw-drop, rewriting wisdom.jsonl without invalidated_by restores the row on the next reconcile, because an absent row is absent from existing_source_ids and re-ingests fresh.\n\nA removal failure logs and continues rather than aborting the root, so a transient database error retries next pass instead of blocking ingestion.\n\nROUTED AN OUT-OF-SCOPE FINDING rather than folding it in. Writing the namespace-scoping test surfaced a real pre-existing defect: id is a global PRIMARY KEY at migrations/0001_init.sql:9, ingested rows use the raw ADV id at src/ingest.rs, and upsert_batch resolves conflicts with ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace at src/store.rs:211-221. Two projects both holding pw-1, which is near-certain given ADV ids are per-project sequential, means the second reconcile silently reassigns the first project's row to the other namespace. memories_source_uniq on (namespace, source, source_id) never fires because the primary-key conflict wins first. Created change fixCrossNamespaceMemoryId as a discovery-origin fast-follow of this change. I then rewrote my scoping test to use distinct ids per namespace so it proves delete scoping rather than accidentally exercising the upsert collision.",
+      "summary": "RED tr_mtg25kw0_10acbc03 exit 101, no field items or invalidated on Vec<MemoryInput>. GREEN tr_mtg27bfx_9ad3a55e exit 0, 63 of 63 lib tests pass. VERIFY tr_mtg27m0f_261d211e exit 0, both DB-backed reconciliation tests pass. VERIFY tr_mtg28qug_498c5b39 exit 0, reconcile_state_it plus promotion_state_it, recall_filters_it and ingest_batch_it all green, clippy --all-targets -D warnings clean, fmt clean.\n\nThe confirmed defect is fixed. parse_wisdom now returns WisdomParse carrying items plus the source ids of retracted entries, Store::forget_ingested deletes them within the namespace restricted to adv_wisdom and adv_reflection, and reconcile_root applies them.\n\nPROVED THE TESTS ARE NOT VACUOUS. I neutered the reconcile call by passing an empty slice instead of the collected ids and re-ran: both tests failed, reconcile_removes_rows_retracted_after_ingest and retraction_is_scoped_to_the_reconciled_namespace, the latter at the is_empty assertion. Restored and re-ran green. The regression is therefore load-bearing rather than incidentally satisfied.\n\nDEPARTED FROM THE TASK NOTE ON ORDERING, deliberately. The note said apply retractions after upsert_batch. I placed them before the dedup lookup instead. Retraction is independent of dedup, since an invalidated entry is skipped at parse and never appears in items, so the two touch disjoint rows and correctness does not depend on order. But an embed or upsert failure inside the batch loop hits continue, and a shutdown hits an early return, either of which would skip a trailing removal step. Knowledge ADV has explicitly withdrawn should not survive a failed embed, so the deletion runs first where no downstream early return can bypass it.\n\nforget_ingested is restricted to ingested sources, the mirror image of forget_manual's source = 'manual'. That asymmetry is intentional: reconcile gains the power to retract ingested knowledge without gaining the power to delete a human's manual memories. Empty input short-circuits without a database call, matching existing_source_ids.\n\nDeletion rather than a tombstone is self-healing, and the test proves it: after removing pw-drop, rewriting wisdom.jsonl without invalidated_by restores the row on the next reconcile, because an absent row is absent from existing_source_ids and re-ingests fresh.\n\nA removal failure logs and continues rather than aborting the root, so a transient database error retries next pass instead of blocking ingestion.\n\nROUTED AN OUT-OF-SCOPE FINDING rather than folding it in. Writing the namespace-scoping test surfaced a real pre-existing defect: id is a global PRIMARY KEY at migrations/0001_init.sql:9, ingested rows use the raw ADV id at src/ingest.rs, and upsert_batch resolves conflicts with ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace at src/store.rs:211-221. Two projects both holding pw-1, which is near-certain given ADV ids are per-project sequential, means the second reconcile silently reassigns the first project's row to the other namespace. memories_source_uniq on (namespace, source, source_id) never fires because the primary-key conflict wins first. Created change fixCrossNamespaceMemoryId as a discovery-origin fast-follow of this change. I then rewrote my scoping test to use distinct ids per namespace so it proves delete scoping rather than accidentally exercising the upsert collision.",
+      "filesTouched": [
+        "src/ingest.rs",
+        "src/lib.rs",
+        "src/store.rs",
+        "tests/reconcile_state_it.rs"
+      ],
+      "checkpointSha": "abbb3a8934aa3fcf6b1f2ea63b4dd874800e451d",
+      "completedAt": "2026-08-30T17:05:47.675Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC6"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-568afae7fe07",
+      "title": "Map promoted_at to PromotionCandidate on stored rows, idempotently",
+      "type": "code",
+      "status": "done",
+      "priority": 4,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-76bb0834b5e5"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-cb1e6043527e"
+        }
+      ],
+      "created_at": "2026-08-30T16:44:54.978Z",
+      "started_at": "2026-08-30T17:06:20.030Z",
+      "completed_at": "2026-08-30T17:11:51.226Z",
+      "verification": "RED tr_mtg2bfn6_662f1102 exit 101, no field promoted on WisdomParse. GREEN tr_mtg2ecm0_4d4de10a exit 0, all 5 reconcile_state_it tests pass. VERIFY tr_mtg2g17f_e774c935 exit 0, full suite green: 63 lib tests, and every integration suite including ingest_batch_it 3, promotion_state_it 4, recall_filters_it 1, recall_it 2, reconcile_state_it 5, plus clippy --all-targets -D warnings and fmt clean.\n\nThis closes the validator's decisive catch. A promoted_at set after first ingest now reaches the stored row through Store::mark_candidates, applied by reconcile outside the dedup path.\n\nSIMPLIFIED AGAINST THE TASK NOTE, deliberately. The note described two paths: an inline state write during parse for entries arriving already-promoted, plus mark_candidates for entries promoted later. I implemented one. Because mark_candidates runs after upsert_batch, it covers both cases: a first-ingest row exists by then and has no promotion_state, so the same statement flags it. Two writers of promotion_state would have been redundant and could disagree. Parse now only collects ids and strips the raw timestamp.\n\nParse still strips promoted_at, and that is not cosmetic. Dedup freezes metadata at first write, so keeping the raw field would leave agents a second promotion field populated only on entries that happened to arrive already-promoted and absent on everything promoted later. One field, one meaning. A dedicated test asserts promoted_at is gone while unrelated provenance such as source_change survives.\n\nPROVED THE IDEMPOTENCY GUARD IS LOAD-BEARING. I removed AND NOT (metadata ? $3) from MARK_CANDIDATES_SQL and re-ran: reconcile_never_clobbers_a_human_promotion failed with left Some(PromotionCandidate), right Some(Promoted { target: docs/specs/0011-promotion-state.md#sha256:abc }). Restored and green. Without the guard every later reconcile would silently un-graduate a human's promotion and resurrect the memory in recall beside the Concord record that owns it, since promoted_at stays in the source file forever and every pass re-collects the same ids. AC7 is therefore genuinely tested, not incidentally satisfied.\n\nIngested promotions map to PromotionCandidate and never to Promoted. ADV records graduation as a timestamp with no manifest path and no sha256, so there is no Concord target to name. Promoted with an empty target would hide the memory from recall while pointing at nothing, losing it on both sides at once. A test asserts a candidate stays visible in default recall.\n\nTHE ROUTED DEFECT REPRODUCED AGAINST MY OWN TESTS. Two new tests each seeded id pw-1 under distinct uniquely-named namespaces and collided, because id is a global primary key. The second upsert took the ON CONFLICT (id) DO UPDATE branch and moved the first test's row into the other namespace, so a state assertion read None. It presented as a promotion-state bug and was not one, which is exactly how this will present in production. I gave each test a distinct id, which is a fixture workaround rather than a fix, and recorded the reproduction as observed evidence in fixCrossNamespaceMemoryId along with a scope section and the note that the workaround should be removed once real isolation exists.\n\nBoth new store methods short-circuit on empty input without a database call, and both reconcile steps log and continue on error so a transient database failure retries next pass rather than aborting the root. Retries are automatic because ids are re-collected from the source file on every pass, never from the store.",
+      "summary": "RED tr_mtg2bfn6_662f1102 exit 101, no field promoted on WisdomParse. GREEN tr_mtg2ecm0_4d4de10a exit 0, all 5 reconcile_state_it tests pass. VERIFY tr_mtg2g17f_e774c935 exit 0, full suite green: 63 lib tests, and every integration suite including ingest_batch_it 3, promotion_state_it 4, recall_filters_it 1, recall_it 2, reconcile_state_it 5, plus clippy --all-targets -D warnings and fmt clean.\n\nThis closes the validator's decisive catch. A promoted_at set after first ingest now reaches the stored row through Store::mark_candidates, applied by reconcile outside the dedup path.\n\nSIMPLIFIED AGAINST THE TASK NOTE, deliberately. The note described two paths: an inline state write during parse for entries arriving already-promoted, plus mark_candidates for entries promoted later. I implemented one. Because mark_candidates runs after upsert_batch, it covers both cases: a first-ingest row exists by then and has no promotion_state, so the same statement flags it. Two writers of promotion_state would have been redundant and could disagree. Parse now only collects ids and strips the raw timestamp.\n\nParse still strips promoted_at, and that is not cosmetic. Dedup freezes metadata at first write, so keeping the raw field would leave agents a second promotion field populated only on entries that happened to arrive already-promoted and absent on everything promoted later. One field, one meaning. A dedicated test asserts promoted_at is gone while unrelated provenance such as source_change survives.\n\nPROVED THE IDEMPOTENCY GUARD IS LOAD-BEARING. I removed AND NOT (metadata ? $3) from MARK_CANDIDATES_SQL and re-ran: reconcile_never_clobbers_a_human_promotion failed with left Some(PromotionCandidate), right Some(Promoted { target: docs/specs/0011-promotion-state.md#sha256:abc }). Restored and green. Without the guard every later reconcile would silently un-graduate a human's promotion and resurrect the memory in recall beside the Concord record that owns it, since promoted_at stays in the source file forever and every pass re-collects the same ids. AC7 is therefore genuinely tested, not incidentally satisfied.\n\nIngested promotions map to PromotionCandidate and never to Promoted. ADV records graduation as a timestamp with no manifest path and no sha256, so there is no Concord target to name. Promoted with an empty target would hide the memory from recall while pointing at nothing, losing it on both sides at once. A test asserts a candidate stays visible in default recall.\n\nTHE ROUTED DEFECT REPRODUCED AGAINST MY OWN TESTS. Two new tests each seeded id pw-1 under distinct uniquely-named namespaces and collided, because id is a global primary key. The second upsert took the ON CONFLICT (id) DO UPDATE branch and moved the first test's row into the other namespace, so a state assertion read None. It presented as a promotion-state bug and was not one, which is exactly how this will present in production. I gave each test a distinct id, which is a fixture workaround rather than a fix, and recorded the reproduction as observed evidence in fixCrossNamespaceMemoryId along with a scope section and the note that the workaround should be removed once real isolation exists.\n\nBoth new store methods short-circuit on empty input without a database call, and both reconcile steps log and continue on error so a transient database failure retries next pass rather than aborting the root. Retries are automatic because ids are re-collected from the source file on every pass, never from the store.",
+      "filesTouched": [
+        "src/ingest.rs",
+        "src/lib.rs",
+        "src/store.rs",
+        "tests/reconcile_state_it.rs"
+      ],
+      "checkpointSha": "3074ad290a698d8b0068b1383a024342ecc47c0b",
+      "completedAt": "2026-08-30T17:11:51.226Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "implements": [
+          "AC6",
+          "AC7"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "inline"
+      }
+    },
+    {
+      "id": "tk-7e124e75c1ac",
+      "title": "Write spec 0011-promotion-state.md to both locations",
+      "type": "docs",
+      "status": "done",
+      "priority": 5,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-568afae7fe07"
+        },
+        {
+          "type": "blocked_by",
+          "target": "tk-3b0d19ec2e80"
+        }
+      ],
+      "created_at": "2026-08-30T16:45:07.176Z",
+      "started_at": "2026-08-30T17:11:57.011Z",
+      "completed_at": "2026-08-30T17:12:47.113Z",
+      "verification": "Documentation task, tdd_intent not_applicable, so no red/green cycle. Evidence policy is artifact_reference.\n\nVerified byte-identical across both required locations: diff reports no output and cmp reports no differences between docs/specs/0011-promotion-state.md and .adv/specs/0011-promotion-state.md. Numbering follows 0010 as the next in sequence and the heading follows the rq-episode-* convention, giving rq-episode-promotion-state01.\n\nStructure mirrors 0010 so the two read as siblings: Statement, contract sections, Query and Index Safety, Boundaries, Verification.\n\nThe GIN caveat is recorded explicitly rather than left to inference. The default exclusion is a negative predicate and does not use memories_metadata_gin, exactly as the negative open-follow-up predicate does not, and the spec cites 0010 which already records that the index claim covers positive containment only. A reader who skips this would reasonably assume migration 0002 covers the new filter. It does not.\n\nAlso recorded, each because a reader would otherwise have to reconstruct it from code: that Episodic is an absent key and never a stored value, so nobody adds a literal later and forces a backfill; that Superseded was considered and dropped for want of any producer; why target is opaque and what the accepted failure mode is, with the two-step candidate flow and demotion as its bounds; why ingested promotions become candidates rather than promoted, which is that ADV has no manifest path or sha256 to name; why the absent-key guard delivers idempotency, which is that promoted_at stays in the source file permanently; and that transitions are bidirectional and not source-restricted.\n\nStated plainly that no migration is involved, since a reader will look for one on seeing a new metadata key.\n\nDocumented the write-once-per-source_id property as the reason the ingest contract exists at all, so a future reader understands why reconcile addresses stored rows directly instead of routing through the ingestion path.",
+      "summary": "Documentation task, tdd_intent not_applicable, so no red/green cycle. Evidence policy is artifact_reference.\n\nVerified byte-identical across both required locations: diff reports no output and cmp reports no differences between docs/specs/0011-promotion-state.md and .adv/specs/0011-promotion-state.md. Numbering follows 0010 as the next in sequence and the heading follows the rq-episode-* convention, giving rq-episode-promotion-state01.\n\nStructure mirrors 0010 so the two read as siblings: Statement, contract sections, Query and Index Safety, Boundaries, Verification.\n\nThe GIN caveat is recorded explicitly rather than left to inference. The default exclusion is a negative predicate and does not use memories_metadata_gin, exactly as the negative open-follow-up predicate does not, and the spec cites 0010 which already records that the index claim covers positive containment only. A reader who skips this would reasonably assume migration 0002 covers the new filter. It does not.\n\nAlso recorded, each because a reader would otherwise have to reconstruct it from code: that Episodic is an absent key and never a stored value, so nobody adds a literal later and forces a backfill; that Superseded was considered and dropped for want of any producer; why target is opaque and what the accepted failure mode is, with the two-step candidate flow and demotion as its bounds; why ingested promotions become candidates rather than promoted, which is that ADV has no manifest path or sha256 to name; why the absent-key guard delivers idempotency, which is that promoted_at stays in the source file permanently; and that transitions are bidirectional and not source-restricted.\n\nStated plainly that no migration is involved, since a reader will look for one on seeing a new metadata key.\n\nDocumented the write-once-per-source_id property as the reason the ingest contract exists at all, so a future reader understands why reconcile addresses stored rows directly instead of routing through the ingestion path.",
+      "filesTouched": [
+        ".adv/specs/0011-promotion-state.md",
+        "docs/specs/0011-promotion-state.md"
+      ],
+      "checkpointSha": "8d83815bbd0dae6a65168b1603c06290dc20d103",
+      "completedAt": "2026-08-30T17:12:47.113Z",
+      "assignedTo": "agent",
+      "evidence_plan": {
+        "policy": "artifact_reference",
+        "proof_target": "Artifact reference or operational output",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "artifact_reference",
+      "metadata": {
+        "tdd_intent": "not_applicable"
+      }
+    },
+    {
+      "id": "tk-e7b71bab9d58",
+      "title": "Full verification pass",
+      "type": "verification",
+      "status": "done",
+      "priority": 6,
+      "deps": [
+        {
+          "type": "blocked_by",
+          "target": "tk-7e124e75c1ac"
+        }
+      ],
+      "created_at": "2026-08-30T16:45:16.922Z",
+      "started_at": "2026-08-30T17:12:55.319Z",
+      "completed_at": "2026-08-30T17:44:51.881Z",
+      "verification": "Harden-stage remediation. Full verify tr_mtg3mzb9_53f0e134 exit 0: build clean, 63 of 63 lib tests, 19 DB-backed tests up from 18, clippy --all-targets -D warnings clean, fmt clean, specs byte-identical, git diff --check clean.\n\nLOST-UPDATE DEFECT IN THE UPSERT CONFLICT PATH, found by the harden reviewer.\n\nupsert_batch resolved conflicts with metadata = EXCLUDED.metadata, which overwrites the whole JSONB column including a stored promotion_state. The conflict path now preserves an existing state: CASE WHEN memories.metadata ? key THEN jsonb_set(EXCLUDED.metadata, ARRAY[key], memories.metadata -> key, true) ELSE EXCLUDED.metadata END. Every other metadata field still refreshes from source.\n\nThis directly contradicts the design-stage researcher, which concluded the overwrite could not happen because filter_eligible drops already-stored items before upsert_batch. That holds single-threaded only. filter_eligible is a check-then-act across two statements with no lock, so two overlapping reconciles can both classify a row as absent, and a promotion can land between their writes. I accepted that researcher conclusion at design time and it was wrong; the harden pass caught what the acceptance pass did not, because I scoped the two reviews to different dimensions.\n\nThe more reachable trigger is not concurrent reconciles. Store::upsert delegates to upsert_batch (store.rs:172-176), so the manual MCP upsert tool shared the bug: updating a memory's content would silently wipe its promotion state, restoring a graduated memory to recall with no signal. Verified by reading the delegation rather than assuming it.\n\nProved load-bearing rather than trusting the reviewer: reverted the preservation branch to metadata = EXCLUDED.metadata and confirmed concurrent_ingest_conflict_preserves_promotion_state fails, then restored and confirmed it passes. Third such check in this change.\n\nScalar-metadata edge case assessed against the schema, not assumed: migrations/0001_init.sql:33 declares metadata JSONB NOT NULL, so a scalar row reaching jsonb_set would fail the write rather than silently null the column. Rejected write is a safe failure mode. Both reviewers judged this non-blocking; confirmed with the actual constraint.\n\nAlso corrected an overstatement I had written. The spec and the promote tool description claimed a concurrent loser always matches nothing. True only when the kind changes. Two transitions from the same kind are last-writer-wins, because from carries a kind but no target or version. The docs now say that plainly instead of implying stronger safety than the SQL provides.\n\nSpec 0011 updated in both copies with the conflict-path rule and the corrected concurrency claim, re-verified byte-identical with cmp.",
+      "summary": "Harden-stage remediation. Full verify tr_mtg3mzb9_53f0e134 exit 0: build clean, 63 of 63 lib tests, 19 DB-backed tests up from 18, clippy --all-targets -D warnings clean, fmt clean, specs byte-identical, git diff --check clean.\n\nLOST-UPDATE DEFECT IN THE UPSERT CONFLICT PATH, found by the harden reviewer.\n\nupsert_batch resolved conflicts with metadata = EXCLUDED.metadata, which overwrites the whole JSONB column including a stored promotion_state. The conflict path now preserves an existing state: CASE WHEN memories.metadata ? key THEN jsonb_set(EXCLUDED.metadata, ARRAY[key], memories.metadata -> key, true) ELSE EXCLUDED.metadata END. Every other metadata field still refreshes from source.\n\nThis directly contradicts the design-stage researcher, which concluded the overwrite could not happen because filter_eligible drops already-stored items before upsert_batch. That holds single-threaded only. filter_eligible is a check-then-act across two statements with no lock, so two overlapping reconciles can both classify a row as absent, and a promotion can land between their writes. I accepted that researcher conclusion at design time and it was wrong; the harden pass caught what the acceptance pass did not, because I scoped the two reviews to different dimensions.\n\nThe more reachable trigger is not concurrent reconciles. Store::upsert delegates to upsert_batch (store.rs:172-176), so the manual MCP upsert tool shared the bug: updating a memory's content would silently wipe its promotion state, restoring a graduated memory to recall with no signal. Verified by reading the delegation rather than assuming it.\n\nProved load-bearing rather than trusting the reviewer: reverted the preservation branch to metadata = EXCLUDED.metadata and confirmed concurrent_ingest_conflict_preserves_promotion_state fails, then restored and confirmed it passes. Third such check in this change.\n\nScalar-metadata edge case assessed against the schema, not assumed: migrations/0001_init.sql:33 declares metadata JSONB NOT NULL, so a scalar row reaching jsonb_set would fail the write rather than silently null the column. Rejected write is a safe failure mode. Both reviewers judged this non-blocking; confirmed with the actual constraint.\n\nAlso corrected an overstatement I had written. The spec and the promote tool description claimed a concurrent loser always matches nothing. True only when the kind changes. Two transitions from the same kind are last-writer-wins, because from carries a kind but no target or version. The docs now say that plainly instead of implying stronger safety than the SQL provides.\n\nSpec 0011 updated in both copies with the conflict-path rule and the corrected concurrency claim, re-verified byte-identical with cmp.",
+      "filesTouched": [
+        ".adv/specs/0011-promotion-state.md",
+        "docs/specs/0011-promotion-state.md",
+        "src/server.rs",
+        "src/store.rs",
+        "tests/promotion_state_it.rs"
+      ],
+      "checkpointSha": "947e520eb7d6292ae8651404112858d883faada9",
+      "completedAt": "2026-08-30T17:44:51.881Z",
+      "assignedTo": "agent",
+      "contract_refs": {
+        "verifies": [
+          "AC1",
+          "AC2",
+          "AC3",
+          "AC4",
+          "AC5",
+          "AC6",
+          "AC7",
+          "AC8",
+          "AC9"
+        ]
+      },
+      "evidence_plan": {
+        "policy": "test",
+        "proof_target": "Automated red/green tests evidenced by adv_run_test",
+        "provenance": "new",
+        "stage": "stage-v2"
+      },
+      "evidence_policy": "test",
+      "metadata": {
+        "tdd_intent": "separate_verification"
+      }
+    }
+  ],
+  "subagent_reports": [
+    {
+      "schema_version": "1.0",
+      "change_id": "addPromotionStateMemories",
+      "attempt": 1,
+      "workdir_used": "/home/jon/dev/episode",
+      "scope": {
+        "kind": "change",
+        "scope_key": "researcher:design-gate-independent-validation"
+      },
+      "agent": "adv-researcher",
+      "topic": "Independent design validation: promotion state + retracted-knowledge defect",
+      "sources": [
+        {
+          "label": "src/ingest.rs",
+          "locator": "src/ingest.rs:67-70",
+          "summary": "parse_wisdom skips invalidated_by entries at parse time only; no deletion of already-stored rows; metadata = raw object minus content (lines 87-90)."
+        },
+        {
+          "label": "src/lib.rs",
+          "locator": "src/lib.rs:159-255,105-113",
+          "summary": "reconcile_root is upsert-only (existing_source_ids + upsert_batch); filter_eligible drops items whose source_id already exists, so upsert_batch never touches existing rows."
+        },
+        {
+          "label": "src/store.rs",
+          "locator": "src/store.rs:274-283,66-72,146-195",
+          "summary": "Sole DELETE is forget_manual restricted to source='manual'. Negative open-followup exclusion predicate precedent at 66-72. upsert_batch full-overwrite ON CONFLICT at 180-190."
+        },
+        {
+          "label": "migrations",
+          "locator": "migrations/0001_init.sql:6-55, migrations/0002_metadata_gin.sql:1-2",
+          "summary": "Single table, no FK/cascade/TTL; unique partial index on (namespace,source,source_id); GIN jsonb_path_ops on metadata."
+        },
+        {
+          "label": "src/types.rs",
+          "locator": "src/types.rs:57-67,109,131-140",
+          "summary": "ActionState tagged-enum precedent with empty-payload variants (LinkedWork {}, OpenFollowup {}) under deny_unknown_fields + schemars; RecallFilters is #[serde(default)], not persisted."
+        },
+        {
+          "label": "src/server.rs",
+          "locator": "src/server.rs:54-62,447-506",
+          "summary": "ForgetParams shape (id+namespace, manual-only per tool description); schema test proves empty-payload variants serialize closed under schemars."
+        },
+        {
+          "label": "spec 0010",
+          "locator": "docs/specs/0010-recall-metadata-filters.md:22",
+          "summary": "Index claim covers positive containment only; negative open-followup predicate already accepted unindexed — precedent the design carries forward."
+        },
+        {
+          "label": "problem statement",
+          "locator": "adv_change_show addPromotionStateMemories (problemStatement)",
+          "summary": "Records zero rows in memories table and service disabled 2026-08-19 — defect is latent, not currently user-visible."
+        }
+      ],
+      "architecture_assessment": "Defect CONFIRMED end to end: skip at ingest.rs:67-70 is parse-time only; reconcile_root (lib.rs:159-255) has no prune; sole DELETE is forget_manual (store.rs:274-283) restricted to source='manual'; no cascade/TTL/reset anywhere (grep over src; migrations 0001/0002). Blast radius is LATENT: store holds zero rows and service is down (problem statement), so the design's present-tense claim 'Episode currently serves knowledge that ADV has explicitly retracted' overstates — it becomes true on first reconcile after service restoration. The proposed delete-on-invalidated fix is correct and self-healing (un-invalidation re-ingests fresh). Idempotency: the feared overwrite does not exist — filter_eligible (lib.rs:105-113) makes upsert_batch unreachable for existing rows, so tool-set promotion_state survives re-ingest. The REAL hole is inverse: promoted_at set in ADV after first ingest never maps (dedup skips the row), making the ingest-side AC6 mechanism inert for the common case; the planned parse_wisdom unit test cannot catch this. Concurrency: single-statement UPDATE with SQL from-state predicate is sufficient (row lock + READ COMMITTED predicate recheck); metadata write must stay in SQL. JSONB storage matches the ActionState precedent; RecallFilters additive field is backward-compatible (#[serde(default)], not persisted); PromotionCandidate {} empty variant has exact house precedent (LinkedWork/OpenFollowup, proven by server.rs:447-506 schema test). Design-internal contradiction: 'promote mirrors forget_manual' (manual-only) vs deferred question assuming humans promote ingested rows. AC set (AC1 four variants, AC3 excludes Superseded) conflicts with the three-variant design. No reverse transition exists for a Promoted row whose target dies — permanent silent exclusion, a failure mode the design's own D1 analysis predicts.",
+      "validation": {
+        "status": "caution",
+        "blockers": [],
+        "notes": "No architecture blockers. Four required corrections before planning: (1) ingest promoted_at mapping never reaches already-stored rows — add collect-promoted-ids + targeted UPDATE mirroring forget_ingested, or explicitly narrow AC6; add integration test 'ingest valid, set promoted_at in ADV, reconcile, assert default recall exclusion'. (2) Amend AC1/AC3 (and AC2 wording) to the three-variant contract the design actually ships. (3) Specify Store::promote's source predicate — it must allow ingested rows or the deferred question's human-supplies-target flow is impossible for the exact rows carrying promoted_at. (4) Resolve the missing reverse transition: allow demote via the same tool, or record the accepted permanent-exclusion loss explicitly."
+      },
+      "architecture_judgement": {
+        "applicability": "applicable",
+        "confidence": "high",
+        "risk": "medium",
+        "tradeoffs": [
+          "Opaque target trades verifiability for contract fidelity: episode cannot verify resolvability even in principle (no runtime write surface on Concord), so non-blank validation is the only honest check — but a typo'd target silently removes the memory from BOTH episode recall and Concord receivability.",
+          "Delete-over-mark on invalidated rows loses the invalidated_by link in episode but keeps ADV wisdom.jsonl as the supersession system of record, and is self-healing on un-invalidation; a marker variant would add a state only ingest can produce and a second exclusion predicate.",
+          "JSONB over typed column avoids a migration and matches the action precedent, at the cost of an unindexed negative predicate on every default recall — acceptable because HNSW filtered-scan cost scales with the excluded fraction, which human promotion activity bounds.",
+          "Folding the defect fix into this change couples a latent-bug repair to a feature, justified by the same seam and by the variant removal being net-subtractive."
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Structured target {path, sha256}",
+            "disposition": "rejected",
+            "rationale": "Contract names the two components but no serialized format; structured fields would be episode inventing wire detail Concord has not committed to — and runtime resolution is impossible anyway (no runtime surface)."
+          },
+          {
+            "option": "Promoted { target: Option<String> } for ingested promotions",
+            "disposition": "rejected",
+            "rationale": "Asserts graduation and triggers default recall exclusion while pointing at nothing — the memory vanishes from both sides."
+          },
+          {
+            "option": "Leave promoted_at dormant in metadata, no state mapping",
+            "disposition": "rejected",
+            "rationale": "Defensible but wastes the signal; PromotionCandidate extracts value without over-asserting receivability."
+          },
+          {
+            "option": "New ingest-only variant (e.g. PromotedUnresolved)",
+            "disposition": "rejected",
+            "rationale": "Adds a state no tool can produce — violates the design's own dead-variant argument for dropping Superseded."
+          },
+          {
+            "option": "Typed promotion column instead of JSONB",
+            "disposition": "rejected",
+            "rationale": "Migration cost unjustified at bounded cardinality; action key precedent already established the JSONB pattern with identical recall semantics."
+          }
+        ],
+        "recommendation": "APPROVE WITH FINDINGS. Proceed to planning after applying the four corrections: fix/narrow the ingest promoted_at mapping for stored rows (with the store-level integration test), amend AC1/AC3 to three variants, pin Store::promote's source scope (must include ingested rows), and settle the reverse-transition question (cheap: let promote set any state with per-transition from-state preconditions; or record the loss). Also correct the present-tense blast-radius claim."
+      },
+      "recommendation": "Proceed with the design after the four corrections in validation.notes. The defect is real and the fix direction is right; the idempotency hazard runs in the opposite direction from the one suspected (safe where feared, hollow where not examined).",
+      "follow_ups": [
+        "Record the no-reverse-transition decision (demote tool vs accepted permanent exclusion) explicitly in the spec.",
+        "Correct the design's present-tense retracted-knowledge claim to future tense (zero rows, service down).",
+        "Spec 0011 should enumerate the valid transition table, including whether Episodic→Promoted direct is allowed."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "addPromotionStateMemories",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/addPromotionStateMemories",
+      "scope": {
+        "kind": "change",
+        "scope_key": "review:acceptance"
+      },
+      "agent": "adv-reviewer",
+      "phase": "review",
+      "verdict": "READY",
+      "blocking_findings": [],
+      "nonblocking_findings": [],
+      "changes_made": [
+        {
+          "file": "src/store.rs",
+          "summary": "Fixed the promotion compare-and-set predicate so Episodic matches only an absent promotion_state key. JSON null and malformed objects no longer pass the precondition.",
+          "verification": "The new Postgres regression test failed before the fix and passed after it. Full unit, integration, clippy, format, and diff checks passed."
+        },
+        {
+          "file": "tests/promotion_state_it.rs",
+          "summary": "Added a Postgres regression test for present JSON null and empty-object promotion states with an Episodic from-state.",
+          "verification": "cargo test --tests -- --ignored passed with 5 promotion tests, including the new regression."
+        },
+        {
+          "file": "src/types.rs",
+          "summary": "Updated PromotionStateKind documentation to describe the exact absent-key SQL branch.",
+          "verification": "cargo test --lib and cargo clippy --all-targets -- -D warnings passed."
+        },
+        {
+          "file": "docs/specs/0011-promotion-state.md",
+          "summary": "Corrected the transition contract to distinguish stored-state tag comparison from exact episodic absent-key matching.",
+          "verification": "The specification copies passed byte comparison."
+        },
+        {
+          "file": ".adv/specs/0011-promotion-state.md",
+          "summary": "Kept the ADV specification copy byte-identical with the durable documentation copy.",
+          "verification": "cmp -s docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md passed."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "JSON path extraction returns SQL NULL for an absent key, JSON null, and malformed objects. A NULL-safe tag comparison cannot enforce an absent-key state invariant. Pair the NULL parameter with an explicit key-existence predicate."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "cargo test --test promotion_state_it promote_rejects_present_state_when_from_is_episodic -- --ignored (RED before fix)",
+          "cargo test --test promotion_state_it promote_rejects_present_state_when_from_is_episodic -- --ignored (GREEN after fix)",
+          "cargo test --lib",
+          "cargo test --tests -- --ignored",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo fmt --check",
+          "cmp -s docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md",
+          "git diff --check"
+        ],
+        "results": "pass",
+        "evidence": "The regression produced updated=1 before the fix and updated=0 after it. Final verification passed: 63 unit tests, all ignored Postgres suites including 5 promotion and 5 reconcile tests, clippy with warnings denied, format, byte identity, and diff whitespace."
+      },
+      "scope_drift": null,
+      "risks": [
+        "The database column permits scalar JSON metadata, and jsonb_set rejects scalar targets. All production writers and the inspected live rows use JSON objects, so this is not an acceptance blocker. A future metadata-shape invariant should use a separate change if Store becomes an external API."
+      ],
+      "required_main_agent_actions": [
+        "Preserve and checkpoint the five reviewed file edits before acceptance.",
+        "Do not revisit reflection reconciliation, reconcile ordering, promoted_at stripping, or log-and-retry behavior. The inspected contracts and tests support their current behavior."
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "change_id": "addPromotionStateMemories",
+      "attempt": 1,
+      "workdir_used": "/home/jon/.local/share/opencode/worktree/098dab10ebf50e5c885fb94eef48afda85032788/change/addPromotionStateMemories",
+      "scope": {
+        "kind": "change",
+        "scope_key": "harden:release"
+      },
+      "agent": "adv-reviewer",
+      "phase": "harden",
+      "verdict": "READY",
+      "blocking_findings": [
+        {
+          "id": "operational-robustness-1",
+          "label": "issue",
+          "file": "src/store.rs",
+          "line": 235,
+          "what": "The ingestion ON CONFLICT path replaced metadata wholesale and could erase a promotion completed between two competing reconcile writes.",
+          "why": "A promoted memory could return to episodic recall after a losing reconcile upsert, so Episode and Concord could serve conflicting copies.",
+          "fix": "applied"
+        }
+      ],
+      "nonblocking_findings": [
+        {
+          "id": "operational-robustness-2",
+          "label": "suggestion",
+          "file": "src/lib.rs",
+          "line": 191,
+          "what": "Overlapping service instances can let a stale reconcile reinsert a row after another reconcile removes its retracted version.",
+          "why": "The supported one-instance loop serializes roots, so restoration is safe when deployment preserves that model. No database lock enforces the model."
+        },
+        {
+          "id": "operational-robustness-3",
+          "label": "suggestion",
+          "file": "src/store.rs",
+          "line": 357,
+          "what": "forget_ingested and mark_candidates send every source id in one ANY array.",
+          "why": "Large ADV files can create large request buffers and unstable planner costs. Current parsing already loads the whole file, so this is hardening rather than a promotion-state defect."
+        },
+        {
+          "id": "operational-robustness-4",
+          "label": "suggestion",
+          "file": "src/types.rs",
+          "line": 219,
+          "what": "Promoted targets have no byte-length limit.",
+          "why": "A caller can enlarge one JSONB row without bound. Select a contract limit before adding validation because the current specification accepts every nonblank opaque target."
+        },
+        {
+          "id": "operational-robustness-5",
+          "label": "suggestion",
+          "file": "docs/specs/0011-promotion-state.md",
+          "line": 50,
+          "what": "The promoted exclusion cannot use memories_metadata_gin.",
+          "why": "The specification and 0010 remain accurate. HNSW can still serve ordered recall, but a high promoted fraction can increase filtered ANN work and reduce returned candidates."
+        },
+        {
+          "id": "operational-robustness-6",
+          "label": "praise",
+          "file": "src/lib.rs",
+          "line": 191,
+          "what": "Retraction-first ordering and partition transactions leave every crash point retry-safe.",
+          "why": "Deletes, dedup, upserts, and candidate updates are idempotent. Embed and upsert failures log namespace and batch index, then preserve retry eligibility."
+        }
+      ],
+      "changes_made": [
+        {
+          "file": "src/store.rs",
+          "summary": "Preserved an existing promotion_state in the ingestion conflict path and clarified kind-level compare-and-set semantics.",
+          "verification": "The new Postgres regression failed before the fix and passed after it. All required checks passed."
+        },
+        {
+          "file": "tests/promotion_state_it.rs",
+          "summary": "Added a regression that promotes a row between competing ingestion writes and proves the second upsert preserves the target.",
+          "verification": "cargo test --tests -- --ignored passed, including 6 promotion-state tests."
+        },
+        {
+          "file": "src/server.rs",
+          "summary": "Corrected MCP parameter and tool text to state that same-kind transitions are last-writer-wins.",
+          "verification": "cargo test --lib and cargo clippy --all-targets -- -D warnings passed."
+        },
+        {
+          "file": "docs/specs/0011-promotion-state.md",
+          "summary": "Recorded ingestion conflict preservation and exact kind-level concurrency semantics.",
+          "verification": "Spec copies matched byte-for-byte and git diff --check passed."
+        },
+        {
+          "file": ".adv/specs/0011-promotion-state.md",
+          "summary": "Kept the mirrored promotion-state specification identical.",
+          "verification": "diff -q docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md passed."
+        }
+      ],
+      "wisdom_candidates": [
+        {
+          "type": "gotcha",
+          "content": "An ingestion dedup check does not prevent ON CONFLICT races. Preserve service-owned metadata during the conflict update because a state transition can complete between lookup and write."
+        }
+      ],
+      "verification": {
+        "tests_run": [
+          "EPISODE_TEST_DATABASE_URL='postgres://episode:episode@localhost:5434/episode' cargo test --test promotion_state_it concurrent_ingest_conflict_preserves_promotion_state -- --ignored --exact (RED, then GREEN)",
+          "cargo test --lib",
+          "EPISODE_TEST_DATABASE_URL='postgres://episode:episode@localhost:5434/episode' cargo test --tests -- --ignored",
+          "cargo clippy --all-targets -- -D warnings",
+          "cargo fmt --check",
+          "diff -q docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md",
+          "git diff --check"
+        ],
+        "results": "pass",
+        "evidence": "Regression failed before the SQL repair with left None and right Promoted, then passed. Final checks passed: 63 library tests, 19 ignored Postgres tests, clippy, formatting, mirrored-spec comparison, and diff validation."
+      },
+      "scope_drift": null,
+      "risks": [
+        "Concurrent reconcile safety depends on the documented one-instance deployment model; the database does not serialize overlapping instances.",
+        "Source-id arrays and promotion targets remain unbounded.",
+        "No generated BRIEFING PACKET slice was present in the context packet; the supplied scope and file list were sufficient for this review."
+      ],
+      "required_main_agent_actions": [
+        "Keep restoration single-instance. Before supporting overlapping instances, add per-namespace cross-process reconcile serialization and a stale-retraction regression.",
+        "Choose measured limits before bounding source-id mutation chunks or promotion target bytes.",
+        "Monitor EXPLAIN plans and recall cardinality as promoted-row fraction grows; add a plan regression only when a representative corpus and threshold exist.",
+        "Do not revisit the settled episodic precondition or source promotion_state stripping defects."
+      ]
+    }
+  ],
+  "test_runs": {
+    "tk-1cd68ba98a0b": [
+      {
+        "runId": "tr_mtg1o3n7_ecf5d724",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --lib promotion_state 2>&1 | tail -30",
+        "durationMs": 77215.74743400514,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:49:20.764Z"
+      },
+      {
+        "runId": "tr_mtg1oznw_30434a44",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --lib promotion_state 2>&1 | tail -30",
+        "durationMs": 15520.775479003787,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:50:02.268Z"
+      },
+      {
+        "runId": "tr_mtg1q1ia_350da560",
+        "phase": "verify",
+        "exitCode": 1,
+        "classification": "failed",
+        "command": "cargo test --lib 2>&1 | tail -8 && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -8 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+        "durationMs": 40910.8273819983,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:50:51.308Z"
+      },
+      {
+        "runId": "tr_mtg1qb1k_2a099cc1",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -4 && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -4 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+        "durationMs": 5622.718842998147,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:51:03.662Z"
+      }
+    ],
+    "tk-3b0d19ec2e80": [
+      {
+        "runId": "tr_mtg1sgpx_38951b24",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --no-run 2>&1 | grep -E \"^error|no field|not found|-->\" | head -20",
+        "durationMs": 10103.057730995119,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:52:44.329Z"
+      },
+      {
+        "runId": "tr_mtg1tzae_bea9596e",
+        "phase": "green",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -5",
+        "durationMs": 2287.8898910060525,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:53:55.058Z"
+      },
+      {
+        "runId": "tr_mtg1ugf7_f561bc0c",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -5",
+        "durationMs": 9945.54262600094,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:54:17.255Z"
+      },
+      {
+        "runId": "tr_mtg1usa1_a3068249",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --test promotion_state_it -- --ignored 2>&1 | tail -20",
+        "durationMs": 8666.7134019956,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T16:54:32.630Z"
+      },
+      {
+        "runId": "tr_mtg1v4rd_1504164c",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo clippy --all-targets -- -D warnings 2>&1 | tail -3 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\" && echo \"=== recall_filters_it (pre-existing) ===\" && cargo test --test recall_filters_it -- --ignored 2>&1 | tail -5",
+        "durationMs": 6840.991707995534,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T16:54:48.798Z"
+      }
+    ],
+    "tk-cb1e6043527e": [
+      {
+        "runId": "tr_mtg1xx1w_fdf90ab5",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --no-run 2>&1 | grep -E \"^error|-->\" | head -12",
+        "durationMs": 4043.6976160034537,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:56:58.778Z"
+      },
+      {
+        "runId": "tr_mtg202ec_c07d64f8",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -6",
+        "durationMs": 13390.5352480039,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T16:58:39.020Z"
+      },
+      {
+        "runId": "tr_mtg20gts_aa2efa0b",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --test promotion_state_it -- --ignored 2>&1 | tail -12",
+        "durationMs": 13841.13997400552,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T16:58:57.723Z"
+      },
+      {
+        "runId": "tr_mtg20ofm_6cc263df",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo clippy --all-targets -- -D warnings 2>&1 | tail -3 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+        "durationMs": 4421.6653780043125,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T16:59:07.581Z"
+      }
+    ],
+    "tk-76bb0834b5e5": [
+      {
+        "runId": "tr_mtg25kw0_10acbc03",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --no-run 2>&1 | grep -E \"^error|-->\" | head -12",
+        "durationMs": 1797.2525609955192,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:02:56.264Z"
+      },
+      {
+        "runId": "tr_mtg26sfb_559fa718",
+        "phase": "green",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -4",
+        "durationMs": 2148.8344639986753,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:03:52.688Z"
+      },
+      {
+        "runId": "tr_mtg27bfx_9ad3a55e",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -4",
+        "durationMs": 8572.28976199776,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:04:17.333Z"
+      },
+      {
+        "runId": "tr_mtg27m0f_261d211e",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -12",
+        "durationMs": 9181.730593003333,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:04:31.028Z"
+      },
+      {
+        "runId": "tr_mtg28qug_498c5b39",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -6 && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -3 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\" && echo \"=== other suites ===\" && cargo test --test promotion_state_it --test recall_filters_it --test ingest_batch_it -- --ignored 2>&1 | grep -E \"^test result|running\"",
+        "durationMs": 18935.48691200465,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:05:23.969Z"
+      }
+    ],
+    "tk-568afae7fe07": [
+      {
+        "runId": "tr_mtg2bfn6_662f1102",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --no-run 2>&1 | grep -E \"^error|-->\" | head -10",
+        "durationMs": 1841.2940480038524,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:07:29.405Z"
+      },
+      {
+        "runId": "tr_mtg2d1sb_57ea179c",
+        "phase": "green",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -4 && echo \"=== integration ===\" && cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -12",
+        "durationMs": 16760.59483600408,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:08:44.763Z"
+      },
+      {
+        "runId": "tr_mtg2ddh1_a2d7d6e3",
+        "phase": "green",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -14",
+        "durationMs": 3098.8358479961753,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:08:59.900Z"
+      },
+      {
+        "runId": "tr_mtg2ecm0_4d4de10a",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -14",
+        "durationMs": 2905.7416739985347,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:09:45.446Z"
+      },
+      {
+        "runId": "tr_mtg2g17f_e774c935",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo test --lib 2>&1 | tail -3 && echo \"=== all integration ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result|Running\" && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -2 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+        "durationMs": 50820.444793999195,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:11:03.973Z"
+      }
+    ],
+    "tk-e7b71bab9d58": [
+      {
+        "runId": "tr_mtg2kc6h_065471dd",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -2 && echo \"=== lib ===\" && cargo test --lib 2>&1 | tail -2 && echo \"=== ignored suites ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"Running|^test result\"",
+        "durationMs": 6397.663522996008,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:14:24.823Z"
+      },
+      {
+        "runId": "tr_mtg2km1x_74d52b85",
+        "phase": "verify",
+        "exitCode": 1,
+        "classification": "failed",
+        "command": "cargo clippy --all-targets -- -D warnings 2>&1 | grep -cE \"^warning|^error\" | xargs -I{} echo \"clippy warnings+errors: {}\" && cargo fmt --check && echo \"fmt: clean\" && diff docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"spec diff: byte-identical\" && echo \"=== named AC tests ===\" && cargo test --tests -- --ignored --nocapture 2>&1 | grep -E \"^test (reconcile_|promote_|recall_excludes|stored_metadata|retraction_)\"",
+        "durationMs": 452.3158339932561,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:14:37.612Z"
+      },
+      {
+        "runId": "tr_mtg2kxcy_5281849e",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo clippy --all-targets -- -D warnings 2>&1 | tail -2 && echo \"clippy: exit 0, no warnings\" && cargo fmt --check && echo \"fmt: clean\" && diff docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"spec diff: byte-identical\" && echo \"=== named AC tests ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test [a-z]\"",
+        "durationMs": 6608.847213000059,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:14:52.270Z"
+      },
+      {
+        "runId": "tr_mtg34vov_8639962f",
+        "phase": "red",
+        "exitCode": 101,
+        "classification": "failed",
+        "command": "cargo test --test reconcile_state_it -- --ignored source_supplied 2>&1 | tail -14",
+        "durationMs": 2706.9734160006046,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:30:23.225Z"
+      },
+      {
+        "runId": "tr_mtg36ckn_4614b74e",
+        "phase": "green",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo fmt && cargo test --lib 2>&1 | tail -3 && echo \"=== reconcile ===\" && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\"",
+        "durationMs": 8700.676790997386,
+        "evidence_kind": "unit",
+        "recordedAt": "2026-08-30T17:31:31.768Z"
+      },
+      {
+        "runId": "tr_mtg375mj_35853568",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cp docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && cargo fmt && cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | tail -2 && echo \"=== all ignored ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== clippy/fmt/spec ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && diff docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"specs byte-identical\"",
+        "durationMs": 13328.570220001042,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:32:09.411Z"
+      },
+      {
+        "runId": "tr_mtg3mzb9_53f0e134",
+        "phase": "verify",
+        "exitCode": 0,
+        "classification": "passed",
+        "command": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E \"^test result\" && echo \"=== ignored ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== gates ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp -s docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"specs byte-identical\" && git diff --check && echo \"whitespace clean\"",
+        "durationMs": 21994.365391001105,
+        "evidence_kind": "other",
+        "recordedAt": "2026-08-30T17:44:27.727Z"
+      }
+    ]
+  },
+  "deltas": {},
+  "gates": {
+    "proposal": {
+      "status": "done",
+      "completed_at": "2026-08-30T16:23:48.048Z",
+      "completed_by": "user",
+      "approval_evidence": "User confirmed the problem statement with \"confirm\".\n\nProblem: episode reads ADV's promoted_at and invalidated_by fields and already acts on invalidated_by at ingest.rs:68, but models neither. Three capabilities are missing — marking a promotion candidate, recording that a memory graduated and where it landed, and excluding graduated memories from recall.\n\nTwo silent failure modes justify the work. A lesson graduates into a spec while episode keeps surfacing the episodic copy, so agents receive the same knowledge from two sources that can disagree with no signal about which is law. Or a lesson never graduates, ageing out inside episode while never reaching the durable record.\n\nWhy now: Concord #587 landed the promotion-receiving contract on 2026-08-30 at docs/vertical-integration.md:130-158, satisfying concord#46 Item 2. It specifies target identity, back-link, acknowledgement, and explicitly assigns recall exclusion to episode. Before that contract this half would have emitted into a void. Both declared prerequisites also shipped — RememberParams.context and RecallParams.filters exist in src/server.rs with spec 0010 and tests/recall_filters_it.rs on disk.\n\nOpen design question carried into discovery, deliberately not guessed: Concord resolves targets by manifest path plus sha256 but specifies no serialized string format. Three options recorded. Current lean is to keep target genuinely opaque and let Concord resolve or reject it as knowledge_missing, matching the contract's own statement that target is opaque to episode.\n\nRecorded operating condition, accepted by the user rather than treated as a blocker: episode is not running. The deployed binary at ~/.local/bin/episode was built 2026-07-10 and predates migration 0002_metadata_gin.sql from 2026-08-11. The store at port 5434 records both migrations applied, so sqlx refuses to start. Disabled 2026-08-19; memories table holds zero rows. The user chose to proceed with proposal work rather than fix the outage first. The change stays implementable and testable against a local store.\n\nOut of scope: auto-promotion heuristics, any Concord-side work, and restoring the episode service."
+    },
+    "discovery": {
+      "status": "done",
+      "completed_at": "2026-08-30T16:27:42.956Z",
+      "completed_by": "agent",
+      "approval_evidence": "Codebase recon complete with file:line evidence. Three existing patterns fit this change closely, one blocking gap was found, and three design decisions must be settled at the design gate.\n\nPATTERNS TO FOLLOW, NOT INVENT:\n\n1. include_open_followups is a near-exact precedent for default-exclusion recall filtering. RecallFilters at src/types.rs:131-140 carries a plain bool defaulting to false. src/store.rs:66-72 translates it into NOT (metadata @> '{\"action\":{\"kind\":\"open_followup\"}}') when false, and omits the predicate when true. Exposed through RecallParams at src/server.rs:23-37, validated at src/server.rs:102, covered at tests/recall_filters_it.rs:64-87. Promotion filtering mirrors this with two NOT clauses instead of one.\n\n2. ActionState at src/types.rs:57-67 is the exact enum precedent: internally tagged with tag = \"kind\", rename_all = \"snake_case\", deny_unknown_fields, and #[schemars(crate = \"rmcp::schemars\")] which is required because rmcp re-exports schemars. PromotionState should match this shape exactly. Its validation precedent is MemoryContext::validate at src/types.rs:113-128 with a dedicated error enum.\n\n3. forget_manual at src/store.rs:274-283 is the precedent for a narrow write: one SQL statement with structural predicates rather than application-layer checks.\n\nBLOCKING GAP — no partial-update path exists. The only writes are Store::upsert / upsert_batch at src/store.rs:126-195, which fully overwrite a row on conflict, and forget_manual, which deletes. The promotion lifecycle Episodic to PromotionCandidate to Promoted is a state-only change on an existing row and has no caller today. This change must add a transition path or AC5 is unimplementable. A re-ingest can incidentally rewrite metadata, but that is not a targeted transition and does not reach manual rows or reversals.\n\nSTORAGE FINDINGS:\n\n- metadata is JSONB with a GIN index using jsonb_path_ops (migrations/0002_metadata_gin.sql:1-2). kind is the only filter-relevant typed column. Everything else the filters touch lives in JSONB.\n- Negative predicates do not use the GIN index. docs/specs/0010-recall-metadata-filters.md:22 states the index claim covers positive containment only. The promotion exclusion inherits that caveat and it must be documented in the new spec rather than silently assumed.\n- Episodic must be an absent key, not a stored literal. The open-followup precedent excludes one tagged shape and lets everything else pass. Storing an explicit episodic marker would force a backfill migration over every existing row for no gain.\n\nINGEST FINDINGS:\n\n- promoted_at is not mapped anywhere today. It appears only in a doc comment at src/ingest.rs:46 and a test fixture at src/ingest.rs:273.\n- invalidated_by is used once, at src/ingest.rs:67-70, to skip the entry entirely with the comment \"Superseded / soft-deleted entries are not retrievable.\"\n- parse_wisdom does not deserialize ADV entries into typed structs. It clones raw JSON and strips only content at src/ingest.rs:87-90. The state mapping belongs there, after the clone, and should remove promoted_at while writing promotion_state so the two keys cannot diverge.\n\nDESIGN DECISIONS FOR THE NEXT GATE:\n\nD1 — target representation. Concord's contract resolves a target by manifest path plus sha256 and names a record version, but publishes no serialized string format. Options: structured fields, fully opaque passthrough, or defer. Lean is opaque passthrough, matching the contract's own statement that target is opaque to episode.\n\nD2 — what invalidated_by should do. AC6 implies mapping it to Superseded, but the current code deliberately drops those rows before storage. Ingesting them as Superseded would preserve supersession history and make it queryable behind the opt-in flag, at the cost of a behavior change and store growth. Keeping the skip narrows AC6 to promoted_at only and leaves Superseded reachable solely through explicit transitions. This needs a decision rather than an assumption.\n\nD3 — transition surface shape. Whether the new capability is an MCP tool mirroring ForgetParams at src/server.rs:54-62, and whether transitions assert a from-state precondition structurally in SQL.\n\nCONVENTIONS TO HONOR:\n\n- Specs ship as two verbatim-identical files, docs/specs/NNNN-*.md and .adv/specs/NNNN-*.md. Next number is 0011.\n- DB-backed tests are #[tokio::test] with #[ignore = \"requires Postgres\"], take EPISODE_TEST_DATABASE_URL with a localhost:5434 default, and use a per-run unique namespace.\n- src/store.rs:332-356 is the DB-free precedent asserting filter values never enter SQL syntax. A parallel test should assert the same for the promotion predicates.\n\nNote on the operating condition: DB-backed tests default to the same store at port 5434, which is healthy and running. The episode service being down does not block test execution."
+    },
+    "design": {
+      "status": "done",
+      "completed_at": "2026-08-30T16:42:48.862Z",
+      "completed_by": "agent",
+      "approval_evidence": "Design recorded and independently validated. Validator verdict: APPROVE WITH FINDINGS, no CONFLICT, so no design checkpoint was required. All four required corrections applied, plus the minor one.\n\nTHE VALIDATOR'S DECISIVE CATCH. The originally designed ingest mapping was inert. filter_eligible at src/lib.rs:105-113, called at :199, drops every item whose source_id is already stored, so a promoted_at set in ADV after first ingest never reaches episode. Since wisdom is overwhelmingly ingested before it is promoted, a parse-time-only mapping would almost never fire. I verified this directly rather than accepting it.\n\nThat catch exposed a deeper unification the original design missed. Episode's ingest is write-once per source_id, so episode cannot observe ANY post-ingest mutation of ADV state. Both fields this change depends on are exactly that: invalidated_by mutates on retraction, promoted_at mutates on graduation. The retraction defect and the inert mapping are one missing mechanism, not two bugs. Reconcile now gains a single post-ingest state reconciliation step applying both to already-stored rows, outside the dedup path.\n\nCORRECTIONS APPLIED:\n1. Ingest mapping fixed rather than narrowed. New Store::mark_candidates applies promoted_at to existing rows by source_id, guarded to fire only where promotion_state is absent. That guard also delivers idempotency, stopping reconcile from clobbering a human-set Promoted back to candidate on every pass. A store-level regression test is required because a parse_wisdom unit test structurally cannot catch this.\n2. Acceptance criteria amended. AC1 said four variants and now specifies the two stored variants with Episodic as the absent-key default. AC3 no longer references Superseded. AC5 requires bidirectional transitions on ingested rows. AC6 rewritten to post-ingest reconciliation semantics. AC7 added for idempotency, AC8 for opaque target, AC9 for the test set.\n3. Store::promote source predicate pinned. It borrows forget_manual's shape but explicitly NOT its source = 'manual' restriction. The validator caught a genuine self-contradiction: the primary use case is a human promoting an ingested wisdom row, which a manual-only predicate would forbid.\n4. Reverse transition resolved. Transitions are bidirectional with per-transition SQL preconditions, which yields demotion for free. This is the recovery path for D1's accepted failure mode, where a Promoted row whose Concord target is later deleted would otherwise be excluded from recall permanently with no way back.\n5. Blast radius corrected to future tense. The store holds zero rows and the service is disabled, so both defects are latent. They become live on the first reconcile after restoration, which is the argument for landing this before the service returns.\n\nVALIDATOR CONFIRMATIONS: the retraction defect is CONFIRMED end to end with no cascade, TTL, or prune path anywhere. Dropping Superseded is correct on producers, since reflections carry no invalidated_by check at all and forget_manual covers manual deletion. Folding both defect fixes into this change is correct scope, and remains net-subtractive: one fewer variant, one fewer recall predicate, one fewer failure mode. JSONB over a typed column is right and matches the action precedent. RecallFilters is additive-safe under serde(default) and is never persisted. PromotionCandidate {} as an empty-payload variant has an exact house precedent in LinkedWork {} and OpenFollowup {}. SQL-side from-state preconditions are sufficient under READ COMMITTED provided the JSONB merge stays in SQL and never becomes read-modify-write in Rust.\n\nD1 unchanged and confirmed sound: target stays opaque. Concord publishes no serialized format and exposes no resolution surface, so local validation beyond non-blank would be theater. The accepted failure mode is now recorded explicitly rather than glossed, with the two-step flow as mitigation and demotion as recovery."
+    },
+    "planning": {
+      "status": "done",
+      "completed_at": "2026-08-30T16:47:01.916Z",
+      "completed_by": "user",
+      "approval_evidence": "User approved the task graph by invoking /adv-apply addPromotionStateMemories against the presented planning checkpoint (command-as-approval, Tier A).\n\nSeven tasks. All nine acceptance criteria covered, contractCoverage reports no uncovered criteria.\n\ntk-1cd68ba98a0b PromotionState type + validation (AC1, AC2, AC8)\ntk-3b0d19ec2e80 recall default-exclusion of Promoted (AC3, AC4) — blocked by 1\ntk-cb1e6043527e Store::promote + MCP tool, bidirectional, not source-restricted (AC5) — blocked by 1\ntk-76bb0834b5e5 post-ingest reconciliation plumbing + remove invalidated rows (AC6) — blocked by 1\ntk-568afae7fe07 map promoted_at to PromotionCandidate idempotently (AC6, AC7) — blocked by 3 and 4\ntk-7e124e75c1ac spec 0011 dual-file verbatim — blocked by 2 and 5\ntk-e7b71bab9d58 full verification pass (verifies AC1-AC9) — blocked by 6\n\nOrdering rationale: the type lands first because every other code task depends on it. Tasks 4 and 5 both modify reconcile_root, so they are sequenced rather than parallel to avoid two edits to the same function. Task 5 also depends on task 3 because its idempotency test needs Store::promote to set the Promoted state it then asserts survives a reconcile.\n\nTasks 4 and 5 each carry a regression test that fails against current main. These are the confirmed defects: no path removes a stored row whose ADV source became invalidated_by, and no path applies a promoted_at set after first ingest.\n\nWorktree materialized at change/addPromotionStateMemories from base main at 2b550fb."
+    },
+    "execution": {
+      "status": "done",
+      "completed_at": "2026-08-30T17:16:01.859Z",
+      "completed_by": "agent",
+      "approval_evidence": "All 7 tasks done, none cancelled, none deferred. Worktree clean at 8d83815 on change/addPromotionStateMemories, six checkpoint commits over base main 2b550fb. 10 files, 1513 insertions, 15 deletions.\n\nFINAL VERIFICATION tr_mtg2kc6h_065471dd and tr_mtg2kxcy_5281849e, both exit 0: cargo build --locked clean, 63 of 63 lib tests, 16 DB-backed tests green across every binary against the live store at localhost:5434, clippy --all-targets -D warnings with zero warnings, cargo fmt --check clean, and the two spec copies byte-identical by diff.\n\nAll nine acceptance criteria map to passing tests. Full mapping is recorded on tk-e7b71bab9d58.\n\nWHAT THIS CHANGE ACTUALLY TURNED OUT TO BE. The feature is promotion state, but the work was dominated by a single structural fact the design validator surfaced: episode's ingest is write-once per source_id. filter_eligible drops every already-stored item before upsert_batch sees it, so episode cannot observe any post-ingest mutation of ADV state. Both fields this feature depends on are exactly that. invalidated_by mutates on retraction, promoted_at mutates on graduation, and neither could reach a stored row. The retraction defect and the inert promotion mapping were one missing mechanism, not two bugs, and reconcile now carries one post-ingest state reconciliation step that serves both.\n\nBOTH REGRESSIONS WERE PROVEN LOAD-BEARING, not merely observed passing. Neutering the reconcile retraction call failed reconcile_removes_rows_retracted_after_ingest and retraction_is_scoped_to_the_reconciled_namespace. Removing AND NOT (metadata ? $3) from MARK_CANDIDATES_SQL failed reconcile_never_clobbers_a_human_promotion with left PromotionCandidate, right Promoted. Both restored green. A passing test that would also pass against broken code is not evidence, so each was checked.\n\nTWO DELIBERATE DEPARTURES FROM THE TASK PLAN, both recorded on their tasks. Retraction runs before the batch loop rather than after, because an embed failure hits continue and a shutdown hits an early return, either of which would skip a trailing deletion and leave withdrawn knowledge in service. And the promotion mapping uses one writer rather than two: because mark_candidates runs after upsert_batch it covers both first-ingest and later-promotion rows, so the separately-planned inline state write was redundant and was dropped. Parse still strips promoted_at so promotion_state is the only promotion field agents can filter on.\n\nONE OUT-OF-SCOPE DEFECT ROUTED, not folded in. id is a global PRIMARY KEY while ingested rows use raw per-project ADV ids, and upsert_batch resolves conflicts with ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace. Two projects both holding pw-1 means the second silently steals the first's row. It then reproduced against my own test fixtures during tk-568afae7fe07, presenting as a promotion-state failure when it was not one. Created fixCrossNamespaceMemoryId as a discovery-origin fast-follow with that reproduction recorded as observed evidence.\n\nIndependent verification was delegated to adv-verifier and then re-run inline rather than accepted, because the reported suite duration contradicted an earlier measurement. The discrepancy proved legitimate — the embedding model is now disk-cached — and counts matched exactly across all seven binaries.\n\nBlast radius remains latent. The store holds zero rows and the service has been disabled since 2026-08-19, so neither defect is harming anyone today. Both would go live on the first reconcile after restoration, which is the argument for landing this before the service returns."
+    },
+    "acceptance": {
+      "status": "done",
+      "completed_at": "2026-08-30T17:34:51.308Z",
+      "completed_by": "user",
+      "approval_evidence": "User accepted at the acceptance checkpoint, replying \"Continue\" against the anchor phrase \"Reply `continue` to proceed, or reply with what to adjust.\"\n\nReview verdict APPROVED. All 9 acceptance criteria mapped to named passing tests. Three defects found and fixed during review: the reviewer's episodic compare-and-set looseness in PROMOTE_SQL, the reserved-key hijack in parse_wisdom that was its root cause, and a stale doc comment. Final verification tr_mtg375mj_35853568 exit 0: build clean, 63 of 63 lib tests, 18 DB-backed tests, clippy --all-targets -D warnings clean, fmt clean, spec copies byte-identical. Executive summary persisted and read back. Review commit 341768e.\n\nCaveat carried into release: fixCrossNamespaceMemoryId remains open and is confirmed real, having reproduced against this change's test fixtures. It is out of scope here and tracked as its own change."
+    },
+    "release": {
+      "status": "pending"
+    }
+  },
+  "documents": {
+    "proposal": "# Add promotion state to memories\n\n## Problem\n\nA nascent supersession model already exists in the source data: wisdom entries carry `promoted_at` and `invalidated_by`, and ingest already skips `invalidated_by` entries (`src/ingest.rs:67-70`). But episode doesn't model promotion as first-class. There is no way to:\n\n- mark a memory as a promotion candidate (\"this keeps recurring, graduate it to durable knowledge\"),\n- record that a memory has been promoted and link to where it landed,\n- filter OUT promoted memories at recall (so the spec — which now owns that knowledge — doesn't duplicate).\n\nThis is the real seam between episodic memory (episode) and durable Product knowledge (Concord specs/decisions). Without it, the two drift and duplicate: a lesson rots in episode while also living in the spec, or never graduates at all.\n\n## The blocker underneath\n\nDiscovery found that both ADV fields this change depends on are **post-ingest mutations**, and episode cannot observe either.\n\n`reconcile_root` is write-once per `source_id`: `filter_eligible` (`src/lib.rs:105-113`) drops every item already stored, so `upsert_batch` only ever sees new rows.\n\n- A wisdom entry ingested while valid and later marked `invalidated_by` **stays stored and keeps surfacing**. The parse-time skip prevents adding it, but the only `DELETE` in the codebase (`src/store.rs:274-283`) is restricted to `source = 'manual'`, so ingested rows have no removal path at all.\n- A `promoted_at` set after first ingest **never maps**, because dedup skips the row. Since wisdom is overwhelmingly ingested before it is promoted, a parse-time-only mapping would be inert in the common case.\n\nOne missing mechanism, two symptoms. Reconcile must apply post-ingest state changes to rows that already exist. Fixing that is a precondition for this feature working at all, so it is in scope rather than deferred.\n\n## Proposed change\n\n### Promotion state type\n\n```rust\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]\n#[serde(tag = \"kind\", rename_all = \"snake_case\", deny_unknown_fields)]\n#[schemars(crate = \"rmcp::schemars\")]\npub enum PromotionState {\n    /// Flagged: graduated in ADV, or \"this keeps recurring\". Still authoritative\n    /// in episode, so it stays visible in recall.\n    PromotionCandidate {},\n    /// Graduated, with the Concord record that now owns the content.\n    Promoted { target: String },\n}\n```\n\n`Episodic` is the default and is represented by the **absence** of the key, not a stored literal. An explicit marker would force a backfill across every row and buy nothing.\n\n`Superseded { by }` was in the original sketch and is dropped. With invalidated rows removed rather than marked, and `forget_manual` covering manual deletion, no caller can produce it.\n\n### Storage\n\nJSONB under the reserved key `promotion_state`, alongside the existing `action` key, filterable via the GIN index from Tier 1b. No migration.\n\n### Recall semantics\n\n- `recall` gains a filter defaulting to exclusion of `Promoted`. An explicit opt-in includes them. This mirrors `include_open_followups` exactly.\n- `PromotionCandidate` stays visible by default: it has not graduated, so episode still holds the authoritative copy.\n\n### Transitions\n\nA `promote` tool sets state on an existing row, with the from-state precondition asserted in SQL. Transitions are bidirectional — demotion is the recovery path when a Concord target is later deleted, which would otherwise exclude a memory from recall permanently.\n\nTransitions are **not source-restricted**. The row most needing promotion is an ingested wisdom entry.\n\n### Graduation flow (the seam)\n\n```\nADV sets promoted_at   -->  reconcile marks PromotionCandidate  (still visible)\nhuman supplies target  -->  promote sets Promoted { target }    (excluded from recall)\nConcord target dies    -->  demote back to PromotionCandidate   (visible again)\n```\n\n## Language and storage assumption\n\nThis change is implemented in **Rust + Postgres + pgvector**, per the decision recorded in change `decideStorageLanguageDirection`.\n\nThe language choice is safe here, and the receiving contract is what makes it safe. Concord's promotion-receiving contract (`docs/vertical-integration.md:130-158`) crosses a manifest-path + sha256 boundary, holds a `target` explicitly opaque to episode, and records no runtime event on Concord's side. It is language- and storage-agnostic by construction.\n\n## Scope\n\n- `src/types.rs`: `PromotionState` enum, validation, `RecallFilters` field.\n- `src/store.rs`: recall predicate, `promote`, `forget_ingested`, `mark_candidates`.\n- `src/server.rs`: `promote` tool, recall filter param.\n- `src/ingest.rs`: collect invalidated and promoted source ids; map inline promotions.\n- `src/lib.rs`: post-ingest state reconciliation step in `reconcile_root`.\n- `docs/specs/0011-promotion-state.md` and `.adv/specs/0011-promotion-state.md`, verbatim identical.\n\n## Out of scope\n\n- Auto-promotion heuristics. Manual flagging first; heuristic promotion stays a recorded later candidate.\n- Anything on Concord's side. The receiving contract is delivered and unchanged.\n- Restoring the episode service.\n\n## The receiving contract\n\nconcord#46 Item 2 is **satisfied**. Concord #587 (commit `94989a5`, 2026-08-30) added the contract at `docs/vertical-integration.md:130-158`.\n\n- **Target identity.** A formalized knowledge record of kind `spec` or `decision`, resolved through the knowledge manifest by manifest path + sha256. Unresolvable is `knowledge_missing`. A promotion names a record version, not a moving document.\n- **Back-link.** The receiving record cites the originating episode memory in its `sources`. Recorded provenance, not runtime state.\n- **Acknowledgement.** Structural only. Concord records no runtime event.\n- **Recall exclusion.** Episode's behavior, which AC3 specifies.\n\n**`target` stays opaque.** The contract publishes no serialized format and exposes no resolution surface, so episode cannot verify a target even in principle. Validation is non-blank and nothing more. The accepted failure mode — a malformed target is invisible in episode and rejected at Concord — is mitigated by the two-step flow: nothing is hidden from recall until a human supplies a real target.\n\n## Dependencies\n\nBoth declared prerequisites have **shipped**, though neither retains an ADV change record:\n\n- `enrichRememberWithContext` — `RememberParams.context: Option<MemoryContext>` in `src/server.rs`.\n- `addRecallMetadataFilters` — `RecallParams.filters: Option<RecallFilters>` in `src/server.rs`, with `RecallFilters` at `src/types.rs:131-140`, spec `0010`, and `tests/recall_filters_it.rs` on disk.\n\nThis change is **not blocked**.\n\n## Known operating condition\n\nEpisode is not running. The deployed binary predates migration `0002_metadata_gin.sql`, so `sqlx` refuses to start, and the store holds zero rows. Both defects above are therefore **latent, not active** — they become live on the first reconcile after the service is restored, which is why this should land before it comes back up. DB-backed tests run against the same healthy store and are unaffected.\n\n## Acceptance criteria\n\n- AC1: `PromotionState` exists with two stored variants, `PromotionCandidate` and `Promoted { target }`. `Episodic` is the absent-key default and is never written.\n- AC2: New memories carry no `promotion_state` key and therefore default to episodic.\n- AC3: `recall` excludes `Promoted` rows by default.\n- AC4: An explicit opt-in filter includes them. `PromotionCandidate` is visible in both modes.\n- AC5: A memory can be transitioned between states through the `promote` tool, in both directions, on ingested as well as manual rows. A from-state mismatch affects zero rows.\n- AC6: Reconcile applies post-ingest ADV state to already-stored rows: `invalidated_by` removes the row, and `promoted_at` sets `PromotionCandidate`.\n- AC7: Reconcile is idempotent. A human-set `Promoted { target }` survives subsequent reconciles and is never clobbered back to candidate.\n- AC8: `target` is stored opaquely and validated only as non-blank.\n- AC9: Tests cover each transition, the recall default-exclusion, both defect regressions, and idempotency.\n\n## Epic context\n\nMember of Epic `shapeEpisodeStructuredMemory` (advisory order 5 of 6). Implements the episode-to-durable-knowledge promotion seam.\n\nBoth Concord-side questions this change touches are settled. The receiving contract (concord#46 Item 2) is satisfied as of 2026-08-30. The ownership question, C20, is **resolved**: Concord's operator approved episode staying external, optional, and Product-scoped when configured on 2026-08-30, with the product-scoping probe demoted to a reopen trigger. Concord PR #596 executes the documentation deliverables. Neither question gates this change.\n\n## External evidence — magic-context\n\n> Routed from change `studyMagicContextMemoryDesign`. Source: [`cortexkit/magic-context`](https://github.com/cortexkit/magic-context) (MIT), read at HEAD `a54f9c0`. This section attaches to the **already-deferred** \"auto-promotion heuristics\" item under *Out of scope*. It does not pull that item into scope and it does not modify the acceptance criteria. Manual flagging remains this change's design.\n\nmagic-context has a working implementation of the heuristic promotion this change defers. Recording its mechanics now means the deferred item, when it activates, starts from a validated design rather than a blank page.\n\n### Repeated-confirmation promotion\n\nThe rule is two-axis, and the two-axis shape is the transferable part. From `primer-clustering.ts`:\n\n```ts\nexport const PRIMER_CLUSTER_THRESHOLD = 0.85;\nexport const PRIMER_CLUSTER_HYSTERESIS = 0.02;\nexport const PRIMER_PROMOTION_THRESHOLD = 2;\nexport const PRIMER_MIN_SPAN_DAYS = 7;\n\n// ...\nreturn summary.support >= threshold && summary.spanDays >= minSpanDays;\n```\n\nThe two axes are **not** what the constant names suggest, so read `summarizePrimerCluster` before reusing them:\n\n- Candidates are first deduplicated by occurrence key, then collapsed to **one candidate per distinct UTC day**. `support` is the count of those distinct days — not the count of occurrence keys.\n- `spanDays` is the **elapsed** whole-day distance between the earliest and latest surviving candidate, not a count of days on which something happened.\n\nSo the rule reads: promote when a cluster has been confirmed on **at least 2 distinct days** *and* those confirmations are **at least 7 elapsed days apart**. Clustering is by cosine ≥ 0.85, with the threshold relaxed by 0.02 for candidates already inside an existing primer, which is what stops membership flapping at the boundary.\n\nRequiring both axes is what makes it resist the two obvious false positives. A single chatty session collapses to one distinct day and fails `support`. A burst of activity over one busy afternoon fails `spanDays`. Neither axis alone rejects both.\n\nA simpler second path also exists: user-memory observations promote after ≥ 3 observations (`task-executor.ts` ~L434, `promotionThreshold ?? 3`).\n\n### Deduplication is exact, not fuzzy\n\nBefore promotion, duplicates are collapsed by **normalized content hash per category**, backed by `idx_memories_project_category_hash`. Cross-category merges are structurally rejected rather than scored.\n\nThis is worth noting against the intuition that a semantic store should dedupe semantically. They use cosine to find promotion *candidates* and an exact hash to collapse *duplicates*. The two jobs get different mechanisms.\n\n### Keep-versus-discard is verified, not inferred\n\nTheir `verify` task gates each memory on whether its **backing file changed** since `verified_at`. Partial progress persists across runs, and refusals count as non-failing skips rather than errors.\n\nThis transfers directly. episode ingests from ADV wisdom and reflection files, so every ingested memory already has a backing file. The same file-change gate is available without new infrastructure, and it is a stronger signal than age-based decay: a gotcha about a module that has not changed is not stale merely because it is old.\n\n### Concurrency, if a background pass is ever added\n\nDreamer tasks are assigned **lease domains** in `dreamer/task-registry.ts`, so disjoint-state tasks run concurrently while memory-mutating tasks serialize on a shared `memory:<project>` lease. Read-then-write runs atomically under `BEGIN IMMEDIATE`. The Postgres analogue is an advisory lock.\n\nThe design point is not the specific primitive. It is that a consolidation pass mutates the same rows that `recall` and `remember` are serving live, and needs an explicit exclusion mechanism rather than optimistic hope.\n\n### Model-pinning caveat — prospective, and narrower than first reported\n\nThis change has no LLM-backed pass today, so the following constrains the deferred item rather than the current design.\n\nmagic-context's **historian** appends the live session provider/model as an absolute last resort after its configured fallback chain (`compartment-runner-historian.ts`, in `runFallbackHistorianPass`). `ARCHITECTURE.md` labels this behavior \"historian-only\".\n\nIt is **refuted** for the other two background roles: `dreamer` and `sidekick` both resolve through configured `fallback_models` only, and throw when that list is exhausted (`resolve-fallbacks.ts`, `shared/model-resolution.ts`, `sidekick/agent.ts`).\n\n**Reader trap worth carrying with the citation:** `resolve-fallbacks.ts`'s header comment loosely describes \"the runner's session-model last resort\" as though it applied to all hidden agents. Only the historian runner implements it. Anyone consulting that comment instead of the runners will conclude the fallback is general. It is not.\n\nThe constraint that lands: **if episode ever adds an LLM-backed consolidation pass, pin its model explicitly and fail closed.** Never fall back to the caller's session model. On a metered subscription that silently bills the user's scarce quota to do background maintenance they did not ask for at that moment, and the failure is invisible — the pass appears to succeed.\n",
+    "problemStatement": "# Problem statement\n\n## What is wrong\n\nEpisode stores agent memories but has no first-class model of what happens when a memory stops being episodic and becomes durable knowledge.\n\nThe raw material for that model already exists in the source data. ADV wisdom entries carry `promoted_at` and `invalidated_by`, and `ingest.rs:68` already skips entries marked `invalidated_by`. Episode reads those fields and acts on one of them, but models neither.\n\nThree capabilities are missing:\n\n1. **No way to mark a promotion candidate.** A lesson that keeps recurring across work has no way to be flagged as worth graduating into durable knowledge.\n2. **No way to record that a memory graduated, or where it landed.** There is no link from an episode memory to the spec or decision that now owns its content.\n3. **No way to exclude graduated memories from recall.** A memory whose content now lives in a formalized Concord record still surfaces from episode.\n\n## Why it matters\n\nWithout this, episodic memory and durable Product knowledge drift apart and duplicate each other. Two failure modes follow, and both are silent:\n\n- A lesson graduates into a spec, but episode keeps surfacing the episodic copy. Agents get the same knowledge from two sources that can now disagree, with no signal about which one is law.\n- A lesson never graduates at all. It ages out of relevance inside episode while never reaching the durable record that would have preserved it.\n\nThis is the seam the epic exists to build. Episode owns episodic memory. Concord owns Product law. Nothing currently connects the two, so knowledge either duplicates across the boundary or falls through it.\n\n## Why now\n\nThe receiving side exists as of 2026-08-30. Concord #587 landed the promotion-receiving contract at `docs/vertical-integration.md:130-158`, satisfying concord#46 Item 2. It specifies target identity, back-link, acknowledgement, and recall exclusion on Concord's side.\n\nBefore that contract, building the episode half would have meant emitting into a void. The contract now names what a target is, and explicitly assigns recall exclusion to episode. This change implements episode's side of a defined seam rather than guessing at one.\n\nBoth declared prerequisites have also shipped: `RememberParams.context` and `RecallParams.filters` exist in `src/server.rs`, with spec `0010` and `tests/recall_filters_it.rs` on disk. Nothing blocks this work.\n\n## Known operating condition\n\nEpisode is currently not running. The deployed binary at `~/.local/bin/episode` was built 2026-07-10 and predates migration `0002_metadata_gin.sql`, which landed 2026-08-11. The store at port 5434 records both migrations as applied, so `sqlx` refuses to start against a binary that embeds only the first. The service was disabled 2026-08-19 and the `memories` table holds zero rows.\n\nThis is recorded as a deliberate condition of the work, not an oversight. The change is implementable and testable against a local store regardless. Restoring the service is operational work outside this epic, and it must happen before any of this capability is exercised in practice.\n\n## What is out of scope\n\n- Auto-promotion heuristics. Manual flagging comes first; heuristic promotion stays a recorded later candidate.\n- Anything on Concord's side. The receiving contract is delivered and unchanged by this work.\n- Restoring the episode service.\n",
+    "design": "# Design — promotion state\n\n## The root cause behind both defects\n\nEpisode's ingest is **write-once per `source_id`**. `reconcile_root` (`src/lib.rs:159-255`) reads `existing_source_ids` (`:183`), then `filter_eligible` (`:105-113`, called at `:199`) drops every item whose `source_id` is already stored. `upsert_batch` therefore only ever sees new rows.\n\nConsequence: **episode cannot observe any post-ingest mutation of ADV state.** Both fields this change cares about are exactly that.\n\n| ADV field | Mutated when | Episode today |\n|---|---|---|\n| `invalidated_by` | after a lesson is retracted | row stays stored and keeps surfacing |\n| `promoted_at` | after a lesson graduates | never mapped — dedup skips the row |\n\nThe parse-time skip at `src/ingest.rs:67-70` prevents *adding* an invalidated entry but cannot remove a stored one. And a `promoted_at` mapping in `parse_wisdom` would be inert in the common case, because wisdom is overwhelmingly ingested before it is promoted.\n\nThese are one missing mechanism, not two bugs. Reconcile needs a step that applies post-ingest state changes to rows that already exist.\n\n## Decisions\n\n### D1. `target` stays opaque\n\n`Promoted { target: String }`. Episode stores what the caller supplies and never parses it.\n\nConcord's contract resolves a target by manifest path plus sha256, names a record version rather than a moving document, publishes **no serialized format**, and states `target` is opaque to episode. Concord also exposes no runtime resolution surface, so episode could not verify resolvability even in principle. Validation beyond non-blank would be theater.\n\n**Accepted failure mode, recorded rather than mitigated away.** A malformed target is excluded from episode recall *and* rejected by Concord as `knowledge_missing` — silent loss on both sides. The two-step flow is the mitigation: ADV promotion lands a memory in `PromotionCandidate`, which stays visible in recall, and only an explicit human `promote` carrying a real target moves it to `Promoted`. Nothing is hidden until a human supplies the target. The demote path below is the recovery.\n\n### D2. Invalidated entries are removed, not marked\n\nIngest collects source ids carrying a non-null `invalidated_by` and deletes the corresponding stored rows.\n\nDelete-over-mark is self-healing: if an entry is later un-invalidated in ADV, the row is absent from `existing_source_ids`, so the next reconcile re-ingests it fresh.\n\n**Consequence: `Superseded { by }` is dropped.** No producer exists for it. Manual supersession is served by `forget_manual`, and `parse_reflections` has no `invalidated_by` check at all, so reflections cannot produce it either. A state no caller can create is dead on arrival.\n\nThe enum carries two stored variants instead of three, and default recall exclusion needs one predicate instead of two.\n\n### D3. Transitions are bidirectional and not source-restricted\n\n`Store::promote` borrows `forget_manual`'s **shape** — one statement, structural predicates, rows-affected return — but **not its `source = 'manual'` restriction**. The row a human most needs to promote is an ingested wisdom entry carrying `promoted_at`. Restricting to manual rows would make the primary use case impossible.\n\nTransitions set any target state under a per-transition precondition asserted in SQL. This yields demotion for free, which is the recovery path for D1's accepted failure mode: a `Promoted` row whose Concord target is later deleted would otherwise be excluded from recall permanently, with no way back.\n\nOne `UPDATE` carrying its from-state predicate is safe under READ COMMITTED. A concurrent loser blocks on the row lock, re-evaluates, and returns zero rows affected. This holds only while the JSONB merge stays in SQL — never read-modify-write in Rust.\n\n## Type\n\nFollowing `ActionState` (`src/types.rs:57-67`), the house precedent for a tagged state round-tripping through MCP params into JSONB:\n\n```rust\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]\n#[serde(tag = \"kind\", rename_all = \"snake_case\", deny_unknown_fields)]\n#[schemars(crate = \"rmcp::schemars\")]\npub enum PromotionState {\n    PromotionCandidate {},\n    Promoted { target: String },\n}\n```\n\n`#[schemars(crate = \"rmcp::schemars\")]` is required because rmcp re-exports schemars. The empty-payload variant matches `LinkedWork {}` / `OpenFollowup {}` (`src/types.rs:64-66`), already proven closed under schemars by the schema test at `src/server.rs:489-499`.\n\n**`Episodic` is absent, not stored.** It is the default, and therefore the absence of a `promotion_state` key. An explicit marker would force a backfill across every row and buy nothing, since the predicate excludes one tagged shape and passes everything else. This follows the open-followup precedent.\n\nValidation mirrors `MemoryContext::validate` (`src/types.rs:113-128`): `Promoted` requires a non-blank `target`.\n\n## Storage\n\nJSONB under reserved key `promotion_state`, alongside the existing `action` key. No migration, no new column — matching the `action` precedent at `src/types.rs:109`.\n\n```json\n{\"promotion_state\": {\"kind\": \"promoted\", \"target\": \"...\"}}\n```\n\n## Recall filtering\n\nMirrors `include_open_followups` (`src/store.rs:66-72`). New `RecallFilters` bool defaulting to `false`, adding one predicate when unset:\n\n```sql\nNOT (metadata @> '{\"promotion_state\":{\"kind\":\"promoted\"}}')\n```\n\n`PromotionCandidate` stays visible by default, deliberately. A candidate has not graduated, so episode still holds the authoritative copy.\n\n**GIN caveat, stated not assumed.** `docs/specs/0010-recall-metadata-filters.md:22` records that the index claim covers positive containment only. This negative predicate is unindexed, exactly as the open-followup exclusion already is. Filtered-scan cost scales with the *excluded* fraction, which human promotion activity bounds. The new spec must say this.\n\nAdding the field is backward-compatible: `RecallFilters` is `#[serde(default)]` (`src/types.rs:131-132`) and is never persisted, so an omitted flag yields `false` and current behavior.\n\n## Ingest — post-ingest state reconciliation\n\n`parse_wisdom` (`src/ingest.rs:57-104`) additionally returns collected state changes rather than only skipping:\n\n- entries with non-null `invalidated_by` → collect id for **deletion**\n- entries with non-null `promoted_at` → collect id for **transition to `PromotionCandidate`**\n\n`reconcile_root` gains a step after `upsert_batch` that applies these to already-stored rows, outside the dedup path:\n\n| Change | Store method | Effect |\n|---|---|---|\n| invalidated | `forget_ingested` | delete rows by `source_id` within namespace, restricted to ingested sources |\n| promoted | `mark_candidates` | set `promotion_state` to `promotion_candidate` by `source_id`, only where the key is currently absent |\n\nThe `where currently absent` guard makes this idempotent and stops reconcile from clobbering a human `Promoted { target }` back down to a candidate on every pass.\n\nFor entries arriving already-promoted on first ingest, `parse_wisdom` also writes the state inline after the metadata clone at `src/ingest.rs:87`, and **removes `promoted_at`** so the two keys cannot diverge.\n\n### Why ingested promotions become `PromotionCandidate`, not `Promoted`\n\nADV's `promoted_at` is a timestamp. ADV wisdom carries no manifest path and no sha256, so an ingested promotion has **no Concord target to record**.\n\n`Promoted { target: Option<String> }` would assert graduation and trigger recall exclusion while pointing at nothing — the memory would vanish from episode and be unreceivable at Concord simultaneously. Mapping to `PromotionCandidate` is faithful: ADV says this graduated, episode keeps serving it, and a human supplies the Concord target through `promote` when the record exists.\n\nThis narrows AC6 rather than satisfying it as originally worded. AC6 is amended accordingly.\n\n## Surfaces\n\n| Surface | Shape |\n|---|---|\n| `promote` tool | Mirrors `ForgetParams` (`src/server.rs:54-62`): id, namespace, target state. Not source-restricted. |\n| `Store::promote` | One statement, from-state precondition in SQL, JSONB merge in SQL. Bidirectional. |\n| `Store::forget_ingested` | Delete by `source_id`, ingested sources only. |\n| `Store::mark_candidates` | Set candidate state by `source_id`, only where `promotion_state` is absent. |\n| `RecallFilters` | One new bool, default false. |\n\n## Verification\n\n- DB-free SQL test paralleling `src/store.rs:332-356`: the new predicate appears, and state literals never enter SQL syntax.\n- Integration test paralleling `tests/recall_filters_it.rs:64-87`: seed promoted and unpromoted rows, assert default exclusion and opt-in inclusion.\n- **Regression test for the retraction defect** — ingest an entry, invalidate it in ADV, reconcile, assert the row is gone. Fails today.\n- **Regression test for the inert-mapping defect** — ingest a valid entry, set `promoted_at` in ADV, reconcile, assert the row is now `PromotionCandidate`. Fails under a parse-only design, and a `parse_wisdom` unit test cannot catch it. This must be store-level.\n- Idempotency test — human sets `Promoted { target }`, then reconcile runs again, assert the state is not clobbered back to candidate.\n- Transition tests — each valid transition, demotion, and a from-state mismatch returning zero rows affected.\n- Ingest unit test paralleling `src/ingest.rs:264-316`: inline `promoted_at` maps and is removed from metadata.\n- Schema test paralleling `src/server.rs:447-506`: variant tags.\n\n## Spec\n\n`0011-promotion-state.md`, written verbatim to both `docs/specs/` and `.adv/specs/`, per the convention 0010 follows.\n\n## Scope note\n\nBoth defect fixes are folded in rather than deferred, because they share one root cause with the feature: episode cannot observe post-ingest ADV mutations. Fixing that is what makes promotion state work at all — without it the ingest mapping is inert and retracted knowledge persists.\n\nNet effect is still subtractive against the original proposal: one fewer enum variant, one fewer recall predicate, one fewer stale-data failure mode.\n\n**Blast radius is latent, not active.** The store holds zero rows and the service has been disabled since 2026-08-19. Neither defect is harming anyone today. Both become live on the first reconcile after the service is restored, which is precisely why they should land before it comes back up.\n",
+    "executiveSummary": "# Promotion state for episode memories\n\n## What this delivers\n\nEpisode is the agent memory service. It stores lessons learned during work and hands them back when they become relevant again. Concord is the separate system that holds settled, durable knowledge — the written specs and decisions a team treats as law.\n\nUntil now those two had no connection. A lesson could graduate into a Concord spec while episode carried on serving its own older copy, so an agent could receive the same guidance twice from two places that quietly disagreed, with nothing indicating which one was authoritative. Or a lesson could stay in episode forever and never make it into the durable record at all.\n\nThis change gives every memory a recorded position on that path. A memory can be flagged as a candidate for graduation, or marked as graduated with a pointer to the Concord record that now owns it. Once a memory is marked graduated, episode stops serving it by default, so the durable record speaks alone. A candidate stays visible, because it has not graduated yet and episode is still its only source.\n\nThe move can be reversed. If the Concord record it points to is later deleted, the memory can be returned to visibility. Without that, a memory could be hidden permanently with no way to bring it back.\n\n## Two faults fixed along the way\n\nBoth were found during this work rather than reported, and both came from the same underlying cause: episode only ever looked at a lesson once, when it first arrived. Anything that changed about that lesson afterward was invisible to it.\n\n**Withdrawn lessons kept being served.** When a lesson was retracted at the source, episode already knew not to take in a new copy — but it had no way to remove one it had already stored. A retracted lesson would keep surfacing indefinitely.\n\n**Graduation was never noticed.** Lessons are almost always stored first and graduate later, so the graduation signal arrived after episode had stopped looking. The feature would have appeared to work while doing nothing in practice.\n\nBoth are now handled by a single addition that lets episode revisit what it already holds.\n\n## Two more faults, found by review\n\nThe work was reviewed twice, each pass looking at something different. Both passes found a real fault in the new code, and neither fault would have been visible from the outside until it had already caused harm.\n\n**A memory could declare itself already graduated.** The first review found an internal check that was looser than intended. Tracing it back revealed the more serious problem beneath: the new promotion marker could be set by the incoming lesson file rather than only by episode. A lesson could have arrived claiming to be graduated and disappeared from recall immediately. Episode now strips that field on the way in, so only episode can set it.\n\n**Updating a memory silently erased its promotion state.** The second review found that saving a memory overwrote all of its bookkeeping, including its promotion state. A graduated memory would quietly return to being served, reintroducing the exact duplication this change exists to prevent. Saving now preserves the promotion state while still refreshing everything else.\n\nThe second fault is worth noting for a further reason: an earlier analysis during design had concluded it could not happen. That conclusion was correct for one thing happening at a time and wrong the moment two overlap, and it was wrong in a way that only a review looking specifically at timing would catch.\n\n## Current state and impact\n\nNothing is affected today. The episode service has been switched off since 19 August 2026 and its store is empty, so none of these faults has harmed anything. All of them would have begun causing real problems the first time the service ran again after being restored, which is the argument for fixing them before that happens.\n\n## Confidence\n\nAll nine agreed acceptance criteria are met and covered by automated tests. The full test suite passes, including tests run against a real database rather than a simulation.\n\nThe three most serious fixes were checked more strictly than usual. Each was deliberately disabled to confirm its test then failed, proving the tests genuinely detect the fault rather than passing regardless. All were re-enabled and confirmed passing.\n\nOne claim in the specification was also corrected rather than defended. It had described the protection against two people changing the same memory at once as stronger than the code actually provides. The specification now states the real behaviour.\n\n## Related work identified, not included\n\nA separate pre-existing fault was found and recorded for its own change (`fixCrossNamespaceMemoryId`): memories from different projects can share an internal identifier, letting one project's memory silently overwrite another's. It is unrelated to promotion, so it was documented rather than folded into this work. It reproduced during testing here, which confirms it is real rather than theoretical.\n"
+  },
+  "cross_project_origin": {
+    "source_project": "concord",
+    "source_path": "/home/jon/dev/concord",
+    "linked_at": "2026-08-11T00:04:21.624Z"
+  },
+  "same_project_dependencies": [],
+  "epic_membership": {
+    "epic_id": "shapeEpisodeStructuredMemory",
+    "entry_id": "change-1786406878020-4aj05u",
+    "order": 5,
+    "title": "Add promotion state to memories",
+    "linked_at": "2026-08-11T00:07:58.020Z",
+    "epic_project_id": "098dab10ebf50e5c885fb94eef48afda85032788",
+    "source": "link_existing"
+  },
+  "projection_revision": 74,
+  "projection_commits": [
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --lib promotion_state 2>&1 | tail -30",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:db051e67-f2b0-4316-bb8a-69c983b43c07",
+      "payload_hash": "19f07f22aadefe708d697ce0450fe4ae079a7b093511a5170db3a14763c1c907",
+      "prior_revision": 24,
+      "new_revision": 25,
+      "committed_at": "2026-08-30T16:50:02.451Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --lib 2>&1 | tail -8 && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -8 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:39c01120-25b3-435f-b772-7a495997ad85",
+      "payload_hash": "2b65abf0973edacf2b1126dea8452ee94a51293f46eeec159aebeba98f89f849",
+      "prior_revision": 25,
+      "new_revision": 26,
+      "committed_at": "2026-08-30T16:50:51.315Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -4 && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -4 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:af1ef682-e665-4155-859b-9da882375cab",
+      "payload_hash": "102cfec1b940550a4bc43eb9a8791811fd805d3483f03996f39a0158d7483160",
+      "prior_revision": 26,
+      "new_revision": 27,
+      "committed_at": "2026-08-30T16:51:03.668Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "c556bd4b427c13e1e20a0751a6bafbbf1da6ea2d:RED tr_mtg1o3n7_ecf5d724 exit 101, unresolved imports PromotionState and PromotionStateValidationError. GREEN tr_mtg1oznw_30434a44 exit 0, 7 of 7 promotion_state tests pass. VERIFY tr_mtg1qb1k_2a099cc1 exit 0: 58 of 58 lib tests pass, clippy --all-targets -D warnings clean, cargo fmt --check clean.\n\nAdded PromotionState to src/types.rs following the ActionState precedent at :57-67 exactly — serde tag = \"kind\", rename_all snake_case, deny_unknown_fields, and the mandatory schemars(crate = \"rmcp::schemars\") since rmcp re-exports schemars.\n\nTwo stored variants only. Episodic is deliberately not a variant; a dedicated test asserts kind: \"episodic\" fails to deserialize, pinning the absent-key default so nobody later adds a stored literal that would require a backfill over every row.\n\nThe schema closedness test confirms PromotionCandidate {} stays closed under schemars with additionalProperties false, matching the LinkedWork {} and OpenFollowup {} precedent that server.rs:489-499 already verifies. This was the one derive risk in the task and it holds.\n\nValidation is non-blank on target and nothing more. The accepts-test deliberately feeds unparseable shapes including a JSON literal and a path#sha256 form to pin that episode never infers structure from an opaque target.\n\nAlso added PROMOTION_STATE_KEY as the reserved metadata key so the store and ingest tasks bind to one constant rather than three string literals.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:890b0e23-17ac-4a2b-b9f0-92ce8dd9b914",
+      "payload_hash": "0f28b9a78595b2046ffefcfdb2c8750d88f075a8cea66cf71d202a93f76e5bc8",
+      "prior_revision": 27,
+      "new_revision": 28,
+      "committed_at": "2026-08-30T16:51:17.692Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addPromotionStateMemories:697878cb-f98a-41ab-8dfe-44b433f696be",
+      "payload_hash": "1bde4b0a02357f23882b3febe86e75dd0e896d7926bac23c061d69962ac9301f",
+      "prior_revision": 28,
+      "new_revision": 29,
+      "committed_at": "2026-08-30T16:51:25.401Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --no-run 2>&1 | grep -E \"^error|no field|not found|-->\" | head -20",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:ac1dc5e5-8692-4ab4-89e8-f6983b1b49bc",
+      "payload_hash": "ad4614cf8f8633dcc0fe85fedbc6bfb7b11cc260f2ef4063031b318c62fe995c",
+      "prior_revision": 29,
+      "new_revision": 30,
+      "committed_at": "2026-08-30T16:52:44.334Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -5",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:cde221c8-18f6-429b-8f6b-5a7e9db40909",
+      "payload_hash": "ad2d242f0df0d4205744b352b72cf8b901a34a604e7dd0c06c9af73bc8a1b434",
+      "prior_revision": 30,
+      "new_revision": 31,
+      "committed_at": "2026-08-30T16:53:55.067Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -5",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:ddbe7ff4-ac39-4d16-a198-e41759609375",
+      "payload_hash": "50a749552678eb10bae1cced0612f09db06358eb60fb6b5160335d90815e3f71",
+      "prior_revision": 31,
+      "new_revision": 32,
+      "committed_at": "2026-08-30T16:54:17.299Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test promotion_state_it -- --ignored 2>&1 | tail -20",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:8ac732e3-6872-419e-9bac-977bcfe3296d",
+      "payload_hash": "3069f3f00a777c5edaa6548cab8e2b5e68758dfcf0908676c8225b66a434a6cc",
+      "prior_revision": 32,
+      "new_revision": 33,
+      "committed_at": "2026-08-30T16:54:32.741Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo clippy --all-targets -- -D warnings 2>&1 | tail -3 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\" && echo \"=== recall_filters_it (pre-existing) ===\" && cargo test --test recall_filters_it -- --ignored 2>&1 | tail -5",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:226eec59-6844-4686-9533-d10f3493b595",
+      "payload_hash": "c806190fdf49853c4fbc49d6dbaf2bbf338d6b73f2461ff944cbeb14573434e1",
+      "prior_revision": 33,
+      "new_revision": 34,
+      "committed_at": "2026-08-30T16:54:48.808Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "6b6347005219644a2a904217b8d662aa8870a10b:RED tr_mtg1sgpx_38951b24 exit 101, RecallFilters has no field named include_promoted. GREEN tr_mtg1ugf7_f561bc0c exit 0, 61 of 61 lib tests pass, up from 58. VERIFY tr_mtg1usa1_a3068249 exit 0, DB-backed promotion_state_it passes against the live store at localhost:5434. VERIFY tr_mtg1v4rd_1504164c exit 0, clippy --all-targets -D warnings clean, fmt clean, and the pre-existing recall_filters_it still passes.\n\nMirrored include_open_followups end to end. New RecallFilters.include_promoted bool defaults to false, so every existing caller stops receiving graduated knowledge without changing its request. The struct derives Deserialize but not Serialize and is never persisted, so the addition is backward-compatible by construction.\n\nThe predicate lives beside the open-followup exclusion in build_recall_query and binds the JSON value rather than inlining it. Three DB-free tests pin the structure: default emits two NOT (metadata @> $n) clauses, opt-in leaves exactly one so the open-followup exclusion is provably independent, and neither promotion_state nor promoted ever appears in SQL text. The counting assertion is what makes the two exclusions distinguishable in a DB-free test, since both compile to the same syntax with different bound values.\n\nThe GIN caveat is recorded as a comment at the predicate: this is a negative match and does not use memories_metadata_gin, exactly as the open-followup exclusion does not. Task 6 carries it into spec 0011.\n\nPromotionCandidate stays visible in both modes. The integration test seeds all three shapes and asserts default recall returns candidate and plain but not promoted, then that opt-in returns all three. That is the AC3/AC4 pair proven against real Postgres rather than SQL text.\n\nOne self-inflicted compile error along the way: my test helper wrote QueryBuilder<'static, Postgres>, but this sqlx version parameterizes QueryBuilder by DB alone. Corrected to match the existing build_recall_query signature. Also adopted the file's existing sql()/as_str() borrow pattern after SqlStr turned out not to implement Display.\n\nCampsite: added an include_promoted default assertion to the existing recall_filters_validate_closed_optional_input test in server.rs, so the omitted-flag default is pinned at the deserialization boundary as well as in the query builder.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:dc388fa1-a27c-47b2-ac8c-65383b937488",
+      "payload_hash": "76051a2833c3dbc82d25e9cc45f5b40517f9a26237b22d31f5cff2817be4e7fd",
+      "prior_revision": 34,
+      "new_revision": 35,
+      "committed_at": "2026-08-30T16:55:06.633Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addPromotionStateMemories:daa3279e-e348-4847-b54a-d8d4f53f62fd",
+      "payload_hash": "3be992cf7ef5e4ed8b496e381f9aeb1cf48f891364faef5593d183fc3c0575ff",
+      "prior_revision": 35,
+      "new_revision": 36,
+      "committed_at": "2026-08-30T16:55:12.933Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --no-run 2>&1 | grep -E \"^error|-->\" | head -12",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:8709e30d-f63c-4365-bb46-a18db53d5869",
+      "payload_hash": "5c3a018aa635c79825ca48cd95f089b0e4bd538ead72808c1f768b5a663887c2",
+      "prior_revision": 36,
+      "new_revision": 37,
+      "committed_at": "2026-08-30T16:56:58.786Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -6",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:b6472b6e-ad90-40b3-bd42-2b2db0b9d57e",
+      "payload_hash": "20b921e5eb061697addfe376e98e5fb86d88709b51afa2020944b34b4f2ccdf5",
+      "prior_revision": 37,
+      "new_revision": 38,
+      "committed_at": "2026-08-30T16:58:39.029Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test promotion_state_it -- --ignored 2>&1 | tail -12",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:ecaf75b9-6d78-4149-bd23-3337279dd043",
+      "payload_hash": "bb5cf93399a95218f75ffb82465fac94f82ecf27902104b01732796c0b07b841",
+      "prior_revision": 38,
+      "new_revision": 39,
+      "committed_at": "2026-08-30T16:58:57.753Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo clippy --all-targets -- -D warnings 2>&1 | tail -3 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:2cc53442-e2f7-47e4-8dca-0d7aaa1f8e9e",
+      "payload_hash": "891bf386923220688df100e6c85561676990a82ae936d5dec11d7c2deac77186",
+      "prior_revision": 39,
+      "new_revision": 40,
+      "committed_at": "2026-08-30T16:59:07.588Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "e0a6eea7163eac228b814eaaf3d58330ea2c9e72:RED tr_mtg1xx1w_fdf90ab5 exit 101, unresolved import PromotionStateKind and no method named promote on Store, five call sites. GREEN tr_mtg202ec_c07d64f8 exit 0, 63 of 63 lib tests pass, up from 61. VERIFY tr_mtg20gts_aa2efa0b exit 0, all 4 DB-backed promotion tests pass against the live store. VERIFY tr_mtg20ofm_6cc263df exit 0, clippy --all-targets -D warnings clean, fmt clean.\n\nThe transition is one statement covering every path, including the episodic start state, with no branching:\n\nUPDATE memories SET metadata = jsonb_set(metadata, ARRAY[$3], $4::jsonb, true), updated_at = now() WHERE id = $1 AND namespace = $2 AND metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5\n\nIS NOT DISTINCT FROM rather than = is the load-bearing choice. A NULL $5 matches an absent key, so \"the row is episodic\" is expressible as a bound parameter instead of a structurally different predicate. Without it the statement would have to branch on the expected kind, which would put a state literal into SQL text and defeat the DB-free test.\n\nThe merge stays in SQL, so the precondition is safe under READ COMMITTED: a concurrent loser blocks on the row lock, re-evaluates against the winner's committed row, and matches nothing. Reading state into Rust and writing it back would reintroduce the lost-update window the design warned about.\n\nNo source restriction, and a DB-free test asserts the word source never appears in the statement. promote_accepts_ingested_rows proves it against a real adv_wisdom row. This is the self-contradiction the design validator caught: the primary use case is a human promoting an ingested wisdom entry, which forget_manual's manual-only predicate would have forbidden.\n\nAdded PromotionStateKind rather than passing the tag as a string. The from-side needs kind-level identity, not a full value: demoting a promoted row must not require the caller to already know its target. Episodic carries no tag because the absent key is the default, and as_tag returning Option is what feeds the NULL-safe comparison.\n\nBidirectionality is proven end to end in one test: episodic to candidate to promoted, retarget promoted to promoted with a new sha, then demote back to candidate, finishing with an assertion that the demoted row is visible in default recall again. That last assertion is the recovery path for the accepted failure mode where a Concord target is deleted.\n\nThe mismatch test asserts both wrong-direction claims return 0 and, importantly, that the stored state is untouched afterward. Wrong namespace also returns 0.\n\nMCP promote tool mirrors ForgetParams and validates the target state before touching the store, so a blank target is rejected as invalid_params rather than reaching SQL.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:a296f4f9-499f-4f8c-8caa-f4a164316ecd",
+      "payload_hash": "84294da2c402ec8e96069b7fbca6d446030e89a45e7df4f2e4c2113afe3d822f",
+      "prior_revision": 40,
+      "new_revision": 41,
+      "committed_at": "2026-08-30T16:59:26.272Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addPromotionStateMemories:4dbffcff-8d62-4a8c-862f-b3dbd8343942",
+      "payload_hash": "1b3af8a424de2da41f7053fa0343c0b209bc1837a341cc60f27360577d7240e6",
+      "prior_revision": 41,
+      "new_revision": 42,
+      "committed_at": "2026-08-30T16:59:32.374Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --no-run 2>&1 | grep -E \"^error|-->\" | head -12",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:b499fdea-3333-4bd2-8b77-95afe1488138",
+      "payload_hash": "755c5f664801ecd7a295b45074365dcf87af0bbef4efb126929f5bcea2370f93",
+      "prior_revision": 42,
+      "new_revision": 43,
+      "committed_at": "2026-08-30T17:02:56.270Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -4",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:b1d7548f-09c8-45cd-a976-2a5cda123d9a",
+      "payload_hash": "b5610140214b9ccf5e67894cd984f4aa931f1cd5898521d32ac1d46b6cb3d7a4",
+      "prior_revision": 43,
+      "new_revision": 44,
+      "committed_at": "2026-08-30T17:03:52.697Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -4",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:e0088fdb-689e-4cd8-a4da-cb9da2258387",
+      "payload_hash": "b380959bf9c4407d5e0aa571a80f22dbde85ce2a75d1f4ad16f4452310e970ba",
+      "prior_revision": 44,
+      "new_revision": 45,
+      "committed_at": "2026-08-30T17:04:17.339Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -12",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:a66c64fb-f613-4d1a-8e3b-4b8aaea8f43a",
+      "payload_hash": "1fa25276065e68ce669688dd6eac26e07da0b9b1d9def89300528500f60b31f4",
+      "prior_revision": 45,
+      "new_revision": 46,
+      "committed_at": "2026-08-30T17:04:31.039Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -6 && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -3 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\" && echo \"=== other suites ===\" && cargo test --test promotion_state_it --test recall_filters_it --test ingest_batch_it -- --ignored 2>&1 | grep -E \"^test result|running\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:33f80593-7776-4fcc-bd04-adc2a122fe1d",
+      "payload_hash": "724a5089bae021b6bd2bc4726b269632984e42d7103d2c0ff41d950099e1762b",
+      "prior_revision": 46,
+      "new_revision": 47,
+      "committed_at": "2026-08-30T17:05:24.092Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "abbb3a8934aa3fcf6b1f2ea63b4dd874800e451d:RED tr_mtg25kw0_10acbc03 exit 101, no field items or invalidated on Vec<MemoryInput>. GREEN tr_mtg27bfx_9ad3a55e exit 0, 63 of 63 lib tests pass. VERIFY tr_mtg27m0f_261d211e exit 0, both DB-backed reconciliation tests pass. VERIFY tr_mtg28qug_498c5b39 exit 0, reconcile_state_it plus promotion_state_it, recall_filters_it and ingest_batch_it all green, clippy --all-targets -D warnings clean, fmt clean.\n\nThe confirmed defect is fixed. parse_wisdom now returns WisdomParse carrying items plus the source ids of retracted entries, Store::forget_ingested deletes them within the namespace restricted to adv_wisdom and adv_reflection, and reconcile_root applies them.\n\nPROVED THE TESTS ARE NOT VACUOUS. I neutered the reconcile call by passing an empty slice instead of the collected ids and re-ran: both tests failed, reconcile_removes_rows_retracted_after_ingest and retraction_is_scoped_to_the_reconciled_namespace, the latter at the is_empty assertion. Restored and re-ran green. The regression is therefore load-bearing rather than incidentally satisfied.\n\nDEPARTED FROM THE TASK NOTE ON ORDERING, deliberately. The note said apply retractions after upsert_batch. I placed them before the dedup lookup instead. Retraction is independent of dedup, since an invalidated entry is skipped at parse and never appears in items, so the two touch disjoint rows and correctness does not depend on order. But an embed or upsert failure inside the batch loop hits continue, and a shutdown hits an early return, either of which would skip a trailing removal step. Knowledge ADV has explicitly withdrawn should not survive a failed embed, so the deletion runs first where no downstream early return can bypass it.\n\nforget_ingested is restricted to ingested sources, the mirror image of forget_manual's source = 'manual'. That asymmetry is intentional: reconcile gains the power to retract ingested knowledge without gaining the power to delete a human's manual memories. Empty input short-circuits without a database call, matching existing_source_ids.\n\nDeletion rather than a tombstone is self-healing, and the test proves it: after removing pw-drop, rewriting wisdom.jsonl without invalidated_by restores the row on the next reconcile, because an absent row is absent from existing_source_ids and re-ingests fresh.\n\nA removal failure logs and continues rather than aborting the root, so a transient database error retries next pass instead of blocking ingestion.\n\nROUTED AN OUT-OF-SCOPE FINDING rather than folding it in. Writing the namespace-scoping test surfaced a real pre-existing defect: id is a global PRIMARY KEY at migrations/0001_init.sql:9, ingested rows use the raw ADV id at src/ingest.rs, and upsert_batch resolves conflicts with ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace at src/store.rs:211-221. Two projects both holding pw-1, which is near-certain given ADV ids are per-project sequential, means the second reconcile silently reassigns the first project's row to the other namespace. memories_source_uniq on (namespace, source, source_id) never fires because the primary-key conflict wins first. Created change fixCrossNamespaceMemoryId as a discovery-origin fast-follow of this change. I then rewrote my scoping test to use distinct ids per namespace so it proves delete scoping rather than accidentally exercising the upsert collision.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:6211cbc3-1c33-4f43-85d2-10d37c2b1dd0",
+      "payload_hash": "f0e23e96ea720c02b534a5f94b79e04aef4ba782c0d010b5f9c4f2bfb36970a5",
+      "prior_revision": 47,
+      "new_revision": 48,
+      "committed_at": "2026-08-30T17:05:47.710Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addPromotionStateMemories:94c8fdcb-1f75-4d0f-b99a-49ab9b9594a0",
+      "payload_hash": "0f6262d484f6285611feec2971a67d7865709ad99cbbddcaa5796cc063a258dd",
+      "prior_revision": 48,
+      "new_revision": 49,
+      "committed_at": "2026-08-30T17:06:20.178Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --no-run 2>&1 | grep -E \"^error|-->\" | head -10",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:f0339fe2-3652-4bc3-bee9-c35a2d2dc983",
+      "payload_hash": "f3afb57091d348b2453a56b557135f373f5a4a4e60de293d6b3da198870ea870",
+      "prior_revision": 49,
+      "new_revision": 50,
+      "committed_at": "2026-08-30T17:07:29.487Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -4 && echo \"=== integration ===\" && cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -12",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:713fc7f4-b658-4dbb-9858-458fe11fcffc",
+      "payload_hash": "dc99c845be5ea08c2ff182ec077d48c246040d222f1ce0205463b46cb9c64611",
+      "prior_revision": 50,
+      "new_revision": 51,
+      "committed_at": "2026-08-30T17:08:44.795Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -14",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:71247af4-b301-48d3-a9a7-969ad6935291",
+      "payload_hash": "f21fde15b196260847f98a01cce22459104067e5cc921d790f5a380444abbf66",
+      "prior_revision": 51,
+      "new_revision": 52,
+      "committed_at": "2026-08-30T17:08:59.906Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --test reconcile_state_it -- --ignored 2>&1 | tail -14",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:3cea22cd-ccc7-40fd-a2e0-3b49fda4a75f",
+      "payload_hash": "80dbec7ea896ba4f6d6da69a2598011209bf9f7070934ba3284808cbc619f3e7",
+      "prior_revision": 52,
+      "new_revision": 53,
+      "committed_at": "2026-08-30T17:09:45.619Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --lib 2>&1 | tail -3 && echo \"=== all integration ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result|Running\" && echo \"=== clippy ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -2 && echo \"=== fmt ===\" && cargo fmt --check && echo \"fmt ok\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:7037230d-6ea6-4a04-9e51-845eed549e5b",
+      "payload_hash": "80f153caa982555a0ac1ec46e599acd565ae1e1c96126c3914c378f887270117",
+      "prior_revision": 53,
+      "new_revision": 54,
+      "committed_at": "2026-08-30T17:11:03.979Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "3074ad290a698d8b0068b1383a024342ecc47c0b:RED tr_mtg2bfn6_662f1102 exit 101, no field promoted on WisdomParse. GREEN tr_mtg2ecm0_4d4de10a exit 0, all 5 reconcile_state_it tests pass. VERIFY tr_mtg2g17f_e774c935 exit 0, full suite green: 63 lib tests, and every integration suite including ingest_batch_it 3, promotion_state_it 4, recall_filters_it 1, recall_it 2, reconcile_state_it 5, plus clippy --all-targets -D warnings and fmt clean.\n\nThis closes the validator's decisive catch. A promoted_at set after first ingest now reaches the stored row through Store::mark_candidates, applied by reconcile outside the dedup path.\n\nSIMPLIFIED AGAINST THE TASK NOTE, deliberately. The note described two paths: an inline state write during parse for entries arriving already-promoted, plus mark_candidates for entries promoted later. I implemented one. Because mark_candidates runs after upsert_batch, it covers both cases: a first-ingest row exists by then and has no promotion_state, so the same statement flags it. Two writers of promotion_state would have been redundant and could disagree. Parse now only collects ids and strips the raw timestamp.\n\nParse still strips promoted_at, and that is not cosmetic. Dedup freezes metadata at first write, so keeping the raw field would leave agents a second promotion field populated only on entries that happened to arrive already-promoted and absent on everything promoted later. One field, one meaning. A dedicated test asserts promoted_at is gone while unrelated provenance such as source_change survives.\n\nPROVED THE IDEMPOTENCY GUARD IS LOAD-BEARING. I removed AND NOT (metadata ? $3) from MARK_CANDIDATES_SQL and re-ran: reconcile_never_clobbers_a_human_promotion failed with left Some(PromotionCandidate), right Some(Promoted { target: docs/specs/0011-promotion-state.md#sha256:abc }). Restored and green. Without the guard every later reconcile would silently un-graduate a human's promotion and resurrect the memory in recall beside the Concord record that owns it, since promoted_at stays in the source file forever and every pass re-collects the same ids. AC7 is therefore genuinely tested, not incidentally satisfied.\n\nIngested promotions map to PromotionCandidate and never to Promoted. ADV records graduation as a timestamp with no manifest path and no sha256, so there is no Concord target to name. Promoted with an empty target would hide the memory from recall while pointing at nothing, losing it on both sides at once. A test asserts a candidate stays visible in default recall.\n\nTHE ROUTED DEFECT REPRODUCED AGAINST MY OWN TESTS. Two new tests each seeded id pw-1 under distinct uniquely-named namespaces and collided, because id is a global primary key. The second upsert took the ON CONFLICT (id) DO UPDATE branch and moved the first test's row into the other namespace, so a state assertion read None. It presented as a promotion-state bug and was not one, which is exactly how this will present in production. I gave each test a distinct id, which is a fixture workaround rather than a fix, and recorded the reproduction as observed evidence in fixCrossNamespaceMemoryId along with a scope section and the note that the workaround should be removed once real isolation exists.\n\nBoth new store methods short-circuit on empty input without a database call, and both reconcile steps log and continue on error so a transient database failure retries next pass rather than aborting the root. Retries are automatic because ids are re-collected from the source file on every pass, never from the store.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:ea25b7b6-6a54-4a17-87b1-d76bdf7c6b7b",
+      "payload_hash": "bbafb747b3eff825984dd1bac3d902a2e64a8d8612fac0bc71219aa0272ad8b8",
+      "prior_revision": 54,
+      "new_revision": 55,
+      "committed_at": "2026-08-30T17:11:51.263Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addPromotionStateMemories:36d8577b-f420-45f7-80c9-26a6f0e28f19",
+      "payload_hash": "9bcc430eb92946b4e6285f5408ad618ade909db30eb06d8350dbcda89eb9ab29",
+      "prior_revision": 55,
+      "new_revision": 56,
+      "committed_at": "2026-08-30T17:11:57.093Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "8d83815bbd0dae6a65168b1603c06290dc20d103:Documentation task, tdd_intent not_applicable, so no red/green cycle. Evidence policy is artifact_reference.\n\nVerified byte-identical across both required locations: diff reports no output and cmp reports no differences between docs/specs/0011-promotion-state.md and .adv/specs/0011-promotion-state.md. Numbering follows 0010 as the next in sequence and the heading follows the rq-episode-* convention, giving rq-episode-promotion-state01.\n\nStructure mirrors 0010 so the two read as siblings: Statement, contract sections, Query and Index Safety, Boundaries, Verification.\n\nThe GIN caveat is recorded explicitly rather than left to inference. The default exclusion is a negative predicate and does not use memories_metadata_gin, exactly as the negative open-follow-up predicate does not, and the spec cites 0010 which already records that the index claim covers positive containment only. A reader who skips this would reasonably assume migration 0002 covers the new filter. It does not.\n\nAlso recorded, each because a reader would otherwise have to reconstruct it from code: that Episodic is an absent key and never a stored value, so nobody adds a literal later and forces a backfill; that Superseded was considered and dropped for want of any producer; why target is opaque and what the accepted failure mode is, with the two-step candidate flow and demotion as its bounds; why ingested promotions become candidates rather than promoted, which is that ADV has no manifest path or sha256 to name; why the absent-key guard delivers idempotency, which is that promoted_at stays in the source file permanently; and that transitions are bidirectional and not source-restricted.\n\nStated plainly that no migration is involved, since a reader will look for one on seeing a new metadata key.\n\nDocumented the write-once-per-source_id property as the reason the ingest contract exists at all, so a future reader understands why reconcile addresses stored rows directly instead of routing through the ingestion path.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:8946aded-b439-4916-a854-de63fe19855e",
+      "payload_hash": "e914e2a1093480e4115a9d686cf98dfbd0b684878fddb7c2890892012de19aa5",
+      "prior_revision": 56,
+      "new_revision": 57,
+      "committed_at": "2026-08-30T17:12:47.175Z"
+    },
+    {
+      "mutation_kind": "task_mutation",
+      "authority_kind": "mutation",
+      "authority_reason": "task_mutation",
+      "authority_evidence": "in_progress",
+      "operation_id": "mutation:task_mutation:addPromotionStateMemories:5182c68e-f1d3-4854-8723-cb73d78dcec3",
+      "payload_hash": "430756d02036989995b73408f813cace3bddf6b04c8eb5c0156ad0fe05589a1b",
+      "prior_revision": 57,
+      "new_revision": 58,
+      "committed_at": "2026-08-30T17:12:55.338Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -2 && echo \"=== lib ===\" && cargo test --lib 2>&1 | tail -2 && echo \"=== ignored suites ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"Running|^test result\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:19c25671-b53c-4e15-9eb0-8255fcbb3cb0",
+      "payload_hash": "d2c4697a94d87794f4155e4410c4c46c63bcfc0c9c2e68c7fd21bbb838428a6b",
+      "prior_revision": 58,
+      "new_revision": 59,
+      "committed_at": "2026-08-30T17:14:24.831Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo clippy --all-targets -- -D warnings 2>&1 | grep -cE \"^warning|^error\" | xargs -I{} echo \"clippy warnings+errors: {}\" && cargo fmt --check && echo \"fmt: clean\" && diff docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"spec diff: byte-identical\" && echo \"=== named AC tests ===\" && cargo test --tests -- --ignored --nocapture 2>&1 | grep -E \"^test (reconcile_|promote_|recall_excludes|stored_metadata|retraction_)\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:117b3ef4-006a-45dc-a997-66c89e9bc190",
+      "payload_hash": "bb82e596a8a12308e25d2413b06beade32248cb7e06c373e8539e559c98bc352",
+      "prior_revision": 59,
+      "new_revision": 60,
+      "committed_at": "2026-08-30T17:14:37.617Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo clippy --all-targets -- -D warnings 2>&1 | tail -2 && echo \"clippy: exit 0, no warnings\" && cargo fmt --check && echo \"fmt: clean\" && diff docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"spec diff: byte-identical\" && echo \"=== named AC tests ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test [a-z]\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:30981e67-db47-42d9-8534-dee4ba581358",
+      "payload_hash": "a61b0ecc3c2260e6452cb5600331adb7c8aa9551aca27ca24abf28343a651204",
+      "prior_revision": 60,
+      "new_revision": 61,
+      "committed_at": "2026-08-30T17:14:52.369Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "8d83815bbd0dae6a65168b1603c06290dc20d103:VERIFY tr_mtg2kc6h_065471dd exit 0: cargo build --locked clean, 63 of 63 lib tests, and every ignored suite green — ingest_batch_it 3, ingest_cadence 1, promotion_state_it 4, recall_filters_it 1, recall_it 2, reconcile_state_it 5, for 16 DB-backed tests against the live store. VERIFY tr_mtg2kxcy_5281849e exit 0: clippy --all-targets -D warnings clean with no warnings, fmt clean, spec diff byte-identical, and every DB-backed test named individually as ok.\n\nDelegated the burst to adv-verifier, then re-ran it myself rather than accepting the report. The verifier reported the whole ignored suite in 2.9s, which contradicted my own earlier measurement of 37.30s for recall_it alone. My independent run reproduced the fast number, 3.20s, and the cause is that recall_it loads a real embedding model which is now cached on disk after the first run. The discrepancy was legitimate, but it was resolved with evidence rather than assumed benign. Counts matched the verifier exactly across all seven binaries.\n\nOne self-inflicted false failure along the way at tr_mtg2km1x_74d52b85: I piped clippy through grep -c, which exits 1 when the count is zero, breaking the && chain. Clippy itself was clean with zero warnings. Reissued without that construct.\n\nACCEPTANCE CRITERIA MAPPING, all nine covered by passing tests:\n\nAC1 two stored variants with Episodic as the absent-key default — types::promotion_state_tests: variant_tags_serialize_snake_case, variant_tags_deserialize_round_trip, episodic_is_not_a_variant, unknown_fields_are_rejected, schema_variants_are_closed_and_exact.\n\nAC2 new memories default to episodic with no stored key — reconcile_maps_promotion_recorded_after_ingest asserts stored state is None after first ingest of an unpromoted entry; recall_excludes_promoted_by_default_and_keeps_candidates_visible seeds a keyless row.\n\nAC3 recall excludes Promoted by default — store::tests::recall_query_excludes_promoted_by_default DB-free, recall_excludes_promoted_by_default_and_keeps_candidates_visible against Postgres, server::tests::recall_filters_validate_closed_optional_input pinning the omitted-flag default at the deserialization boundary.\n\nAC4 opt-in includes them and candidates stay visible in both modes — store::tests::recall_query_omits_promoted_exclusion_when_opted_in proving the open-followup exclusion survives independently, plus the same DB test asserting both modes.\n\nAC5 bidirectional transitions on ingested rows with mismatch affecting zero rows — promote_transitions_run_in_both_directions covering episodic to candidate to promoted to retargeted to demoted, promote_rejects_from_state_mismatch, promote_accepts_ingested_rows, store::tests::promote_sql_binds_state_and_omits_source_restriction, promotion_state_kind_tags_round_trip.\n\nAC6 reconcile applies post-ingest ADV state to stored rows — reconcile_removes_rows_retracted_after_ingest, retraction_is_scoped_to_the_reconciled_namespace, reconcile_maps_promotion_recorded_after_ingest, stored_metadata_drops_the_raw_promoted_at_field, ingest::tests::parse_wisdom_skips_malformed_and_invalidated.\n\nAC7 idempotency — reconcile_never_clobbers_a_human_promotion, which runs two further passes after a human sets Promoted and asserts the target survives.\n\nAC8 opaque target validated only as non-blank — types::promotion_state_tests::validate_rejects_blank_target and validate_accepts_opaque_nonblank_target, the latter deliberately feeding unparseable shapes.\n\nAC9 test coverage including both defect regressions and idempotency — satisfied by the set above. Both regressions were separately proven load-bearing rather than incidentally passing: neutering the reconcile retraction call failed reconcile_removes_rows_retracted_after_ingest and retraction_is_scoped_to_the_reconciled_namespace, and removing the absent-key guard from MARK_CANDIDATES_SQL failed reconcile_never_clobbers_a_human_promotion.\n\nBoth spec copies are byte-identical by diff. One out-of-scope defect was routed rather than folded in: fixCrossNamespaceMemoryId.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:944c7d14-a170-4b7d-bb9b-58038437fc69",
+      "payload_hash": "cbbe7a40507fd4503d75cae3f94a121459eea735f688977fb88f16ea0638ec61",
+      "prior_revision": 61,
+      "new_revision": 62,
+      "committed_at": "2026-08-30T17:15:27.380Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "All 7 tasks done, none cancelled, none deferred. Worktree clean at 8d83815 on change/addPromotionStateMemories, six checkpoint commits over base main 2b550fb. 10 files, 1513 insertions, 15 deletions.\n\nFINAL VERIFICATION tr_mtg2kc6h_065471dd and tr_mtg2kxcy_5281849e, both exit 0: cargo build --locked clean, 63 of 63 lib tests, 16 DB-backed tests green across every binary against the live store at localhost:5434, clippy --all-targets -D warnings with zero warnings, cargo fmt --check clean, and the two spec copies byte-identical by diff.\n\nAll nine acceptance criteria map to passing tests. Full mapping is recorded on tk-e7b71bab9d58.\n\nWHAT THIS CHANGE ACTUALLY TURNED OUT TO BE. The feature is promotion state, but the work was dominated by a single structural fact the design validator surfaced: episode's ingest is write-once per source_id. filter_eligible drops every already-stored item before upsert_batch sees it, so episode cannot observe any post-ingest mutation of ADV state. Both fields this feature depends on are exactly that. invalidated_by mutates on retraction, promoted_at mutates on graduation, and neither could reach a stored row. The retraction defect and the inert promotion mapping were one missing mechanism, not two bugs, and reconcile now carries one post-ingest state reconciliation step that serves both.\n\nBOTH REGRESSIONS WERE PROVEN LOAD-BEARING, not merely observed passing. Neutering the reconcile retraction call failed reconcile_removes_rows_retracted_after_ingest and retraction_is_scoped_to_the_reconciled_namespace. Removing AND NOT (metadata ? $3) from MARK_CANDIDATES_SQL failed reconcile_never_clobbers_a_human_promotion with left PromotionCandidate, right Promoted. Both restored green. A passing test that would also pass against broken code is not evidence, so each was checked.\n\nTWO DELIBERATE DEPARTURES FROM THE TASK PLAN, both recorded on their tasks. Retraction runs before the batch loop rather than after, because an embed failure hits continue and a shutdown hits an early return, either of which would skip a trailing deletion and leave withdrawn knowledge in service. And the promotion mapping uses one writer rather than two: because mark_candidates runs after upsert_batch it covers both first-ingest and later-promotion rows, so the separately-planned inline state write was redundant and was dropped. Parse still strips promoted_at so promotion_state is the only promotion field agents can filter on.\n\nONE OUT-OF-SCOPE DEFECT ROUTED, not folded in. id is a global PRIMARY KEY while ingested rows use raw per-project ADV ids, and upsert_batch resolves conflicts with ON CONFLICT (id) DO UPDATE SET namespace = EXCLUDED.namespace. Two projects both holding pw-1 means the second silently steals the first's row. It then reproduced against my own test fixtures during tk-568afae7fe07, presenting as a promotion-state failure when it was not one. Created fixCrossNamespaceMemoryId as a discovery-origin fast-follow with that reproduction recorded as observed evidence.\n\nIndependent verification was delegated to adv-verifier and then re-run inline rather than accepted, because the reported suite duration contradicted an earlier measurement. The discrepancy proved legitimate — the embedding model is now disk-cached — and counts matched exactly across all seven binaries.\n\nBlast radius remains latent. The store holds zero rows and the service has been disabled since 2026-08-19, so neither defect is harming anyone today. Both would go live on the first reconcile after restoration, which is the argument for landing this before the service returns.",
+      "operation_id": "mutation:gate_completion:addPromotionStateMemories:90203cf6-1206-4775-b7f4-fcbead46c704",
+      "payload_hash": "33cb8c58ffb795ae0414e2df1649c64abae3d4990eb5a9079f1eb55d3f4d9fe6",
+      "prior_revision": 62,
+      "new_revision": 63,
+      "committed_at": "2026-08-30T17:16:01.902Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "addPromotionStateMemories|change:review:acceptance|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:addPromotionStateMemories:52aa591b-f57a-4257-bff6-b66c6dc37fb5",
+      "payload_hash": "afdd86d1475e26c03f68719b9d18f623fb53df7e603c58aec693ef8631d4ecd7",
+      "prior_revision": 63,
+      "new_revision": 64,
+      "committed_at": "2026-08-30T17:29:01.643Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo test --test reconcile_state_it -- --ignored source_supplied 2>&1 | tail -14",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:94d6c8ed-3af9-48d3-b242-e8922ffa3966",
+      "payload_hash": "886bc994e114351793213a1a9acc6bac77c529970eb67ab90cc0dbe8aa059721",
+      "prior_revision": 64,
+      "new_revision": 65,
+      "committed_at": "2026-08-30T17:30:23.303Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo fmt && cargo test --lib 2>&1 | tail -3 && echo \"=== reconcile ===\" && cargo test --test reconcile_state_it -- --ignored 2>&1 | grep -E \"^test [a-z]|^test result\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:60871b17-56e2-4eff-b473-871289bbc0d1",
+      "payload_hash": "c3b34aa616b62f7994af8b6d5bbcc8e1954f8770bf1ac7f9c7d6cb0254a12884",
+      "prior_revision": 65,
+      "new_revision": 66,
+      "committed_at": "2026-08-30T17:31:31.774Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cp docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && cargo fmt && cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | tail -2 && echo \"=== all ignored ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== clippy/fmt/spec ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && diff docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"specs byte-identical\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:0c04562d-907e-4504-a3ee-2924367839c3",
+      "payload_hash": "cafe125d72fefdb1744525ee5e9b2a7c95316031c83cc073a5fc8048d27ea12b",
+      "prior_revision": 66,
+      "new_revision": 67,
+      "committed_at": "2026-08-30T17:32:09.419Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "341768e325f6d5b294912cee4279e14d4558ac23:Review-stage remediation. RED tr_mtg34vov_8639962f exit 101 with left Some(Promoted { target: \"forged\" }), right None. GREEN tr_mtg36ckn_4614b74e exit 0. FULL VERIFY tr_mtg375mj_35853568 exit 0: build clean, 63 of 63 lib tests, 18 DB-backed tests across all binaries up from 16, clippy --all-targets -D warnings clean, fmt clean, specs byte-identical.\n\nTWO DEFECTS FIXED, ONE FOUND BY THE REVIEWER AND ONE BY FOLLOWING IT TO ITS ROOT.\n\nReviewer's finding, accepted. My PROMOTE_SQL precondition was metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5. With $5 NULL for the episodic case, that matched far more than an absent key: JSON null, a non-object value, and an object missing kind all extract to SQL NULL. So from: Episodic would win against a row that visibly had a promotion state. The reviewer replaced the episodic branch with an exact NOT (metadata ? $3) test and added a regression covering null and empty-object shapes. This also makes promote and mark_candidates agree on what episodic means, where before only mark_candidates used key-absence.\n\nRoot cause behind it, which I found by asking where a malformed state could come from. parse_wisdom copies the raw ADV object into metadata verbatim and stripped only content and promoted_at. It did not strip promotion_state, the reserved key I introduced in this change. So the source file could write episode's own state field. The failing test proved the severe case rather than the malformed one: an entry carrying promotion_state {\"kind\":\"promoted\",\"target\":\"forged\"} was stored intact and would have been excluded from recall from first ingest. External input silently suppressing a memory.\n\nFixed at the boundary: parse_wisdom now removes PROMOTION_STATE_KEY alongside content and promoted_at, so reconcile and the promote tool are the key's only writers. The reviewer's SQL guard remains as defense in depth, but this is the primary control — it stops the bad value existing rather than handling it later.\n\nChecked the sibling path rather than assuming: parse_reflections builds metadata with serde_json::json! from named fields, so it cannot carry source-supplied keys and needs no strip. That also answers the reviewer's question about whether reflections had the same gap. They do not.\n\nCoverage added: an ingest unit test with a forged entry asserting the key is dropped while real provenance survives, and a DB-backed test asserting both a well-formed forgery and a malformed value are stripped, that unrelated provenance is preserved, and that both memories stay visible in recall.\n\nCampsite: corrected the parse_wisdom doc comment, which still claimed metadata was the raw object with only content removed. That is now three stripped keys.\n\nSpec 0011 updated in both copies to record the boundary rule, why the key is episode's, that reflections cannot carry it, and the expanded verification set. Copies re-diffed byte-identical.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:76908423-1ffb-4ebf-bb31-9a61f3d5ba90",
+      "payload_hash": "de572d7869aaa185e102c4b126482d491a567be25600a95a6864e23b04f97189",
+      "prior_revision": 67,
+      "new_revision": 68,
+      "committed_at": "2026-08-30T17:32:36.200Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addPromotionStateMemories:adb85098-36c6-4df4-a22b-cc2bbbf031c7",
+      "payload_hash": "cc4d7014686b7d8539c166d18015b5ec2e2a21881eb7a1475def7acd58940ea0",
+      "prior_revision": 68,
+      "new_revision": 69,
+      "committed_at": "2026-08-30T17:33:08.450Z"
+    },
+    {
+      "mutation_kind": "gate_completion",
+      "authority_kind": "mutation",
+      "authority_reason": "complete gate",
+      "authority_evidence": "User accepted at the acceptance checkpoint, replying \"Continue\" against the anchor phrase \"Reply `continue` to proceed, or reply with what to adjust.\"\n\nReview verdict APPROVED. All 9 acceptance criteria mapped to named passing tests. Three defects found and fixed during review: the reviewer's episodic compare-and-set looseness in PROMOTE_SQL, the reserved-key hijack in parse_wisdom that was its root cause, and a stale doc comment. Final verification tr_mtg375mj_35853568 exit 0: build clean, 63 of 63 lib tests, 18 DB-backed tests, clippy --all-targets -D warnings clean, fmt clean, spec copies byte-identical. Executive summary persisted and read back. Review commit 341768e.\n\nCaveat carried into release: fixCrossNamespaceMemoryId remains open and is confirmed real, having reproduced against this change's test fixtures. It is out of scope here and tracked as its own change.",
+      "operation_id": "mutation:gate_completion:addPromotionStateMemories:40e71e32-1b8f-440c-8bd2-ef3f6c7d7f96",
+      "payload_hash": "a694e442b480cac8f912d5713ea1d3728a36068f3816af924e3f8f31daf7c3c1",
+      "prior_revision": 69,
+      "new_revision": 70,
+      "committed_at": "2026-08-30T17:34:51.313Z"
+    },
+    {
+      "mutation_kind": "subagent_report_submitted",
+      "authority_kind": "mutation",
+      "authority_reason": "persist sub-agent report",
+      "authority_evidence": "addPromotionStateMemories|change:harden:release|adv-reviewer|1",
+      "operation_id": "mutation:subagent_report_submitted:addPromotionStateMemories:e5cf3a43-9703-40a0-9e85-37ed3fb36d96",
+      "payload_hash": "1d9f2c192b965bcd4928a13cfb9882821eb54fd1bb3c96187fd391363bc7f0a9",
+      "prior_revision": 70,
+      "new_revision": 71,
+      "committed_at": "2026-08-30T17:42:54.639Z"
+    },
+    {
+      "mutation_kind": "test_run_recorded",
+      "authority_kind": "mutation",
+      "authority_reason": "record test-run evidence",
+      "authority_evidence": "cargo build --locked 2>&1 | tail -1 && echo \"=== lib ===\" && cargo test --lib 2>&1 | grep -E \"^test result\" && echo \"=== ignored ===\" && cargo test --tests -- --ignored 2>&1 | grep -E \"^test result\" && echo \"=== gates ===\" && cargo clippy --all-targets -- -D warnings 2>&1 | tail -1 && cargo fmt --check && echo \"fmt clean\" && cmp -s docs/specs/0011-promotion-state.md .adv/specs/0011-promotion-state.md && echo \"specs byte-identical\" && git diff --check && echo \"whitespace clean\"",
+      "operation_id": "mutation:test_run_recorded:addPromotionStateMemories:cf683f64-e347-4ad5-a39f-0440bab391ec",
+      "payload_hash": "fc05b8c0ad71db3a55ef405ca23b0f36d7a674c571e3fd9e3c618add4ba2eb73",
+      "prior_revision": 71,
+      "new_revision": 72,
+      "committed_at": "2026-08-30T17:44:27.738Z"
+    },
+    {
+      "mutation_kind": "task_checkpoint_completed",
+      "authority_kind": "mutation",
+      "authority_reason": "record task checkpoint completion",
+      "authority_evidence": "947e520eb7d6292ae8651404112858d883faada9:Harden-stage remediation. Full verify tr_mtg3mzb9_53f0e134 exit 0: build clean, 63 of 63 lib tests, 19 DB-backed tests up from 18, clippy --all-targets -D warnings clean, fmt clean, specs byte-identical, git diff --check clean.\n\nLOST-UPDATE DEFECT IN THE UPSERT CONFLICT PATH, found by the harden reviewer.\n\nupsert_batch resolved conflicts with metadata = EXCLUDED.metadata, which overwrites the whole JSONB column including a stored promotion_state. The conflict path now preserves an existing state: CASE WHEN memories.metadata ? key THEN jsonb_set(EXCLUDED.metadata, ARRAY[key], memories.metadata -> key, true) ELSE EXCLUDED.metadata END. Every other metadata field still refreshes from source.\n\nThis directly contradicts the design-stage researcher, which concluded the overwrite could not happen because filter_eligible drops already-stored items before upsert_batch. That holds single-threaded only. filter_eligible is a check-then-act across two statements with no lock, so two overlapping reconciles can both classify a row as absent, and a promotion can land between their writes. I accepted that researcher conclusion at design time and it was wrong; the harden pass caught what the acceptance pass did not, because I scoped the two reviews to different dimensions.\n\nThe more reachable trigger is not concurrent reconciles. Store::upsert delegates to upsert_batch (store.rs:172-176), so the manual MCP upsert tool shared the bug: updating a memory's content would silently wipe its promotion state, restoring a graduated memory to recall with no signal. Verified by reading the delegation rather than assuming it.\n\nProved load-bearing rather than trusting the reviewer: reverted the preservation branch to metadata = EXCLUDED.metadata and confirmed concurrent_ingest_conflict_preserves_promotion_state fails, then restored and confirmed it passes. Third such check in this change.\n\nScalar-metadata edge case assessed against the schema, not assumed: migrations/0001_init.sql:33 declares metadata JSONB NOT NULL, so a scalar row reaching jsonb_set would fail the write rather than silently null the column. Rejected write is a safe failure mode. Both reviewers judged this non-blocking; confirmed with the actual constraint.\n\nAlso corrected an overstatement I had written. The spec and the promote tool description claimed a concurrent loser always matches nothing. True only when the kind changes. Two transitions from the same kind are last-writer-wins, because from carries a kind but no target or version. The docs now say that plainly instead of implying stronger safety than the SQL provides.\n\nSpec 0011 updated in both copies with the conflict-path rule and the corrected concurrency claim, re-verified byte-identical with cmp.",
+      "operation_id": "mutation:task_checkpoint_completed:addPromotionStateMemories:3cd83dab-7cee-4e87-8d6b-58024d54ec1f",
+      "payload_hash": "a6d1df988018e44957a4aa2d65ea044f2f93592087d0e528332ca4149f7ba8a8",
+      "prior_revision": 72,
+      "new_revision": 73,
+      "committed_at": "2026-08-30T17:44:51.934Z"
+    },
+    {
+      "mutation_kind": "artifact_update",
+      "authority_kind": "mutation",
+      "authority_reason": "change artifact update",
+      "authority_evidence": "operator-requested artifact update",
+      "operation_id": "mutation:artifact_update:addPromotionStateMemories:7dde640e-e4a6-4bf6-90f1-11e9890fa233",
+      "payload_hash": "65dbcf3b6ce1e7f3661b5f6cad1f5c21aa1ddc322bfaf8f11343be7a90f287d6",
+      "prior_revision": 73,
+      "new_revision": 74,
+      "committed_at": "2026-08-30T17:45:13.579Z"
+    }
+  ]
+}
