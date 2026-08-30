@@ -22,65 +22,97 @@ async fn product_scope_includes_untagged_shared_pool() {
     let ns = format!("it_product_{}", uuid::Uuid::new_v4().simple());
     let shared = format!("it_shared_{}", uuid::Uuid::new_v4().simple());
 
-    let seed = [
-        (
-            ns.clone(),
-            "untagged-project",
-            serde_json::json!({"work_id":"w"}),
-        ),
-        (
-            shared.clone(),
-            "untagged-shared",
-            serde_json::json!({"tags":["b"]}),
-        ),
-        (
-            ns.clone(),
-            "tagged-p",
-            serde_json::json!({"product":"p","work_id":"w"}),
-        ),
-        (
-            shared.clone(),
-            "tagged-q",
-            serde_json::json!({"product":"q","work_id":"w"}),
-        ),
-        (
-            ns.clone(),
-            "null-product",
-            serde_json::json!({"product":null,"work_id":"w"}),
-        ),
-    ];
-    for (namespace, content, metadata) in seed {
-        store
-            .upsert(
-                &MemoryInput {
-                    id: format!("{namespace}-{content}"),
-                    namespace: namespace.clone(),
-                    source: MemorySource::Manual,
-                    source_id: None,
-                    kind: Some("gotcha".into()),
-                    content: content.into(),
-                    metadata,
-                },
+    let outcome: anyhow::Result<(Vec<String>, Vec<String>)> = async {
+        let seed = [
+            (
+                ns.clone(),
+                "untagged-project",
+                serde_json::json!({"work_id":"w"}),
+            ),
+            (
+                shared.clone(),
+                "untagged-shared",
+                serde_json::json!({"tags":["b"]}),
+            ),
+            (
+                ns.clone(),
+                "tagged-p",
+                serde_json::json!({"product":"p","work_id":"w"}),
+            ),
+            (
+                shared.clone(),
+                "tagged-q",
+                serde_json::json!({"product":"q","work_id":"w"}),
+            ),
+            (
+                ns.clone(),
+                "null-product",
+                serde_json::json!({"product":null,"work_id":"w"}),
+            ),
+        ];
+        for (namespace, content, metadata) in seed {
+            store
+                .upsert(
+                    &MemoryInput {
+                        id: format!("{namespace}-{content}"),
+                        namespace: namespace.clone(),
+                        source: MemorySource::Manual,
+                        source_id: None,
+                        kind: Some("gotcha".into()),
+                        content: content.into(),
+                        metadata,
+                    },
+                    &vector(),
+                )
+                .await?;
+        }
+
+        let filters = RecallFilters {
+            product: Some("p".into()),
+            ..Default::default()
+        };
+        let mut product_hits: Vec<String> = store
+            .recall(&vector(), &[ns.clone(), shared.clone()], 20, Some(&filters))
+            .await?
+            .into_iter()
+            .map(|hit| hit.content)
+            .collect();
+        product_hits.sort();
+
+        let composed = RecallFilters {
+            product: Some("p".into()),
+            work_id: Some("w".into()),
+            kinds: Some(vec!["gotcha".into()]),
+            ..Default::default()
+        };
+        let mut composed_hits: Vec<String> = store
+            .recall(
                 &vector(),
+                &[ns.clone(), shared.clone()],
+                20,
+                Some(&composed),
             )
+            .await?
+            .into_iter()
+            .map(|hit| hit.content)
+            .collect();
+        composed_hits.sort();
+
+        Ok((product_hits, composed_hits))
+    }
+    .await;
+
+    for namespace in [&ns, &shared] {
+        sqlx::query("DELETE FROM memories WHERE namespace = $1")
+            .bind(namespace)
+            .execute(&pool)
             .await
-            .expect("seed");
+            .expect("cleanup");
     }
 
-    let filters = RecallFilters {
-        product: Some("p".into()),
-        ..Default::default()
-    };
-    let mut got: Vec<String> = store
-        .recall(&vector(), &[ns.clone(), shared.clone()], 20, Some(&filters))
-        .await
-        .expect("product-scoped recall")
-        .into_iter()
-        .map(|h| h.content)
-        .collect();
-    got.sort();
+    let (product_hits, composed_hits) = outcome.expect("seed and product-scoped recalls");
     assert_eq!(
-        got,
+        product_hits,
         vec![
             "tagged-p".to_string(),
             "untagged-project".to_string(),
@@ -88,39 +120,11 @@ async fn product_scope_includes_untagged_shared_pool() {
         ],
         "a Product scope returns the Product's rows plus the untagged shared pool"
     );
-
-    let composed = RecallFilters {
-        product: Some("p".into()),
-        work_id: Some("w".into()),
-        kinds: Some(vec!["gotcha".into()]),
-        ..Default::default()
-    };
-    let mut got: Vec<String> = store
-        .recall(
-            &vector(),
-            &[ns.clone(), shared.clone()],
-            20,
-            Some(&composed),
-        )
-        .await
-        .expect("product + work + kind recall")
-        .into_iter()
-        .map(|hit| hit.content)
-        .collect();
-    got.sort();
     assert_eq!(
-        got,
+        composed_hits,
         vec!["tagged-p".to_string(), "untagged-project".to_string()],
         "the Product-OR-unscoped arm composes with work and kind filters"
     );
-
-    for namespace in [ns, shared] {
-        sqlx::query("DELETE FROM memories WHERE namespace = $1")
-            .bind(&namespace)
-            .execute(&pool)
-            .await
-            .expect("cleanup");
-    }
 }
 
 #[tokio::test]
