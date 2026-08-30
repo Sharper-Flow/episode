@@ -162,26 +162,11 @@ pub async fn reconcile_root(
     root: &ProjectRoot,
     shutdown: &watch::Receiver<bool>,
 ) -> ReconcileOutcome {
-    let adv_dir = root.path.join(".adv");
-    let mut items: Vec<MemoryInput> = Vec::new();
-    let mut invalidated: Vec<String> = Vec::new();
-    let mut promoted: Vec<String> = Vec::new();
-    match ingest::parse_wisdom(&root.namespace, &adv_dir) {
-        Ok(mut w) => {
-            items.append(&mut w.items);
-            invalidated.append(&mut w.invalidated);
-            promoted.append(&mut w.promoted);
-        }
-        Err(e) => {
-            tracing::warn!(namespace = %root.namespace, error = %e, "wisdom parse failed")
-        }
-    }
-    match ingest::parse_reflections(&root.namespace, &adv_dir) {
-        Ok(mut r) => items.append(&mut r),
-        Err(e) => {
-            tracing::warn!(namespace = %root.namespace, error = %e, "reflection parse failed")
-        }
-    }
+    let ingest::SourceParse {
+        items,
+        invalidated,
+        promoted,
+    } = ingest::aggregate(&root.namespace, &root.path, ingest::SOURCES);
 
     // Apply retractions before ingesting. Dedup makes the store blind to ADV
     // fields that change after first ingest, so a retracted entry that was
