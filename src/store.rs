@@ -7,7 +7,10 @@ use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 
-use crate::types::{MemoryInput, NamespaceStat, RecallFilters, RecallHit};
+use crate::types::{
+    MemoryInput, NamespaceStat, PROMOTION_STATE_KEY, PromotionState, PromotionStateKind,
+    RecallFilters, RecallHit,
+};
 
 fn push_and(builder: &mut QueryBuilder<Postgres>, has_where: &mut bool) {
     if *has_where {
@@ -81,7 +84,7 @@ fn build_recall_query(
         builder
             .push("NOT (metadata @> ")
             .push_bind(serde_json::json!({
-                crate::types::PROMOTION_STATE_KEY: {"kind": "promoted"}
+                PROMOTION_STATE_KEY: {"kind": "promoted"}
             }))
             .push(")");
     }
@@ -92,6 +95,19 @@ fn build_recall_query(
         .push_bind(top_k);
     builder
 }
+
+/// Compare-and-set of a memory's promotion state.
+///
+/// Every state value is a bound parameter, so no state literal reaches SQL
+/// syntax. The precondition uses `IS NOT DISTINCT FROM` rather than `=` so a
+/// NULL parameter — meaning "no promotion state" — matches an absent key. That
+/// is what lets one statement cover every transition, including the episodic
+/// start state, without branching on the expected kind.
+const PROMOTE_SQL: &str = "UPDATE memories \
+     SET metadata = jsonb_set(metadata, ARRAY[$3], $4::jsonb, true), \
+         updated_at = now() \
+     WHERE id = $1 AND namespace = $2 \
+       AND metadata -> $3 ->> 'kind' IS NOT DISTINCT FROM $5";
 
 /// Maximum time to wait when acquiring a connection from the pool (AC3).
 const POOL_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -297,6 +313,40 @@ impl Store {
         Ok(result.rows_affected())
     }
 
+    /// Compare-and-set a memory's promotion state (AC5).
+    ///
+    /// Borrows [`Self::forget_manual`]'s shape — one statement, structural
+    /// predicates, rows-affected return — but deliberately **not** its
+    /// `source = 'manual'` restriction. The row a human most needs to promote is
+    /// an ingested wisdom entry, so a manual-only predicate would forbid the
+    /// primary use case.
+    ///
+    /// `from` is the expected current state. A mismatch, a wrong namespace, or
+    /// an unknown id all return `0` rather than erroring.
+    ///
+    /// Safe under READ COMMITTED because the merge stays in SQL: a concurrent
+    /// loser blocks on the row lock, re-evaluates the precondition against the
+    /// winner's committed row, and matches nothing. Reading the state into Rust
+    /// and writing it back would reintroduce the lost-update window.
+    pub async fn promote(
+        &self,
+        id: &str,
+        namespace: &str,
+        to: &PromotionState,
+        from: PromotionStateKind,
+    ) -> Result<u64> {
+        to.validate()?;
+        let result = sqlx::query(PROMOTE_SQL)
+            .bind(id)
+            .bind(namespace)
+            .bind(PROMOTION_STATE_KEY)
+            .bind(serde_json::to_value(to)?)
+            .bind(from.as_tag())
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected())
+    }
+
     /// Grouped counts per (namespace, source), ordered by namespace then source.
     pub async fn stats(&self) -> Result<Vec<NamespaceStat>> {
         let rows = sqlx::query(
@@ -413,6 +463,47 @@ mod tests {
 
     /// Mirrors `recall_query_uses_bound_filters_and_default_open_exclusion`:
     /// promotion state literals are bound parameters, never SQL syntax.
+    /// AC5: the transition statement carries no state literal and no source
+    /// restriction, and asserts its precondition with NULL-safe comparison so a
+    /// single statement covers the episodic start state.
+    #[test]
+    fn promote_sql_binds_state_and_omits_source_restriction() {
+        for value in ["promotion_candidate", "promoted", "episodic"] {
+            assert!(
+                !PROMOTE_SQL.contains(value),
+                "{value:?} must be a bound value, not SQL text:\n{PROMOTE_SQL}"
+            );
+        }
+        assert!(
+            !PROMOTE_SQL.contains("source"),
+            "promote must not inherit forget_manual's source restriction; \
+             the primary use case is promoting an ingested row:\n{PROMOTE_SQL}"
+        );
+        assert!(
+            PROMOTE_SQL.contains("IS NOT DISTINCT FROM"),
+            "the precondition must be NULL-safe so an absent key is matchable:\n{PROMOTE_SQL}"
+        );
+    }
+
+    /// The episodic sentinel is the absence of a tag, which becomes SQL NULL.
+    #[test]
+    fn promotion_state_kind_tags_round_trip() {
+        assert_eq!(PromotionStateKind::Episodic.as_tag(), None);
+        assert_eq!(
+            PromotionStateKind::PromotionCandidate.as_tag(),
+            Some("promotion_candidate")
+        );
+        assert_eq!(PromotionStateKind::Promoted.as_tag(), Some("promoted"));
+        assert_eq!(
+            PromotionState::PromotionCandidate {}.kind(),
+            PromotionStateKind::PromotionCandidate
+        );
+        assert_eq!(
+            PromotionState::Promoted { target: "t".into() }.kind(),
+            PromotionStateKind::Promoted
+        );
+    }
+
     #[test]
     fn recall_query_binds_promotion_state_rather_than_inlining_it() {
         let query = promotion_query(&RecallFilters::default());

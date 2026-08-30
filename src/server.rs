@@ -9,7 +9,9 @@ use serde::Deserialize;
 
 use crate::scheduler::SchedulerHandle;
 use crate::store::Store;
-use crate::types::{MemoryContext, MemoryInput, MemorySource, RecallFilters};
+use crate::types::{
+    MemoryContext, MemoryInput, MemorySource, PromotionState, PromotionStateKind, RecallFilters,
+};
 
 #[derive(Clone)]
 pub struct EpisodeServer {
@@ -59,6 +61,20 @@ struct ForgetParams {
     /// delete that only removes a matching `manual` row in this namespace;
     /// ingested memories and other namespaces are never affected.
     namespace: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct PromoteParams {
+    /// The memory id to transition.
+    id: String,
+    /// Namespace that owns the memory.
+    namespace: String,
+    /// State to move the memory into.
+    to: PromotionState,
+    /// State the memory is expected to be in right now. A mismatch changes
+    /// nothing and returns `updated: 0`, so a stale view cannot overwrite a
+    /// concurrent transition.
+    from: PromotionStateKind,
 }
 
 fn internal(e: impl std::fmt::Display) -> ErrorData {
@@ -159,6 +175,25 @@ impl EpisodeServer {
             .map_err(internal)?;
         Ok(CallToolResult::success(vec![ContentBlock::json(
             serde_json::json!({ "removed": removed }),
+        )?]))
+    }
+
+    #[tool(
+        description = "Move a memory along the promotion path: flag it as a promotion candidate, record that it graduated into a durable Concord spec/decision, or demote it back. Promoted memories are excluded from `recall` by default, so the durable record and episode cannot serve conflicting copies. Works on ingested and manual memories alike. `from` is the state you expect the memory to be in; a mismatch changes nothing and returns `updated: 0`. Returns the `updated` count (0 or 1)."
+    )]
+    async fn promote(
+        &self,
+        Parameters(p): Parameters<PromoteParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        p.to.validate()
+            .map_err(|error| ErrorData::invalid_params(error.to_string(), None))?;
+        let updated = self
+            .store
+            .promote(&p.id, &p.namespace, &p.to, p.from)
+            .await
+            .map_err(internal)?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(
+            serde_json::json!({ "updated": updated }),
         )?]))
     }
 

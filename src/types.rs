@@ -160,6 +160,36 @@ pub enum PromotionState {
     },
 }
 
+/// The tag half of a [`PromotionState`], used as a compare-and-set precondition.
+///
+/// Separate from [`PromotionState`] because a transition asserts *which state a
+/// row is in*, not which payload it carries: demoting a promoted row must not
+/// require the caller to already know its target. [`Self::Episodic`] has no tag
+/// because the episodic default is the absent key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(crate = "rmcp::schemars")]
+pub enum PromotionStateKind {
+    /// No stored promotion state.
+    Episodic,
+    PromotionCandidate,
+    Promoted,
+}
+
+impl PromotionStateKind {
+    /// The stored `kind` tag, or `None` when the key is absent.
+    ///
+    /// `None` maps to SQL `NULL`, which is what makes `IS NOT DISTINCT FROM`
+    /// express "no promotion state" without branching the statement.
+    pub fn as_tag(&self) -> Option<&'static str> {
+        match self {
+            Self::Episodic => None,
+            Self::PromotionCandidate => Some("promotion_candidate"),
+            Self::Promoted => Some("promoted"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PromotionStateValidationError {
     EmptyPromotionTarget,
@@ -192,6 +222,13 @@ impl PromotionState {
                 Err(PromotionStateValidationError::EmptyPromotionTarget)
             }
             _ => Ok(()),
+        }
+    }
+
+    pub fn kind(&self) -> PromotionStateKind {
+        match self {
+            Self::PromotionCandidate {} => PromotionStateKind::PromotionCandidate,
+            Self::Promoted { .. } => PromotionStateKind::Promoted,
         }
     }
 }

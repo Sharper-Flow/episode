@@ -6,7 +6,8 @@
 
 use episode::store::Store;
 use episode::types::{
-    EMBEDDING_DIM, MemoryInput, MemorySource, PROMOTION_STATE_KEY, PromotionState, RecallFilters,
+    EMBEDDING_DIM, MemoryInput, MemorySource, PROMOTION_STATE_KEY, PromotionState,
+    PromotionStateKind, RecallFilters,
 };
 
 fn vector() -> Vec<f32> {
@@ -114,6 +115,252 @@ async fn recall_excludes_promoted_by_default_and_keeps_candidates_visible() {
         .await,
         vec!["candidate", "plain", "promoted"],
         "opting in must return promoted rows alongside the rest"
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
+async fn stored_state(pool: &sqlx::PgPool, id: &str) -> Option<PromotionState> {
+    let raw: serde_json::Value = sqlx::query_scalar("SELECT metadata FROM memories WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .expect("read metadata");
+    raw.get(PROMOTION_STATE_KEY)
+        .map(|value| serde_json::from_value(value.clone()).expect("stored state must be valid"))
+}
+
+/// AC5: transitions run in both directions. Demotion is the recovery path for a
+/// `Promoted` row whose Concord target was deleted — without it that row would
+/// be excluded from recall permanently with no way back.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn promote_transitions_run_in_both_directions() {
+    let db = database_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_{}", uuid::Uuid::new_v4().simple());
+    let id = format!("{ns}-a");
+
+    seed(&store, &ns, "a", None).await;
+    assert_eq!(stored_state(&pool, &id).await, None, "seeds start episodic");
+
+    // Episodic -> candidate.
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::PromotionCandidate {},
+                PromotionStateKind::Episodic
+            )
+            .await
+            .expect("flag candidate"),
+        1
+    );
+    assert_eq!(
+        stored_state(&pool, &id).await,
+        Some(PromotionState::PromotionCandidate {})
+    );
+
+    // Candidate -> promoted.
+    let target = "docs/specs/0011-promotion-state.md#sha256:aaa";
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::Promoted {
+                    target: target.into()
+                },
+                PromotionStateKind::PromotionCandidate
+            )
+            .await
+            .expect("graduate"),
+        1
+    );
+    assert_eq!(
+        stored_state(&pool, &id).await,
+        Some(PromotionState::Promoted {
+            target: target.into()
+        })
+    );
+
+    // Promoted -> promoted, retargeted. The record version moved.
+    let retarget = "docs/specs/0011-promotion-state.md#sha256:bbb";
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::Promoted {
+                    target: retarget.into()
+                },
+                PromotionStateKind::Promoted
+            )
+            .await
+            .expect("retarget"),
+        1
+    );
+    assert_eq!(
+        stored_state(&pool, &id).await,
+        Some(PromotionState::Promoted {
+            target: retarget.into()
+        })
+    );
+
+    // Promoted -> candidate. The Concord target died; the memory must resurface.
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::PromotionCandidate {},
+                PromotionStateKind::Promoted
+            )
+            .await
+            .expect("demote"),
+        1
+    );
+    assert_eq!(
+        stored_state(&pool, &id).await,
+        Some(PromotionState::PromotionCandidate {})
+    );
+    assert_eq!(
+        recalled(&store, &ns, &RecallFilters::default()).await,
+        vec!["a"],
+        "a demoted row must be visible in default recall again"
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
+/// AC5: the from-state precondition lives in SQL, so a mismatch affects zero
+/// rows and leaves the stored state untouched.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn promote_rejects_from_state_mismatch() {
+    let db = database_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_cas_{}", uuid::Uuid::new_v4().simple());
+    let id = format!("{ns}-a");
+
+    seed(
+        &store,
+        &ns,
+        "a",
+        Some(PromotionState::PromotionCandidate {}),
+    )
+    .await;
+
+    // Claiming the row is still episodic must not win.
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::Promoted {
+                    target: "wrong".into()
+                },
+                PromotionStateKind::Episodic
+            )
+            .await
+            .expect("mismatch is not an error"),
+        0
+    );
+    // Claiming it is already promoted must not win either.
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::Promoted {
+                    target: "wrong".into()
+                },
+                PromotionStateKind::Promoted
+            )
+            .await
+            .expect("mismatch is not an error"),
+        0
+    );
+    assert_eq!(
+        stored_state(&pool, &id).await,
+        Some(PromotionState::PromotionCandidate {}),
+        "a losing transition must leave the state untouched"
+    );
+
+    // Wrong namespace and unknown id are also no-ops.
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                "other-namespace",
+                &PromotionState::PromotionCandidate {},
+                PromotionStateKind::PromotionCandidate
+            )
+            .await
+            .expect("wrong namespace"),
+        0
+    );
+
+    sqlx::query("DELETE FROM memories WHERE namespace = $1")
+        .bind(&ns)
+        .execute(&pool)
+        .await
+        .expect("cleanup");
+}
+
+/// AC5: `promote` borrows `forget_manual`'s shape but NOT its `source = 'manual'`
+/// restriction. The row a human most needs to promote is an ingested wisdom
+/// entry, so a manual-only predicate would forbid the primary use case.
+#[tokio::test]
+#[ignore = "requires Postgres"]
+async fn promote_accepts_ingested_rows() {
+    let db = database_url();
+    let store = Store::connect(&db, 5).await.expect("connect + migrate");
+    let pool = sqlx::PgPool::connect(&db).await.expect("test pool");
+    let ns = format!("it_promote_ingested_{}", uuid::Uuid::new_v4().simple());
+    let id = format!("{ns}-pw-1");
+
+    store
+        .upsert(
+            &MemoryInput {
+                id: id.clone(),
+                namespace: ns.clone(),
+                source: MemorySource::AdvWisdom,
+                source_id: Some(format!("{ns}-src-1")),
+                kind: Some("gotcha".into()),
+                content: "ingested".into(),
+                metadata: metadata_with(None),
+            },
+            &vector(),
+        )
+        .await
+        .expect("seed ingested");
+
+    assert_eq!(
+        store
+            .promote(
+                &id,
+                &ns,
+                &PromotionState::Promoted {
+                    target: "docs/specs/0011-promotion-state.md#sha256:ccc".into()
+                },
+                PromotionStateKind::Episodic
+            )
+            .await
+            .expect("promote ingested row"),
+        1,
+        "an ingested row must be promotable; this is the primary use case"
     );
 
     sqlx::query("DELETE FROM memories WHERE namespace = $1")
